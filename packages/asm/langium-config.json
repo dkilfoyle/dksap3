@@ -1,0 +1,18 @@
+{
+  "projectName": "Asm",
+  "languages": [
+    {
+      "id": "asm",
+      "grammar": "src/language/asm.langium",
+      "caseInsensitive": true,
+      "fileExtensions": [".asm"],
+      "textMate": {
+        "out": "syntaxes/asm.tmLanguage.json"
+      },
+      "monarch": {
+        "out": "src/syntaxes/asm.monarch2.ts"
+      }
+    }
+  ],
+  "out": "src/language/generated"
+}

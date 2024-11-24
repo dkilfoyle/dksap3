@@ -1,0 +1,84 @@
+{
+  "name": "asm",
+  "scopeName": "source.asm",
+  "fileTypes": [".asm"],
+  "patterns": [
+    {
+      "name": "comment.line",
+      "match": "\\s*;.*$"
+    },
+    {
+      "name": "keyword.control.asm",
+      "match": "\\b(ACI|ADC|ADD|ADI|ANA|ANI|CALL|CC|CM|CMA|CMC|CMP|CNC|CNZ|CP|CPE|CPI|CPO|CZ|DAD|DCR|DCX|HLT|INR|INX|JMP|JNC|JNZ|JP|JPE|JPO|JZ|LDA|LDAX|LHLD|LXI|MOV|MVI|NOP|ORA|ORI|OUT|POP|PUSH|RAL|RAR|RC|RET|RLC|RM|RNC|RNZ|RP|RPE|RPO|RRC|RZ|SBB|SBI|SHLD|STA|STAX|STC|SUB|SUI|XRA|XRI)\\b"
+    },
+    {
+      "name": "keyword.control.asm",
+      "match": "\\b(aci|adc|add|adi|ana|ani|call|cc|cm|cma|cmc|cmp|cnc|cnz|cp|cpe|cpi|cpo|cz|dad|dcr|dcx|hlt|inr|inx|jmp|jnc|jnz|jp|jpe|jpo|jz|lda|ldax|lhld|lxi|mov|mvi|nop|ora|ori|out|pop|push|ral|rar|rc|ret|rlc|rm|rnc|rnz|rp|rpe|rpo|rrc|rz|sbb|sbi|shld|sta|stax|stc|sub|sui|xra|xri)\\b"
+    },
+    {
+      "name": "string.regexp",
+      "match": "\\b(MACRO|IF|DB|ORG|DW|DS|EQU|SECTION)\\b"
+    },
+    {
+      "name": "string.regexp",
+      "match": "\\b(macro|if|db|org|dw|ds|equ|section)\\b"
+    },
+    {
+      "name": "support.class.z80",
+      "match": "\\b(a|b|c|d|e|h|af|bc|de|hl|sp)\\b"
+    },
+    {
+      "name": "constant.numeric.hex",
+      "match": "\\$[0-9a-fA-F]+"
+    },
+    {
+      "name": "constant.numeric.hex",
+      "match": "\\b[0-9][0-9a-fA-F]+h\\b"
+    },
+    {
+      "name": "constant.numeric",
+      "match": "\\b[0-9]+\b"
+    },
+    {
+      "name": "meta.label.z80",
+      "match": "^\\s*(\\.?[a-zA-Z_][a-zA-Z_0-9\\@]*)\\s*(\\:)\\s*$",
+      "captures": {
+        "1": { "name": "support.class.z80" },
+        "2": { "name": "keyword.operator.z80" }
+      }
+    },
+    {
+      "name": "meta.identifier.z80",
+      "match": "\\b([a-zA-Z_][a-zA-Z_0-9\\@]*)\\b",
+      "captures": {
+        "1": { "name": "entity.name.function.z80" }
+      }
+    },
+    {
+      "name": "string.quoted.double.asm",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "include": "#string-character-escape"
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.single.asm",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "include": "#string-character-escape"
+        }
+      ]
+    }
+  ],
+  "repository": {
+    "string-character-escape": {
+      "name": "constant.character.escape.asm",
+      "match": "\\\\(x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|u\\{[0-9A-Fa-f]+\\}|[0-2][0-7]{0,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.|$)"
+    }
+  }
+}
