@@ -1,0 +1,12 @@
+{
+  "projectName": "Asm",
+  "languages": [
+    {
+      "id": "asm",
+      "grammar": "src/language/asm.langium",
+      "caseInsensitive": true,
+      "fileExtensions": [".asm"]
+    }
+  ],
+  "out": "src/language/generated"
+}

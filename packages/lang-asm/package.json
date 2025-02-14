@@ -1,0 +1,31 @@
+{
+  "name": "@dksap3/lang-asm",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "compile:src": "tsc --build tsconfig.json",
+    "clean": "npx shx rm -fr lib *.tsbuildinfo",
+    "build": "npm run clean && npm run langium:generate && npm run compile:src",
+    "watch": "tsc -b tsconfig.json --watch",
+    "lint": "eslint src --ext ts",
+    "langium:generate": "langium generate",
+    "langium:watch": "langium generate --watch"
+  },
+  "dependencies": {
+    "langium": "^3.3.1"
+  },
+  "devDependencies": {
+    "langium-cli": "^3.3.0"
+  }
+}
