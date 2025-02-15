@@ -1,7 +1,8 @@
-import AsmLanguageConfig from "./language-configuration.json" with {type: "json"};
-import AsmTmSyntax from "./asm.tmLanguage.json" with {type: "json"};
+import { ExtensionConfig, LanguageClientConfig } from "monaco-editor-wrapper";
+import AsmLanguageConfig from "./language-configuration.json";
+import AsmTmSyntax from "./asm.tmLanguage.json";
 
-export const getAsmLanguageClientConfig = () => {
+export const getAsmLanguageClientConfig = (): LanguageClientConfig => {
   // vite does not extract the worker properly if it is URL is a variable
   const lsWorker = new Worker(new URL("../language/main-browser", import.meta.url), {
     type: "module",
@@ -29,7 +30,7 @@ const getAsmExtensionFiles = () => {
   return files;
 };
 
-export const getAsmLanguageExtension = () => {
+export const getAsmLanguageExtension = (): ExtensionConfig => {
   return {
     config: {
       name: "asm-language-extension",

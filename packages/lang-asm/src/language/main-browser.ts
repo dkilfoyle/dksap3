@@ -1,4 +1,4 @@
-import { DocumentState, EmptyFileSystem } from "langium";
+import { AstNode, DocumentState, EmptyFileSystem, LangiumDocument } from "langium";
 import { startLanguageServer } from "langium/lsp";
 import {
   BrowserMessageReader,
@@ -38,26 +38,42 @@ export type AsmDocumentChange = {
   lineAddressMap: Record<number, number>;
 };
 
+const debounce = (fn: Function, ms = 300) => {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return function (this: any, ...args: any[]) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn.apply(this, args), ms);
+  };
+};
+
+const sendAsmDocumentChange = (document: LangiumDocument<AstNode>) => {
+  console.log("sendasm");
+  const { bytes, lineAddressMap, identifierMap } = assember(document.parseResult.value);
+  const json = Asm.serializer.JsonSerializer.serialize(document.parseResult.value, {
+    sourceText: false,
+    textRegions: true,
+    refText: true,
+  });
+  const documentChangeNotification = new NotificationType<AsmDocumentChange>("browser/AsmDocumentChange");
+  // console.log("Sending notification from browser:", hackvm.trace);
+  connection.sendNotification(documentChangeNotification, {
+    uri: document.uri.toString(),
+    content: json,
+    machineCode: bytes,
+    identifierMap,
+    lineAddressMap,
+  });
+};
+
+const debouncedSendAsmDocumentChange = debounce(sendAsmDocumentChange, 1000);
+
 shared.workspace.DocumentBuilder.onBuildPhase(DocumentState.Validated, (documents) => {
   for (const document of documents) {
     // console.log(document);
     // console.log("AST", document.parseResult.value);
     if (document.diagnostics?.length == 0) {
-      const { bytes, lineAddressMap, identifierMap } = assember(document.parseResult.value);
-      const json = Asm.serializer.JsonSerializer.serialize(document.parseResult.value, {
-        sourceText: false,
-        textRegions: true,
-        refText: true,
-      });
-      const documentChangeNotification = new NotificationType<AsmDocumentChange>("browser/AsmDocumentChange");
-      // console.log("Sending notification from browser:", hackvm.trace);
-      connection.sendNotification(documentChangeNotification, {
-        uri: document.uri.toString(),
-        content: json,
-        machineCode: bytes,
-        identifierMap,
-        lineAddressMap,
-      });
+      console.log("calling debounce");
+      debouncedSendAsmDocumentChange(document);
     }
   }
 });

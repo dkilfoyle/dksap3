@@ -1,0 +1,51 @@
+/* :root {
+  --vscode-button-foreground: #ffffff;
+  --vscode-button-background: #0078d4;
+  --vscode-button-hoverBackground: #026ec1;
+  --vscode-button-secondaryForeground: #cccccc;
+  --vscode-button-secondaryBackground: #313131;
+  --vscode-button-secondaryHoverBackground: #3c3c3c;
+  --vscode-editor-foreground: #cccccc;
+  --vscode-editor-background: #1f1f1f;
+  --vscode-input-foreground: #cccccc;
+  --vscode-input-background: #313131;
+  --vscode-editorOverviewRuler-addedForeground: #2ea04399;
+} */
+
+.memview-page {
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  border-color: var(--vscode-tab-border);
+}
+
+.memview-hovercell {
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+.memview-ascii {
+  color: var(--vscode-editorOverviewRuler-addedForeground);
+}
+
+.vscode-button-primary {
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.vscode-button-primary:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.vscode-button-secondary {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+}
+
+.vscode-button-secondary:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.vscode-input {
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+}

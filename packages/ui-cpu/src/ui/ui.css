@@ -1,0 +1,51 @@
+.dark-green2 {
+  background-color: #86c73f;
+}
+
+.dark-green {
+  background-color: #41c940;
+}
+
+.dark-orange {
+  background-color: #c8863f;
+}
+
+.dark-red {
+  background-color: #ca4142;
+}
+
+.dark-yellow {
+  background-color: #c7c940;
+}
+
+.dark-cyan {
+  background-color: #42cbca;
+}
+
+.dark-blue {
+  background-color: #4084cb;
+}
+
+.dark-purple {
+  background-color: #8541cc;
+}
+
+.dark-pink {
+  background-color: #c94085;
+}
+
+.dark-gray {
+  background-color: darkgray;
+}
+
+.tstate-tick {
+  background-color: #c94085;
+}
+
+.tstate-tock {
+  background-color: #c889a8;
+}
+
+.text-xxs {
+  font-size: 4pt;
+}

@@ -1,0 +1,50 @@
+/* :root {
+  --vscode-button-foreground: #ffffff;
+  --vscode-button-background: #0078d4;
+  --vscode-button-hoverBackground: #026ec1;
+  --vscode-button-secondaryForeground: #cccccc;
+  --vscode-button-secondaryBackground: #313131;
+  --vscode-button-secondaryHoverBackground: #3c3c3c;
+  --vscode-editor-foreground: #cccccc;
+  --vscode-editor-background: #1f1f1f;
+  --vscode-input-foreground: #cccccc;
+  --vscode-input-background: #313131;
+} */
+
+.vscode-page {
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  border-color: var(--vscode-tab-border);
+}
+
+.vscode-button-primary {
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.vscode-button-primary:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.vscode-button-secondary {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+}
+
+.vscode-button-secondary:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.tock {
+  /* background-color: #e5e7eb;
+  clip-path: polygon(0 0, 100% 0, 100% 100%); */
+  background: rgb(0, 0, 0);
+  background: linear-gradient(270deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0) 50%, rgba(118, 219, 155, 1) 50%);
+}
+
+.tick {
+  /* background-color: #e5e7eb;
+  clip-path: polygon(0 0, 100% 0, 100% 100% 0 0); */
+  background: rgb(0, 0, 0);
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0) 50%, rgba(118, 219, 155, 1) 50%);
+}

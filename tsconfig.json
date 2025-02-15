@@ -1,4 +1,9 @@
 {
   "files": [],
-  "references": [{ "path": "./packages/template" }, { "path": "./apps/ide" }]
+  "references": [
+    { "path": "./packages/lang-asm" },
+    { "path": "./packages/lang-sc" },
+    { "path": "./packages/cpusim" },
+    { "path": "./apps/ide" }
+  ]
 }

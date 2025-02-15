@@ -1,0 +1,12 @@
+{
+  "projectName": "SmallC",
+  "languages": [
+    {
+      "id": "sc",
+      "grammar": "src/language/sc.langium",
+      "caseInsensitive": false,
+      "fileExtensions": [".c"]
+    }
+  ],
+  "out": "src/language/generated"
+}

@@ -1,0 +1,61 @@
+{
+  "name": "sc",
+  "scopeName": "source.sc",
+  "fileTypes": [
+    ".c"
+  ],
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "name": "keyword.control.sc",
+      "match": "\\b(and|char|else|for|if|int|or|return|while)\\b"
+    },
+    {
+      "name": "string.quoted.double.sc",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "include": "#string-character-escape"
+        }
+      ]
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.block.sc",
+          "begin": "/\\*",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.sc"
+            }
+          },
+          "end": "\\*/",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.sc"
+            }
+          }
+        },
+        {
+          "begin": "//",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.whitespace.comment.leading.sc"
+            }
+          },
+          "end": "(?=$)",
+          "name": "comment.line.sc"
+        }
+      ]
+    },
+    "string-character-escape": {
+      "name": "constant.character.escape.sc",
+      "match": "\\\\(x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|u\\{[0-9A-Fa-f]+\\}|[0-2][0-7]{0,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.|$)"
+    }
+  }
+}
