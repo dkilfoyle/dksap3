@@ -19,11 +19,11 @@ export function registerValidationChecks(services: ScServices) {
  */
 export class ScValidator {
   checkPersonStartsWithCapital(person: FunctionDeclaration, accept: ValidationAcceptor): void {
-    if (person.name) {
-      const firstChar = person.name.substring(0, 1);
-      if (firstChar.toUpperCase() !== firstChar) {
-        accept("warning", "Person name should start with a capital.", { node: person, property: "name" });
-      }
-    }
+    // if (person.name) {
+    //   const firstChar = person.name.substring(0, 1);
+    //   if (firstChar.toUpperCase() !== firstChar) {
+    //     accept("warning", "Person name should start with a capital.", { node: person, property: "name" });
+    //   }
+    // }
   }
 }

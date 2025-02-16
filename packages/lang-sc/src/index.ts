@@ -4,6 +4,7 @@ export { AST };
 export * from "./language/sc-module";
 export * from "./language/sc-validator";
 export * from "./config/config";
+export * from "./language/main-browser";
 // export * from "./sc-completion-provider";
 // export * from "./sc-container-manager";
 // export * from "./sc-data-types";

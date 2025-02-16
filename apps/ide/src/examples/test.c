@@ -1,12 +1,13 @@
 // my comment
 
-main() {
-  int i,j;
+main()
+{
+  int i;
   i = 1;
-  j = 2;
-  return bla(i+j);
+  return bla(i);
 }
 
-bla(int x) {
+bla(int x)
+{
   return x * 2;
 }

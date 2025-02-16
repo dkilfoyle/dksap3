@@ -33,12 +33,11 @@ import { createDefaultLocaleConfiguration } from "monaco-languageclient/vscode/s
 import { configureMonacoWorkers, createDefaultWorkspaceFile } from "./utils.ts";
 import type { MonacoEditorLanguageClientWrapper, WrapperConfig } from "monaco-editor-wrapper";
 import { RegisterLocalProcessExtensionResult } from "@codingame/monaco-vscode-api/extensions";
-import { getScLanguageClientConfig, getScLanguageExtension } from "@dksap3/lang-sc";
+import { ScDocumentChange, getScLanguageClientConfig, getScLanguageExtension } from "@dksap3/lang-sc";
 import { AsmDocumentChange, getAsmLanguageClientConfig, getAsmLanguageExtension } from "@dksap3/lang-asm";
 import { EmulatorWebviewPanel } from "./components/EmulatorWebviewPanel.ts";
 import { MemoryWebviewPanel } from "./components/MemoryWebviewPanel.ts";
 import { compiledDocs } from "./debugger/AsmRuntime.ts";
-import { time } from "console";
 
 export const HOME_DIR = "";
 export const WORKSPACE_PATH = `${HOME_DIR}/dk8085`;
@@ -47,6 +46,8 @@ export type ConfigResult = {
   wrapperConfig: WrapperConfig;
   workspaceFile: vscode.Uri;
 };
+
+const fileSystemProvider = new RegisteredFileSystemProvider(false);
 
 export const configure = (htmlContainer?: HTMLElement): ConfigResult => {
   const workspaceFile = vscode.Uri.file("/workspace/.vscode/workspace.code-workspace");
@@ -129,15 +130,14 @@ export const configure = (htmlContainer?: HTMLElement): ConfigResult => {
     },
   };
 
-  const fileSystemProvider = new RegisteredFileSystemProvider(false);
   fileSystemProvider.registerFile(createDefaultWorkspaceFile(workspaceFile, "/dk8085"));
 
-  const examplesAsm = import.meta.glob("./examples/*.asm", { eager: true, query: "?raw", import: "default" });
+  const examplesAsm = import.meta.glob<string>("./examples/*.asm", { eager: true, query: "?raw", import: "default" });
   Object.entries(examplesAsm).forEach(([key, value]) => {
     fileSystemProvider.registerFile(new RegisteredMemoryFile(vscode.Uri.file(`dk8085/${key.replace("./examples/", "")}`), value));
   });
 
-  const examplesC = import.meta.glob("./examples/*.c", { eager: true, query: "?raw", import: "default" });
+  const examplesC = import.meta.glob<string>("./examples/*.c", { eager: true, query: "?raw", import: "default" });
   Object.entries(examplesC).forEach(([key, value]) => {
     fileSystemProvider.registerFile(new RegisteredMemoryFile(vscode.Uri.file(`dk8085/${key.replace("./examples/", "")}`), value));
   });
@@ -174,9 +174,15 @@ export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrap
     MemoryWebviewPanel.sendLabels(data.identifierMap);
   });
 
-  wrapper.getLanguageClient("sc")?.onNotification("browser/ScDocumentChange", (data: AsmDocumentChange) => {
-    console.log("App.tsx onNotification(browser/scDocumentChange)", data.uri, data.machineCode.length);
-    console.log(JSON.parse(data.content));
+  wrapper.getLanguageClient("sc")?.onNotification("browser/ScDocumentChange", async (data: ScDocumentChange) => {
+    console.log("App.tsx onNotification(browser/scDocumentChange)", data.uri);
+    console.log(data.asm);
+    console.log(JSON.parse(data.ast));
+    console.log(data.uri);
+
+    const uri = vscode.Uri.file(data.uri.replace(".c", ".asm").replace("file:///", ""));
+    vscode.workspace.fs.writeFile(uri, Uint8Array.from(Array.from(data.asm).map((letter) => letter.charCodeAt(0))));
+
     // compiledDocs[data.uri] = data;
   });
 

@@ -47,7 +47,6 @@ const debounce = (fn: Function, ms = 300) => {
 };
 
 const sendAsmDocumentChange = (document: LangiumDocument<AstNode>) => {
-  console.log("sendasm");
   const { bytes, lineAddressMap, identifierMap } = assember(document.parseResult.value);
   const json = Asm.serializer.JsonSerializer.serialize(document.parseResult.value, {
     sourceText: false,
@@ -72,7 +71,6 @@ shared.workspace.DocumentBuilder.onBuildPhase(DocumentState.Validated, (document
     // console.log(document);
     // console.log("AST", document.parseResult.value);
     if (document.diagnostics?.length == 0) {
-      console.log("calling debounce");
       debouncedSendAsmDocumentChange(document);
     }
   }
