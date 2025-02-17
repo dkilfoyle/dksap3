@@ -35,6 +35,9 @@ export type ScKeywordNames =
     | "=="
     | ">"
     | ">="
+    | "["
+    | "[]"
+    | "]"
     | "and"
     | "char"
     | "else"
@@ -43,6 +46,9 @@ export type ScKeywordNames =
     | "int"
     | "or"
     | "return"
+    | "signed"
+    | "struct"
+    | "unsigned"
     | "while"
     | "{"
     | "}";
@@ -65,7 +71,7 @@ export function isExpression(item: unknown): item is Expression {
     return reflection.isInstance(item, Expression);
 }
 
-export type NamedElement = FunctionDeclaration | Parameter | VariableDeclaration;
+export type NamedElement = FunctionDeclaration | Parameter | StructDeclaration | VariableDeclaration;
 
 export const NamedElement = 'NamedElement';
 
@@ -73,12 +79,32 @@ export function isNamedElement(item: unknown): item is NamedElement {
     return reflection.isInstance(item, NamedElement);
 }
 
-export type Statement = AssignmentStatement | Expression | ForStatement | IfStatement | NamedElement | ReturnStatement | WhileStatement;
+export type Statement = AssignmentStatement | Expression | ForStatement | IfStatement | NamedElement | ReturnStatement | StructDeclaration | WhileStatement;
 
 export const Statement = 'Statement';
 
 export function isStatement(item: unknown): item is Statement {
     return reflection.isInstance(item, Statement);
+}
+
+export type TypeReference = PrimitiveTypeReference | StructTypeReference;
+
+export const TypeReference = 'TypeReference';
+
+export function isTypeReference(item: unknown): item is TypeReference {
+    return reflection.isInstance(item, TypeReference);
+}
+
+export interface ArrayDeclaration extends AstNode {
+    readonly $container: VariableDeclaration;
+    readonly $type: 'ArrayDeclaration';
+    dim: number;
+}
+
+export const ArrayDeclaration = 'ArrayDeclaration';
+
+export function isArrayDeclaration(item: unknown): item is ArrayDeclaration {
+    return reflection.isInstance(item, ArrayDeclaration);
 }
 
 export interface AssignmentStatement extends AstNode {
@@ -205,7 +231,9 @@ export function isNumberExpression(item: unknown): item is NumberExpression {
 export interface Parameter extends AstNode {
     readonly $container: Block | ForStatement | FunctionDeclaration | Program;
     readonly $type: 'Parameter';
+    array: boolean;
     name: string;
+    pointer: boolean;
     type: TypeReference;
 }
 
@@ -238,16 +266,43 @@ export function isReturnStatement(item: unknown): item is ReturnStatement {
     return reflection.isInstance(item, ReturnStatement);
 }
 
-export interface TypeReference extends AstNode {
-    readonly $container: Parameter | VariableDeclaration;
-    readonly $type: 'TypeReference';
-    primitive: 'char' | 'int';
+export interface StructDeclaration extends AstNode {
+    readonly $container: Block | ForStatement | Program;
+    readonly $type: 'StructDeclaration';
+    members: Array<StructMember>;
+    name: string;
 }
 
-export const TypeReference = 'TypeReference';
+export const StructDeclaration = 'StructDeclaration';
 
-export function isTypeReference(item: unknown): item is TypeReference {
-    return reflection.isInstance(item, TypeReference);
+export function isStructDeclaration(item: unknown): item is StructDeclaration {
+    return reflection.isInstance(item, StructDeclaration);
+}
+
+export interface StructMember extends AstNode {
+    readonly $container: Parameter | StructDeclaration | VariableDeclaration;
+    readonly $type: 'PrimitiveTypeReference' | 'StructMember';
+    name: string;
+    pointer: boolean;
+}
+
+export const StructMember = 'StructMember';
+
+export function isStructMember(item: unknown): item is StructMember {
+    return reflection.isInstance(item, StructMember);
+}
+
+export interface StructTypeReference extends AstNode {
+    readonly $container: Parameter | VariableDeclaration;
+    readonly $type: 'StructTypeReference';
+    structName: Reference<StructDeclaration>;
+    type: 'struct';
+}
+
+export const StructTypeReference = 'StructTypeReference';
+
+export function isStructTypeReference(item: unknown): item is StructTypeReference {
+    return reflection.isInstance(item, StructTypeReference);
 }
 
 export interface UnaryExpression extends AstNode {
@@ -266,8 +321,10 @@ export function isUnaryExpression(item: unknown): item is UnaryExpression {
 export interface VariableDeclaration extends AstNode {
     readonly $container: Block | ForStatement | Program;
     readonly $type: 'VariableDeclaration';
+    array?: ArrayDeclaration;
     assignment: boolean;
     name: string;
+    pointer: boolean;
     type: TypeReference;
     value?: Expression;
 }
@@ -291,7 +348,21 @@ export function isWhileStatement(item: unknown): item is WhileStatement {
     return reflection.isInstance(item, WhileStatement);
 }
 
+export interface PrimitiveTypeReference extends StructMember {
+    readonly $container: Parameter | VariableDeclaration;
+    readonly $type: 'PrimitiveTypeReference';
+    signed?: 'signed' | 'unsigned';
+    type: 'char' | 'int';
+}
+
+export const PrimitiveTypeReference = 'PrimitiveTypeReference';
+
+export function isPrimitiveTypeReference(item: unknown): item is PrimitiveTypeReference {
+    return reflection.isInstance(item, PrimitiveTypeReference);
+}
+
 export type ScAstType = {
+    ArrayDeclaration: ArrayDeclaration
     AssignmentStatement: AssignmentStatement
     BinaryExpression: BinaryExpression
     Block: Block
@@ -305,9 +376,13 @@ export type ScAstType = {
     NamedElement: NamedElement
     NumberExpression: NumberExpression
     Parameter: Parameter
+    PrimitiveTypeReference: PrimitiveTypeReference
     Program: Program
     ReturnStatement: ReturnStatement
     Statement: Statement
+    StructDeclaration: StructDeclaration
+    StructMember: StructMember
+    StructTypeReference: StructTypeReference
     TypeReference: TypeReference
     UnaryExpression: UnaryExpression
     VariableDeclaration: VariableDeclaration
@@ -317,7 +392,7 @@ export type ScAstType = {
 export class ScAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [AssignmentStatement, BinaryExpression, Block, CharExpression, Definition, Expression, ForStatement, FunctionDeclaration, IfStatement, MemberCall, NamedElement, NumberExpression, Parameter, Program, ReturnStatement, Statement, TypeReference, UnaryExpression, VariableDeclaration, WhileStatement];
+        return [ArrayDeclaration, AssignmentStatement, BinaryExpression, Block, CharExpression, Definition, Expression, ForStatement, FunctionDeclaration, IfStatement, MemberCall, NamedElement, NumberExpression, Parameter, PrimitiveTypeReference, Program, ReturnStatement, Statement, StructDeclaration, StructMember, StructTypeReference, TypeReference, UnaryExpression, VariableDeclaration, WhileStatement];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
@@ -347,6 +422,15 @@ export class ScAstReflection extends AbstractAstReflection {
             case VariableDeclaration: {
                 return this.isSubtype(NamedElement, supertype);
             }
+            case PrimitiveTypeReference: {
+                return this.isSubtype(StructMember, supertype) || this.isSubtype(TypeReference, supertype);
+            }
+            case StructDeclaration: {
+                return this.isSubtype(NamedElement, supertype) || this.isSubtype(Statement, supertype);
+            }
+            case StructTypeReference: {
+                return this.isSubtype(TypeReference, supertype);
+            }
             default: {
                 return false;
             }
@@ -362,6 +446,9 @@ export class ScAstReflection extends AbstractAstReflection {
             case 'MemberCall:element': {
                 return NamedElement;
             }
+            case 'StructTypeReference:structName': {
+                return StructDeclaration;
+            }
             default: {
                 throw new Error(`${referenceId} is not a valid reference id.`);
             }
@@ -370,6 +457,14 @@ export class ScAstReflection extends AbstractAstReflection {
 
     getTypeMetaData(type: string): TypeMetaData {
         switch (type) {
+            case ArrayDeclaration: {
+                return {
+                    name: ArrayDeclaration,
+                    properties: [
+                        { name: 'dim' }
+                    ]
+                };
+            }
             case AssignmentStatement: {
                 return {
                     name: AssignmentStatement,
@@ -459,7 +554,9 @@ export class ScAstReflection extends AbstractAstReflection {
                 return {
                     name: Parameter,
                     properties: [
+                        { name: 'array', defaultValue: false },
                         { name: 'name' },
+                        { name: 'pointer', defaultValue: false },
                         { name: 'type' }
                     ]
                 };
@@ -480,11 +577,30 @@ export class ScAstReflection extends AbstractAstReflection {
                     ]
                 };
             }
-            case TypeReference: {
+            case StructDeclaration: {
                 return {
-                    name: TypeReference,
+                    name: StructDeclaration,
                     properties: [
-                        { name: 'primitive' }
+                        { name: 'members', defaultValue: [] },
+                        { name: 'name' }
+                    ]
+                };
+            }
+            case StructMember: {
+                return {
+                    name: StructMember,
+                    properties: [
+                        { name: 'name' },
+                        { name: 'pointer', defaultValue: false }
+                    ]
+                };
+            }
+            case StructTypeReference: {
+                return {
+                    name: StructTypeReference,
+                    properties: [
+                        { name: 'structName' },
+                        { name: 'type' }
                     ]
                 };
             }
@@ -501,8 +617,10 @@ export class ScAstReflection extends AbstractAstReflection {
                 return {
                     name: VariableDeclaration,
                     properties: [
+                        { name: 'array' },
                         { name: 'assignment', defaultValue: false },
                         { name: 'name' },
+                        { name: 'pointer', defaultValue: false },
                         { name: 'type' },
                         { name: 'value' }
                     ]
@@ -514,6 +632,17 @@ export class ScAstReflection extends AbstractAstReflection {
                     properties: [
                         { name: 'block' },
                         { name: 'condition' }
+                    ]
+                };
+            }
+            case PrimitiveTypeReference: {
+                return {
+                    name: PrimitiveTypeReference,
+                    properties: [
+                        { name: 'name' },
+                        { name: 'pointer', defaultValue: false },
+                        { name: 'signed' },
+                        { name: 'type' }
                     ]
                 };
             }

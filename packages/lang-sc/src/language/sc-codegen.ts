@@ -18,7 +18,7 @@ export let asm = "";
 export let nxtlab = 0;
 export let stkp = 0;
 export const uflag = 0; // don't use 8085 undocumented instructions
-const INTSIZE = 2;
+export const INTSIZE = 2;
 
 /**
  * Output the variable symbol at scptr as an extrn or a public
@@ -48,7 +48,7 @@ export interface ISymbol {
   type: SymbolType;
   storage: SymbolStorage;
   offset: number;
-  tagidx: number;
+  structName?: string;
 }
 
 export enum SymbolType {
@@ -61,7 +61,8 @@ export enum SymbolType {
 }
 
 export enum SymbolIdentity {
-  VARIABLE = 1,
+  NONE = 0,
+  VARIABLE,
   ARRAY,
   POINTER,
   FUNCTION,
@@ -96,6 +97,14 @@ export interface ITagSymbol {
 }
 
 const linker = new Set<string>();
+
+export function gen_header() {
+  asm = "; SmallC 8080 v2.4\n";
+}
+
+export function gen_line(line: string) {
+  asm += line + "\n";
+}
 
 function gen_call(sname: string) {
   asm += `call ${sname}\n`;
@@ -252,7 +261,7 @@ function gen_test_jump(label: number, ft: number) {
  * modify the stack pointer to the new value indicated
  * @param newstkp new value
  */
-function gen_modify_stack(newstkp: number) {
+export function gen_modify_stack(newstkp: number) {
   let k = newstkp - stkp;
   if (k == 0) return newstkp;
   if (k > 0) {

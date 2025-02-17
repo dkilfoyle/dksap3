@@ -23,6 +23,7 @@ Statement:
     VariableDeclaration ';' | 
     AssignmentStatement ';' |
     ReturnStatement ';' | 
+    StructDeclaration |
     Expression ';'
 ;
 
@@ -43,8 +44,11 @@ ReturnStatement:
     'return' value=Expression?;
 
 VariableDeclaration returns NamedElement:
-    {infer VariableDeclaration} type=TypeReference name=ID
+    {infer VariableDeclaration} type=TypeReference pointer?="*"? name=ID (array=ArrayDeclaration)?
 ;
+
+ArrayDeclaration:
+    "[" dim=NUMBER "]";
 
 AssignmentStatement:
     varRef=[VariableDeclaration:ID] '=' value=Expression
@@ -91,12 +95,24 @@ CharExpression:
     value=STRING;
 
 Parameter:
-    type=TypeReference name=ID;
+    type=TypeReference pointer?="*"? name=ID array?="[]"?;
 
 TypeReference:
-    primitive=("int" | "char");
+    PrimitiveTypeReference | StructTypeReference;
 
-type NamedElement = Parameter | FunctionDeclaration | VariableDeclaration;
+PrimitiveTypeReference:
+    signed=("signed"|"unsigned")? type=("int" | "char");
+
+StructTypeReference:
+    type="struct" structName=[StructDeclaration:ID];
+
+StructDeclaration:
+    "struct" name=ID "{" members+=StructMember* "}";
+
+StructMember:
+    PrimitiveTypeReference pointer?="*"? name=ID ";";
+
+type NamedElement = Parameter | FunctionDeclaration | VariableDeclaration | StructDeclaration;
 
 hidden terminal WS: /\s+/;
 terminal ID: /[_a-zA-Z][\w_]*/;
