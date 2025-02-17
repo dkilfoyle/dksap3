@@ -69,7 +69,7 @@ NoArgOperation infers Operation:
 AddrArgument:
     number=NUMBER | identifier=[Label:ID];
 
-terminal ID: /[_a-zA-Z][a-zA-Z0-9._]*/;
+terminal ID: /[_a-zA-Z$][a-zA-Z0-9._]*/;
 Reg8:
     register=("a"|"b"|"c"|"d"|"e"|"h"|"l"|"m");
 Reg16:

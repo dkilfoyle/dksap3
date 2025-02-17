@@ -198,7 +198,7 @@
     "labels": {
       "patterns": [
         {
-          "match": "^\\@?((\\$(?!\\.))?[\\w\\.]+):?(?=\\s)",
+          "match": "^\\@?((\\$\\$(?!\\.))?[\\w\\.]+):?(?=\\s)",
           "captures": {
             "1": {
               "name": "entity.name.function.i8080asm"
@@ -206,7 +206,7 @@
           }
         },
         {
-          "match": "\\b([a-zA-Z][\\w\\.]+)\\b",
+          "match": "\\b([a-zA-Z\\$][\\w\\.]+)\\b",
           "name": "variable.parameter.label.i8080asm"
         }
       ]

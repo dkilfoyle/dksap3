@@ -8,7 +8,7 @@ import type { AstNode, Reference, ReferenceInfo, TypeMetaData } from 'langium';
 import { AbstractAstReflection } from 'langium';
 
 export const AsmTerminals = {
-    ID: /[_a-zA-Z][a-zA-Z0-9._]*/,
+    ID: /[_a-zA-Z$][a-zA-Z0-9._]*/,
     EOL: /[\r\n]+/,
     COMMENT: /;[^\n\r]*/,
     NUMBER: /[0-9][0-9a-fA-F]*[h]?/,

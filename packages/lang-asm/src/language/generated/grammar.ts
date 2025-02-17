@@ -1233,7 +1233,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
       "name": "ID",
       "definition": {
         "$type": "RegexToken",
-        "regex": "/[_a-zA-Z][a-zA-Z0-9._]*/"
+        "regex": "/[_a-zA-Z$][a-zA-Z0-9._]*/"
       },
       "fragment": false,
       "hidden": false
