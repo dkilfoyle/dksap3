@@ -721,7 +721,8 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
                 "$ref": "#/rules@31"
               },
               "arguments": []
-            }
+            },
+            "cardinality": "?"
           },
           {
             "$type": "Keyword",
@@ -1448,6 +1449,29 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
         "elements": [
           {
             "$type": "Assignment",
+            "feature": "storage",
+            "operator": "=",
+            "terminal": {
+              "$type": "Alternatives",
+              "elements": [
+                {
+                  "$type": "Keyword",
+                  "value": "static"
+                },
+                {
+                  "$type": "Keyword",
+                  "value": "register"
+                },
+                {
+                  "$type": "Keyword",
+                  "value": "auto"
+                }
+              ]
+            },
+            "cardinality": "?"
+          },
+          {
+            "$type": "Assignment",
             "feature": "signed",
             "operator": "=",
             "terminal": {
@@ -1498,6 +1522,29 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
       "definition": {
         "$type": "Group",
         "elements": [
+          {
+            "$type": "Assignment",
+            "feature": "storage",
+            "operator": "=",
+            "terminal": {
+              "$type": "Alternatives",
+              "elements": [
+                {
+                  "$type": "Keyword",
+                  "value": "static"
+                },
+                {
+                  "$type": "Keyword",
+                  "value": "register"
+                },
+                {
+                  "$type": "Keyword",
+                  "value": "auto"
+                }
+              ]
+            },
+            "cardinality": "?"
+          },
           {
             "$type": "Assignment",
             "feature": "type",

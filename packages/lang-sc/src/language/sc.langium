@@ -48,7 +48,7 @@ VariableDeclaration returns NamedElement:
 ;
 
 ArrayDeclaration:
-    "[" dim=NUMBER "]";
+    "[" (dim=NUMBER)? "]";
 
 AssignmentStatement:
     varRef=[VariableDeclaration:ID] '=' value=Expression
@@ -101,10 +101,10 @@ TypeReference:
     PrimitiveTypeReference | StructTypeReference;
 
 PrimitiveTypeReference:
-    signed=("signed"|"unsigned")? type=("int" | "char");
+    storage=("static"|"register"|"auto")? signed=("signed"|"unsigned")? type=("int" | "char");
 
 StructTypeReference:
-    type="struct" structName=[StructDeclaration:ID];
+    storage=("static"|"register"|"auto")? type="struct" structName=[StructDeclaration:ID];
 
 StructDeclaration:
     "struct" name=ID "{" members+=StructMember* "}";

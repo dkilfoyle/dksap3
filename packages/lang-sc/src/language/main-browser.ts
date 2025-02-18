@@ -2,7 +2,7 @@ import { AstNode, DocumentState, EmptyFileSystem, LangiumDocument } from "langiu
 import { startLanguageServer } from "langium/lsp";
 import { BrowserMessageReader, BrowserMessageWriter, createConnection, NotificationType } from "vscode-languageserver/browser";
 import { createScServices } from "./sc-module";
-import { compiler } from "./sc-compiler";
+import { compiler } from "../compiler/sc-compiler";
 
 declare const self: DedicatedWorkerGlobalScope;
 

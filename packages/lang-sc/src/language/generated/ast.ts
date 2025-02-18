@@ -39,14 +39,17 @@ export type ScKeywordNames =
     | "[]"
     | "]"
     | "and"
+    | "auto"
     | "char"
     | "else"
     | "for"
     | "if"
     | "int"
     | "or"
+    | "register"
     | "return"
     | "signed"
+    | "static"
     | "struct"
     | "unsigned"
     | "while"
@@ -98,7 +101,7 @@ export function isTypeReference(item: unknown): item is TypeReference {
 export interface ArrayDeclaration extends AstNode {
     readonly $container: VariableDeclaration;
     readonly $type: 'ArrayDeclaration';
-    dim: number;
+    dim?: number;
 }
 
 export const ArrayDeclaration = 'ArrayDeclaration';
@@ -295,6 +298,7 @@ export function isStructMember(item: unknown): item is StructMember {
 export interface StructTypeReference extends AstNode {
     readonly $container: Parameter | VariableDeclaration;
     readonly $type: 'StructTypeReference';
+    storage?: 'auto' | 'register' | 'static';
     structName: Reference<StructDeclaration>;
     type: 'struct';
 }
@@ -352,6 +356,7 @@ export interface PrimitiveTypeReference extends StructMember {
     readonly $container: Parameter | VariableDeclaration;
     readonly $type: 'PrimitiveTypeReference';
     signed?: 'signed' | 'unsigned';
+    storage?: 'auto' | 'register' | 'static';
     type: 'char' | 'int';
 }
 
@@ -599,6 +604,7 @@ export class ScAstReflection extends AbstractAstReflection {
                 return {
                     name: StructTypeReference,
                     properties: [
+                        { name: 'storage' },
                         { name: 'structName' },
                         { name: 'type' }
                     ]
@@ -642,6 +648,7 @@ export class ScAstReflection extends AbstractAstReflection {
                         { name: 'name' },
                         { name: 'pointer', defaultValue: false },
                         { name: 'signed' },
+                        { name: 'storage' },
                         { name: 'type' }
                     ]
                 };
