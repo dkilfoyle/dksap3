@@ -1,7 +1,7 @@
-import { Block, isVariableDeclaration, Statement, VariableDeclaration } from "src/language/generated/ast";
-import { SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
-import { symbol_table } from "./SymbolTable";
+import { Block, isStructTypeReference, isVariableDeclaration, Statement, VariableDeclaration } from "src/language/generated/ast";
+import { symbol_table, SymbolIdentity, SymbolStorage, SymbolType } from "./SymbolTable";
 import { generator, Generator } from "./Generator";
+import { tag_table } from "./TagTable";
 
 const getVariableType = (v: VariableDeclaration) => {
   if (v.type.type == "struct") {
@@ -26,6 +26,12 @@ export const compileStatement = (statement: Statement) => {
 export const compileDeclaration = (decl: VariableDeclaration) => {
   if (symbol_table.find_local(decl.name) != -1) throw Error(`${decl.name} is already in local symbol table`);
   const typ = getVariableType(decl);
+
+  let otag = -1;
+  if (isStructTypeReference(decl.type)) {
+    otag = tag_table.find(decl.type.structName.$refText);
+  }
+
   let j, k;
   j = decl.pointer ? SymbolIdentity.POINTER : SymbolIdentity.VARIABLE;
   if (decl.array) {
@@ -36,7 +42,7 @@ export const compileDeclaration = (decl: VariableDeclaration) => {
       if (typ & SymbolType.CINT) {
         k = k * Generator.INTSIZE;
       } else if (typ == SymbolType.STRUCT) {
-        k = k * tag_table[otag].size;
+        k = k * tag_table.tags[otag].size;
       }
     } else {
       // []
@@ -54,7 +60,7 @@ export const compileDeclaration = (decl: VariableDeclaration) => {
           k = 1;
           break;
         case SymbolType.STRUCT:
-          k = tag_table[otag].size;
+          k = tag_table.tags[otag].size;
           break;
         default:
           k = Generator.INTSIZE;

@@ -1,8 +1,8 @@
 import { FunctionDeclaration, isStructTypeReference, isVariableDeclaration, Parameter } from "../language/generated/ast";
 import { generator, Generator } from "./Generator";
-import { SymbolIdentity, SymbolType, SymbolStorage } from "./interface";
-import { struct_table } from "./StructTable";
-import { symbol_table, SymbolTable } from "./SymbolTable";
+import { compileBlock } from "./statements";
+import { symbol_table, SymbolIdentity, SymbolStorage, SymbolTable, SymbolType } from "./SymbolTable";
+import { tag_table } from "./TagTable";
 
 const getParameterType = (param: Parameter) => {
   if (isStructTypeReference(param.type)) {
@@ -31,9 +31,9 @@ export const compileFunctionDeclaration = (fun: FunctionDeclaration) => {
   // functions expect that the parameters have already been pushed on to the stack
   fun.parameters.forEach((param, i) => {
     // these checks are not actually necessary if the Ast is already valid
-    if (symbol_table.find_locale(param.name) > -1) throw Error(`parameter ${param.name} already exists in local symbol table`);
+    if (symbol_table.find_local(param.name) > -1) throw Error(`parameter ${param.name} already exists in local symbol table`);
 
-    const argptr = symbol_table.add_locale(
+    const argptr = symbol_table.add_local(
       param.name,
       param.pointer || param.array ? SymbolIdentity.POINTER : SymbolIdentity.VARIABLE,
       getParameterType(param),
@@ -45,7 +45,7 @@ export const compileFunctionDeclaration = (fun: FunctionDeclaration) => {
     let ptr = symbol_table.local_table_index;
     if (param.type.type == "struct") {
       if (!param.pointer) throw Error(`only struct pointers allowed as function parameter`);
-      let otag = struct_table.find(param.type.structName.$refText);
+      let otag = tag_table.find(param.type.structName.$refText);
       if (otag == -1) throw Error(`${param.name} is not a declared struct`);
       symbol_table.symbols[argptr].tagidx = otag;
     }
@@ -56,12 +56,7 @@ export const compileFunctionDeclaration = (fun: FunctionDeclaration) => {
     }
   });
 
-  // asm += compileBlock(fun.body);
   compileBlock(fun.body);
-  fun.body.statements.forEach((statement) => {
-    if (isVariableDeclaration(statement)) {
-    }
-  });
 
   generator.gen_label(exitLabel);
   generator.gen_modify_stack(0);

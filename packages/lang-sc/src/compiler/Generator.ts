@@ -1,6 +1,8 @@
 // Adapted from SmallC code8080.c: 2.2 (84/08/31,10:05:09) */
 
-import { CompilerRegs, Ilvalue, ISymbol, ITagSymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
+import { CompilerRegs, Ilvalue } from "./interface";
+import { ISymbol, SymbolIdentity, SymbolType, SymbolStorage } from "./SymbolTable";
+import { ITagSymbol } from "./TagTable";
 
 /*      Define ASNM and LDNM to the names of the assembler and linker
         respectively */

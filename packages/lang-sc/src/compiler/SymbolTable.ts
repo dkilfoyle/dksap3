@@ -1,13 +1,52 @@
-import { generator } from "./Generator";
-import { ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
+import { Generator, generator } from "./Generator";
+
+export interface ISymbol {
+  name: string;
+  identity: SymbolIdentity;
+  type: SymbolType;
+  storage: SymbolStorage;
+  offset: number;
+  tagidx?: number;
+}
+
+export enum SymbolType {
+  UNSIGNED = 1,
+  STRUCT = 2,
+  CCHAR = 1 << 2,
+  UCHAR = (1 << 2) + 1,
+  CINT = 2 << 2,
+  UINT = (2 << 2) + 1,
+}
+
+export enum SymbolIdentity {
+  NONE = 0,
+  VARIABLE,
+  ARRAY,
+  POINTER,
+  FUNCTION,
+}
+
+export enum SymbolStorage {
+  PUBLIC = 1,
+  AUTO,
+  EXTERN,
+  STATIC,
+  LSTATIC,
+  DEFAUTO,
+}
 
 export class SymbolTable {
   public static NUMBER_OF_GLOBALS = 100;
   public static NUMBER_OF_LOCALS = 20;
   public symbols: ISymbol[] = [];
   public global_table_index = 0;
-  public local_table_index = 0;
+  public local_table_index = SymbolTable.NUMBER_OF_GLOBALS;
   // public current_symbol_table_index = 0;
+
+  init() {
+    this.local_table_index = SymbolTable.NUMBER_OF_GLOBALS;
+    this.global_table_index = 0;
+  }
 
   find_global(name: string) {
     return this.symbols.slice(0, this.global_table_index).findIndex((s) => s.name == name);
