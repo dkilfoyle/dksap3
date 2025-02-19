@@ -59,7 +59,8 @@ export const compileFunctionDeclaration = (fun: FunctionDeclaration) => {
   compileBlock(fun.body);
 
   generator.gen_label(exitLabel);
-  generator.gen_modify_stack(0);
+  generator.gen_modify_stack(0); // pop all the locals
   generator.output_line("ret");
   generator.stkp = 0;
+  symbol_table.local_table_index = SymbolTable.NUMBER_OF_GLOBALS; // effectively pop all local symbols
 };

@@ -6,7 +6,7 @@ export enum CompilerRegs {
   DE_REG = 1 << 2,
 }
 
-export interface Ilvalue {
+export interface ILValue {
   symbol: ISymbol | 0;
   indirect: number;
   ptr_type: number;

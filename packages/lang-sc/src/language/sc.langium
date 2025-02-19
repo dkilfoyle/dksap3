@@ -21,7 +21,6 @@ Statement:
     WhileStatement |
     ForStatement |
     VariableDeclaration ';' | 
-    AssignmentStatement ';' |
     ReturnStatement ';' | 
     StructDeclaration |
     Expression ';'
@@ -37,7 +36,7 @@ WhileStatement:
 ;
 
 ForStatement:
-    'for' '(' counter=VariableDeclaration? ';' condition=Expression? ';' execution=AssignmentStatement? ')' block=Block
+    'for' '(' counter=VariableDeclaration? ';' condition=Expression? ';' execution=Expression? ')' block=Block
 ;
 
 ReturnStatement:
@@ -50,12 +49,11 @@ VariableDeclaration returns NamedElement:
 ArrayDeclaration:
     "[" (dim=NUMBER)? "]";
 
-AssignmentStatement:
-    varRef=[VariableDeclaration:ID] '=' value=Expression
-;
-
 Expression:
-    Addition;
+    Assignment;
+
+Assignment infers Expression:
+    Addition ({infer BinaryExpression.left=current} operator=('=') right=Addition)*;
 
 Addition infers Expression:
     Multiplication ({infer BinaryExpression.left=current} operator=('+' | '-') right=Multiplication)*;
@@ -72,7 +70,6 @@ Comparison infers Expression:
 Primary infers Expression:
     '(' Expression ')' |
     UnaryExpression |
-    CharExpression |
     NumberExpression |
     MemberCall;
 
@@ -90,9 +87,6 @@ UnaryExpression:
 
 NumberExpression:
     value=NUMBER;
-
-CharExpression:
-    value=STRING;
 
 Parameter:
     type=TypeReference pointer?="*"? name=ID array?="[]"?;

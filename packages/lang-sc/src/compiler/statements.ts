@@ -1,7 +1,8 @@
-import { Block, isStructTypeReference, isVariableDeclaration, Statement, VariableDeclaration } from "src/language/generated/ast";
+import { Block, isExpression, isStructTypeReference, isVariableDeclaration, Statement, VariableDeclaration } from "../language/generated/ast";
 import { symbol_table, SymbolIdentity, SymbolStorage, SymbolType } from "./SymbolTable";
 import { generator, Generator } from "./Generator";
 import { tag_table } from "./TagTable";
+import { compileExpression } from "./expression";
 
 const getVariableType = (v: VariableDeclaration) => {
   if (v.type.type == "struct") {
@@ -18,8 +19,16 @@ export const compileBlock = (block: Block) => {
 };
 
 export const compileStatement = (statement: Statement) => {
-  if (isVariableDeclaration(statement)) {
-    compileDeclaration(statement);
+  debugger;
+  switch (true) {
+    case isVariableDeclaration(statement):
+      compileDeclaration(statement);
+      break;
+    case isExpression(statement):
+      compileExpression(statement);
+      break;
+    default:
+      console.error("Unimplemented statement ", statement);
   }
 };
 
@@ -68,7 +77,7 @@ export const compileDeclaration = (decl: VariableDeclaration) => {
     }
   }
   if (decl.type.storage != "static") {
-    generator.stkp == generator.gen_modify_stack(generator.stkp - k);
+    generator.stkp = generator.gen_modify_stack(generator.stkp - k);
     const current_symbol_table_idx = symbol_table.add_local(decl.name, j, typ, generator.stkp, SymbolStorage.AUTO);
     if (typ == SymbolType.STRUCT) {
       symbol_table.symbols[current_symbol_table_idx].tagidx = otag;

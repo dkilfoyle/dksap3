@@ -1,6 +1,6 @@
 // Adapted from SmallC code8080.c: 2.2 (84/08/31,10:05:09) */
 
-import { CompilerRegs, Ilvalue } from "./interface";
+import { CompilerRegs, ILValue } from "./interface";
 import { ISymbol, SymbolIdentity, SymbolType, SymbolStorage } from "./SymbolTable";
 import { ITagSymbol } from "./TagTable";
 
@@ -78,6 +78,10 @@ export class Generator {
     this.output_line(`$${label}:`, 0);
   }
 
+  gen_immediate(x: number | string) {
+    this.output_line(`lxi h, ${x}`);
+  }
+
   gen_call(sname: string) {
     this.output_line(`call ${sname}`);
     this.linker.add(sname);
@@ -113,8 +117,9 @@ export class Generator {
         this.output_line(`ldsi ${sym.offset - this.stkp}`);
         return CompilerRegs.DE_REG;
       } else {
-        this.output_line(`lxi h, ${sym.offset - this.stkp}`);
-        this.output_line(`dad sp`);
+        this.gen_comment(`Retrieve local ${sym.name}`);
+        this.output_line(`lxi h, ${sym.offset - this.stkp}`); // load h = stack offset
+        this.output_line(`dad sp`); // hl = hl + sp
         return CompilerRegs.HL_REG;
       }
     }
@@ -293,7 +298,7 @@ export class Generator {
    * @param lval
    * @param lval2
    */
-  gen_add(lval: Ilvalue, lval2: Ilvalue) {
+  gen_add(lval: ILValue, lval2: ILValue) {
     this.gen_pop();
     if (this.dbltest(lval2, lval)) {
       this.output_line(`xchg`);
@@ -303,7 +308,7 @@ export class Generator {
     this.output_line(`dad d`);
   }
 
-  dbltest(val1: Ilvalue, val2: Ilvalue) {
+  dbltest(val1: ILValue, val2: ILValue) {
     if (val1.ptr_type) {
       if (val1.ptr_type & SymbolType.CCHAR) return false;
       if (val2.ptr_type) return false;
@@ -448,7 +453,7 @@ export class Generator {
   /**
    * increment the primary register by 1 if char, INTSIZE if int
    */
-  gen_increment_primary_reg(lval: Ilvalue) {
+  gen_increment_primary_reg(lval: ILValue) {
     switch (lval.ptr_type) {
       case SymbolType.STRUCT:
         this.output_line(`lxi d, ${(lval.tagsym as ITagSymbol).size}`);
@@ -466,7 +471,7 @@ export class Generator {
   /**
    * decrement the primary register by one if char, INTSIZE if int
    */
-  gen_decrement_primary_reg(lval: Ilvalue) {
+  gen_decrement_primary_reg(lval: ILValue) {
     this.output_line(`dcx h`);
     switch (lval.ptr_type) {
       case SymbolType.CINT:
