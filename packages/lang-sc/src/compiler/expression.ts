@@ -11,7 +11,7 @@ import {
   isVariableDeclaration,
   MemberCall,
 } from "../language/generated/ast";
-import { symbol_table, SymbolIdentity, SymbolType } from "./SymbolTable";
+import { ISymbol, symbol_table, SymbolIdentity, SymbolType } from "./SymbolTable";
 import { generator } from "./Generator";
 import { CompilerRegs, ILValue } from "./interface";
 import { tag_table } from "./TagTable";
@@ -32,16 +32,32 @@ interface ExpressionResult {
   lval: ILValue;
 }
 
+function rvalue({ reg, lval }: ExpressionResult) {
+  if (lval.symbol != 0 && lval.indirect == 0) generator.gen_get_memory(lval.symbol);
+  else generator.gen_get_indirect(lval.indirect, reg);
+  return CompilerRegs.HL_REG;
+}
+
+function store(lval: ILValue) {
+  if ((lval.indirect = 0)) generator.gen_put_memory(lval.symbol as ISymbol);
+  else generator.gen_put_indirect(lval.indirect);
+}
+
 export function compileExpression(expression: Expression): ExpressionResult {
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
-  debugger;
   if (isBinaryExpression(expression)) {
     const { left, right, operator } = expression;
-    const rightValue = compileExpression(right);
-    if (operator === "=") {
-      return setExpressionValue(left, rightValue);
-    }
+
     const leftValue = compileExpression(left);
+    if (operator === "=") {
+      if ((leftValue.reg & 1) == 0) throw Error("Need lval");
+      if (leftValue.lval.indirect) generator.gen_push(leftValue.reg);
+      const rightValue = compileExpression(right);
+      if (rightValue.reg & 1) rvalue(rightValue);
+      store(leftValue.lval);
+      return applyAssignment(left, rightValue);
+    }
+    const rightValue = compileExpression(right);
     if (operator === "+") {
       return applyOperator(expression, operator, leftValue, rightValue, (e) => isNumber(e));
     } else if (["-", "*", "/", "<", "<=", ">", ">="].includes(operator)) {
@@ -77,12 +93,15 @@ export function compileExpression(expression: Expression): ExpressionResult {
   throw new AstNodeError(expression, "Unknown expression type found " + expression.$type);
 }
 
-function setExpressionValue(left: Expression, right: ExpressionResult): ExpressionResult {
+function applyAssignment(left: Expression, right: ExpressionResult): ExpressionResult {
   if (isMemberCall(left)) {
     if (left.explicitOperationCall) {
       // Just quietly return from operation call
       runMemberCall(left);
       return right;
+    }
+    const ref = left.element?.ref;
+    if (isVariableDeclaration(ref)) {
     }
   } else {
     throw new AstNodeError(left, "Cannot assign anything to constant");

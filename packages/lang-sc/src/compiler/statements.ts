@@ -19,7 +19,6 @@ export const compileBlock = (block: Block) => {
 };
 
 export const compileStatement = (statement: Statement) => {
-  debugger;
   switch (true) {
     case isVariableDeclaration(statement):
       compileDeclaration(statement);
