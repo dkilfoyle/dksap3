@@ -1,5 +1,5 @@
 import type { ValidationAcceptor, ValidationChecks } from "langium";
-import type { ScAstType, FunctionDeclaration, Parameter } from "./generated/ast";
+import type { ScAstType, FunctionDeclaration, ParameterDeclaration } from "./generated/ast";
 import type { ScServices } from "./sc-module";
 
 /**
@@ -10,7 +10,7 @@ export function registerValidationChecks(services: ScServices) {
   const validator = services.validation.ScValidator;
   const checks: ValidationChecks<ScAstType> = {
     FunctionDeclaration: validator.checkPersonStartsWithCapital,
-    Parameter: validator.checkStructParameterIsPointer,
+    ParameterDeclaration: validator.checkStructParameterIsPointer,
   };
   registry.register(checks, validator);
 }
@@ -27,7 +27,7 @@ export class ScValidator {
     //   }
     // }
   }
-  checkStructParameterIsPointer(param: Parameter, accept: ValidationAcceptor) {
+  checkStructParameterIsPointer(param: ParameterDeclaration, accept: ValidationAcceptor) {
     if (param.type.type == "struct" && !param.pointer) accept("error", "non-pointer struct parameter", { node: param, property: "name" });
   }
 }

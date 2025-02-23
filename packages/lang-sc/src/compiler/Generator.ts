@@ -99,7 +99,7 @@ export class Generator {
       this.output_line(`mov l,a`);
       this.output_line(`mvi h, 0`);
     } else {
-      this.output_line(`lhld ${sym.name}`);
+      this.output_line(`lhld ${sym.name}`); // hl = sym
     }
   }
 

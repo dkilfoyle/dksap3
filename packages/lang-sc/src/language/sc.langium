@@ -7,11 +7,39 @@ Definition:
     GlobalVariableDeclaration |
     FunctionDeclaration;
 
-GlobalVariableDeclaration returns NamedElement:
-    {infer VariableDeclaration} type=TypeReference name=ID (assignment?='=' value=Expression)? ";";
+// ########### Declarations
+
+GlobalVariableDeclaration:
+    type=TypeReference varNames+=GlobalVarName ("," varNames+=GlobalVarName)* ";";
+
+GlobalVarName returns NamedElement:
+    {infer GlobalVarName} pointer?="*"? name=ID (ArrayIndexing | InitValue)?;
+
+fragment ArrayIndexing:
+    array?="[" dim=NUMBER? "]" ("=" "{" items+=Primary ("," items+=Primary)* "}")?;
+
+fragment InitValue:
+    assignment?='=' value=Expression;
+
+LocalVariableDeclaration:
+    type=TypeReference varNames+=LocalVarName ("," varNames+=LocalVarName)* ";";
+
+LocalVarName returns NamedElement:
+    {infer LocalVarName} pointer?="*"? name=ID (array?="[" dim=NUMBER? "]")?;
+
+StructDeclaration:
+    "struct" name=ID "{" members+=StructMember* "}";
+
+StructMember:
+    PrimitiveTypeReference pointer?="*"? name=ID ";";
+
+ParameterDeclaration:
+    type=TypeReference pointer?="*"? name=ID array?="[]"?;
 
 FunctionDeclaration:
-    (returnType?=TypeReference)? name=ID '(' (parameters+=Parameter (',' parameters+=Parameter)*)? ')' body=Block;
+    (returnType?=TypeReference)? name=ID '(' (parameters+=ParameterDeclaration (',' parameters+=ParameterDeclaration)*)? ')' body=Block;
+
+// ########### Statements
 
 Block:
     '{' statements+=Statement* '}';
@@ -20,34 +48,25 @@ Statement:
     IfStatement |
     WhileStatement |
     ForStatement |
-    VariableDeclaration ';' | 
+    LocalVariableDeclaration | 
     ReturnStatement ';' | 
     StructDeclaration |
     Expression ';'
 ;
 
 IfStatement:
-    'if' '(' condition=Expression ')' block=Block
-    ('else' elseBlock=Block)?
-;
+    'if' '(' condition=Expression ')' block=Block ('else' elseBlock=Block)?;
 
 WhileStatement:
-    'while' '(' condition=Expression ')' block=Block
-;
+    'while' '(' condition=Expression ')' block=Block;
 
 ForStatement:
-    'for' '(' counter=VariableDeclaration? ';' condition=Expression? ';' execution=Expression? ')' block=Block
-;
+    'for' '(' init=Expression? ';' condition=Expression? ';' execution=Expression? ')' block=Block;
 
 ReturnStatement:
     'return' value=Expression?;
 
-VariableDeclaration returns NamedElement:
-    {infer VariableDeclaration} type=TypeReference pointer?="*"? name=ID (array=ArrayDeclaration)?
-;
-
-ArrayDeclaration:
-    "[" (dim=NUMBER)? "]";
+// ################ Expressions
 
 Expression:
     Assignment;
@@ -71,25 +90,21 @@ Primary infers Expression:
     '(' Expression ')' |
     UnaryExpression |
     NumberExpression |
-    MemberCall;
+    SymbolExpression;
 
-MemberCall:
-    element=[NamedElement:ID] (
-		explicitOperationCall?='('
-		(
-		    arguments+=Expression (',' arguments+=Expression)*
-		)?
-		')')?;
+SymbolExpression:
+    element=[NamedElement:ID]
+    (("." structMember=[StructMember:ID])?)?
+    ("(" (arguments+=Expression (',' arguments+=Expression)*)? ")")?
+    ("[" indexExpression=Expression "]")?;
 
 UnaryExpression:
-    operator=('!' | '-') value=Expression
-;
+    operator=('!' | '-' | "*" | "%") value=Expression;
 
 NumberExpression:
     value=NUMBER;
 
-Parameter:
-    type=TypeReference pointer?="*"? name=ID array?="[]"?;
+// ########### Types
 
 TypeReference:
     PrimitiveTypeReference | StructTypeReference;
@@ -100,17 +115,13 @@ PrimitiveTypeReference:
 StructTypeReference:
     storage=("static"|"register"|"auto")? type="struct" structName=[StructDeclaration:ID];
 
-StructDeclaration:
-    "struct" name=ID "{" members+=StructMember* "}";
+type NamedElement = ParameterDeclaration | FunctionDeclaration | LocalVarName | StructDeclaration | GlobalVarName;
 
-StructMember:
-    PrimitiveTypeReference pointer?="*"? name=ID ";";
-
-type NamedElement = Parameter | FunctionDeclaration | VariableDeclaration | StructDeclaration;
+// ########## Terminals
 
 hidden terminal WS: /\s+/;
 terminal ID: /[_a-zA-Z][\w_]*/;
-terminal NUMBER returns number: /[0-9]+(\.[0-9]+)?/;
+terminal NUMBER returns number: /[0-9]+/;
 terminal STRING: /"[^"]*"/;
 
 hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;

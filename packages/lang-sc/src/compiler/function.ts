@@ -1,10 +1,10 @@
-import { FunctionDeclaration, isStructTypeReference, isVariableDeclaration, Parameter } from "../language/generated/ast";
+import { FunctionDeclaration, isStructTypeReference, ParameterDeclaration } from "../language/generated/ast";
 import { generator, Generator } from "./Generator";
 import { compileBlock } from "./statements";
 import { symbol_table, SymbolIdentity, SymbolStorage, SymbolTable, SymbolType } from "./SymbolTable";
 import { tag_table } from "./TagTable";
 
-const getParameterType = (param: Parameter) => {
+const getParameterType = (param: ParameterDeclaration) => {
   if (isStructTypeReference(param.type)) {
     return SymbolType.STRUCT;
   } else {

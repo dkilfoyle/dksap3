@@ -9,6 +9,7 @@ import {
 } from "langium/lsp";
 import { ScGeneratedModule, ScGeneratedSharedModule } from "./generated/module";
 import { ScValidator, registerValidationChecks } from "./sc-validator";
+import { ScScopeComputation } from "./sc-scope";
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -16,6 +17,9 @@ import { ScValidator, registerValidationChecks } from "./sc-validator";
 export type ScAddedServices = {
   validation: {
     ScValidator: ScValidator;
+  };
+  references: {
+    ScopeComputation: ScScopeComputation;
   };
 };
 
@@ -33,6 +37,9 @@ export type ScServices = LangiumServices & ScAddedServices;
 export const ScModule: Module<ScServices, PartialLangiumServices & ScAddedServices> = {
   validation: {
     ScValidator: () => new ScValidator(),
+  },
+  references: {
+    ScopeComputation: (services) => new ScScopeComputation(services),
   },
 };
 

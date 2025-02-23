@@ -10,7 +10,7 @@ import { AbstractAstReflection } from 'langium';
 export const ScTerminals = {
     WS: /\s+/,
     ID: /[_a-zA-Z][\w_]*/,
-    NUMBER: /[0-9]+(\.[0-9]+)?/,
+    NUMBER: /[0-9]+/,
     ML_COMMENT: /\/\*[\s\S]*?\*\//,
     SL_COMMENT: /\/\/[^\n\r]*/,
 };
@@ -20,12 +20,14 @@ export type ScTerminalNames = keyof typeof ScTerminals;
 export type ScKeywordNames = 
     | "!"
     | "!="
+    | "%"
     | "("
     | ")"
     | "*"
     | "+"
     | ","
     | "-"
+    | "."
     | "/"
     | ";"
     | "<"
@@ -57,7 +59,7 @@ export type ScKeywordNames =
 
 export type ScTokenNames = ScTerminalNames | ScKeywordNames;
 
-export type Definition = FunctionDeclaration | NamedElement;
+export type Definition = FunctionDeclaration | GlobalVariableDeclaration;
 
 export const Definition = 'Definition';
 
@@ -65,7 +67,7 @@ export function isDefinition(item: unknown): item is Definition {
     return reflection.isInstance(item, Definition);
 }
 
-export type Expression = BinaryExpression | MemberCall | NumberExpression | UnaryExpression;
+export type Expression = BinaryExpression | NumberExpression | SymbolExpression | UnaryExpression;
 
 export const Expression = 'Expression';
 
@@ -73,7 +75,7 @@ export function isExpression(item: unknown): item is Expression {
     return reflection.isInstance(item, Expression);
 }
 
-export type NamedElement = FunctionDeclaration | Parameter | StructDeclaration | VariableDeclaration;
+export type NamedElement = FunctionDeclaration | GlobalVarName | LocalVarName | ParameterDeclaration | StructDeclaration;
 
 export const NamedElement = 'NamedElement';
 
@@ -81,7 +83,7 @@ export function isNamedElement(item: unknown): item is NamedElement {
     return reflection.isInstance(item, NamedElement);
 }
 
-export type Statement = Expression | ForStatement | IfStatement | NamedElement | ReturnStatement | StructDeclaration | WhileStatement;
+export type Statement = Expression | ForStatement | IfStatement | LocalVariableDeclaration | ReturnStatement | StructDeclaration | WhileStatement;
 
 export const Statement = 'Statement';
 
@@ -97,20 +99,8 @@ export function isTypeReference(item: unknown): item is TypeReference {
     return reflection.isInstance(item, TypeReference);
 }
 
-export interface ArrayDeclaration extends AstNode {
-    readonly $container: VariableDeclaration;
-    readonly $type: 'ArrayDeclaration';
-    dim?: number;
-}
-
-export const ArrayDeclaration = 'ArrayDeclaration';
-
-export function isArrayDeclaration(item: unknown): item is ArrayDeclaration {
-    return reflection.isInstance(item, ArrayDeclaration);
-}
-
 export interface BinaryExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | ForStatement | IfStatement | MemberCall | ReturnStatement | UnaryExpression | VariableDeclaration | WhileStatement;
+    readonly $container: BinaryExpression | Block | ForStatement | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'BinaryExpression';
     left: Expression;
     operator: '!=' | '*' | '+' | '-' | '/' | '<' | '<=' | '=' | '==' | '>' | '>=' | 'and' | 'or';
@@ -140,8 +130,8 @@ export interface ForStatement extends AstNode {
     readonly $type: 'ForStatement';
     block: Block;
     condition?: Expression;
-    counter?: NamedElement;
     execution?: Expression;
+    init?: Expression;
 }
 
 export const ForStatement = 'ForStatement';
@@ -151,11 +141,11 @@ export function isForStatement(item: unknown): item is ForStatement {
 }
 
 export interface FunctionDeclaration extends AstNode {
-    readonly $container: Block | ForStatement | Program;
+    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | Program;
     readonly $type: 'FunctionDeclaration';
     body: Block;
     name: string;
-    parameters: Array<Parameter>;
+    parameters: Array<ParameterDeclaration>;
     returnType: boolean;
 }
 
@@ -163,6 +153,37 @@ export const FunctionDeclaration = 'FunctionDeclaration';
 
 export function isFunctionDeclaration(item: unknown): item is FunctionDeclaration {
     return reflection.isInstance(item, FunctionDeclaration);
+}
+
+export interface GlobalVariableDeclaration extends AstNode {
+    readonly $container: Program;
+    readonly $type: 'GlobalVariableDeclaration';
+    type: TypeReference;
+    varNames: Array<NamedElement>;
+}
+
+export const GlobalVariableDeclaration = 'GlobalVariableDeclaration';
+
+export function isGlobalVariableDeclaration(item: unknown): item is GlobalVariableDeclaration {
+    return reflection.isInstance(item, GlobalVariableDeclaration);
+}
+
+export interface GlobalVarName extends AstNode {
+    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration;
+    readonly $type: 'GlobalVarName';
+    array: boolean;
+    assignment: boolean;
+    dim?: number;
+    items: Array<Expression>;
+    name: string;
+    pointer: boolean;
+    value?: Expression;
+}
+
+export const GlobalVarName = 'GlobalVarName';
+
+export function isGlobalVarName(item: unknown): item is GlobalVarName {
+    return reflection.isInstance(item, GlobalVarName);
 }
 
 export interface IfStatement extends AstNode {
@@ -179,22 +200,36 @@ export function isIfStatement(item: unknown): item is IfStatement {
     return reflection.isInstance(item, IfStatement);
 }
 
-export interface MemberCall extends AstNode {
-    readonly $container: BinaryExpression | Block | ForStatement | IfStatement | MemberCall | ReturnStatement | UnaryExpression | VariableDeclaration | WhileStatement;
-    readonly $type: 'MemberCall';
-    arguments: Array<Expression>;
-    element: Reference<NamedElement>;
-    explicitOperationCall: boolean;
+export interface LocalVariableDeclaration extends AstNode {
+    readonly $container: Block;
+    readonly $type: 'LocalVariableDeclaration';
+    type: TypeReference;
+    varNames: Array<NamedElement>;
 }
 
-export const MemberCall = 'MemberCall';
+export const LocalVariableDeclaration = 'LocalVariableDeclaration';
 
-export function isMemberCall(item: unknown): item is MemberCall {
-    return reflection.isInstance(item, MemberCall);
+export function isLocalVariableDeclaration(item: unknown): item is LocalVariableDeclaration {
+    return reflection.isInstance(item, LocalVariableDeclaration);
+}
+
+export interface LocalVarName extends AstNode {
+    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration;
+    readonly $type: 'LocalVarName';
+    array: boolean;
+    dim?: number;
+    name: string;
+    pointer: boolean;
+}
+
+export const LocalVarName = 'LocalVarName';
+
+export function isLocalVarName(item: unknown): item is LocalVarName {
+    return reflection.isInstance(item, LocalVarName);
 }
 
 export interface NumberExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | ForStatement | IfStatement | MemberCall | ReturnStatement | UnaryExpression | VariableDeclaration | WhileStatement;
+    readonly $container: BinaryExpression | Block | ForStatement | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'NumberExpression';
     value: number;
 }
@@ -205,19 +240,19 @@ export function isNumberExpression(item: unknown): item is NumberExpression {
     return reflection.isInstance(item, NumberExpression);
 }
 
-export interface Parameter extends AstNode {
-    readonly $container: Block | ForStatement | FunctionDeclaration | Program;
-    readonly $type: 'Parameter';
+export interface ParameterDeclaration extends AstNode {
+    readonly $container: FunctionDeclaration | GlobalVariableDeclaration | LocalVariableDeclaration;
+    readonly $type: 'ParameterDeclaration';
     array: boolean;
     name: string;
     pointer: boolean;
     type: TypeReference;
 }
 
-export const Parameter = 'Parameter';
+export const ParameterDeclaration = 'ParameterDeclaration';
 
-export function isParameter(item: unknown): item is Parameter {
-    return reflection.isInstance(item, Parameter);
+export function isParameterDeclaration(item: unknown): item is ParameterDeclaration {
+    return reflection.isInstance(item, ParameterDeclaration);
 }
 
 export interface Program extends AstNode {
@@ -244,7 +279,7 @@ export function isReturnStatement(item: unknown): item is ReturnStatement {
 }
 
 export interface StructDeclaration extends AstNode {
-    readonly $container: Block | ForStatement | Program;
+    readonly $container: Block | GlobalVariableDeclaration | LocalVariableDeclaration;
     readonly $type: 'StructDeclaration';
     members: Array<StructMember>;
     name: string;
@@ -257,7 +292,7 @@ export function isStructDeclaration(item: unknown): item is StructDeclaration {
 }
 
 export interface StructMember extends AstNode {
-    readonly $container: Parameter | StructDeclaration | VariableDeclaration;
+    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | ParameterDeclaration | StructDeclaration;
     readonly $type: 'PrimitiveTypeReference' | 'StructMember';
     name: string;
     pointer: boolean;
@@ -270,7 +305,7 @@ export function isStructMember(item: unknown): item is StructMember {
 }
 
 export interface StructTypeReference extends AstNode {
-    readonly $container: Parameter | VariableDeclaration;
+    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | ParameterDeclaration;
     readonly $type: 'StructTypeReference';
     storage?: 'auto' | 'register' | 'static';
     structName: Reference<StructDeclaration>;
@@ -283,10 +318,25 @@ export function isStructTypeReference(item: unknown): item is StructTypeReferenc
     return reflection.isInstance(item, StructTypeReference);
 }
 
+export interface SymbolExpression extends AstNode {
+    readonly $container: BinaryExpression | Block | ForStatement | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
+    readonly $type: 'SymbolExpression';
+    arguments: Array<Expression>;
+    element: Reference<NamedElement>;
+    indexExpression?: Expression;
+    structMember?: Reference<StructMember>;
+}
+
+export const SymbolExpression = 'SymbolExpression';
+
+export function isSymbolExpression(item: unknown): item is SymbolExpression {
+    return reflection.isInstance(item, SymbolExpression);
+}
+
 export interface UnaryExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | ForStatement | IfStatement | MemberCall | ReturnStatement | UnaryExpression | VariableDeclaration | WhileStatement;
+    readonly $container: BinaryExpression | Block | ForStatement | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'UnaryExpression';
-    operator: '!' | '-';
+    operator: '!' | '%' | '*' | '-';
     value: Expression;
 }
 
@@ -294,23 +344,6 @@ export const UnaryExpression = 'UnaryExpression';
 
 export function isUnaryExpression(item: unknown): item is UnaryExpression {
     return reflection.isInstance(item, UnaryExpression);
-}
-
-export interface VariableDeclaration extends AstNode {
-    readonly $container: Block | ForStatement | Program;
-    readonly $type: 'VariableDeclaration';
-    array?: ArrayDeclaration;
-    assignment: boolean;
-    name: string;
-    pointer: boolean;
-    type: TypeReference;
-    value?: Expression;
-}
-
-export const VariableDeclaration = 'VariableDeclaration';
-
-export function isVariableDeclaration(item: unknown): item is VariableDeclaration {
-    return reflection.isInstance(item, VariableDeclaration);
 }
 
 export interface WhileStatement extends AstNode {
@@ -327,7 +360,7 @@ export function isWhileStatement(item: unknown): item is WhileStatement {
 }
 
 export interface PrimitiveTypeReference extends StructMember {
-    readonly $container: Parameter | VariableDeclaration;
+    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | ParameterDeclaration;
     readonly $type: 'PrimitiveTypeReference';
     signed?: 'signed' | 'unsigned';
     storage?: 'auto' | 'register' | 'static';
@@ -341,18 +374,20 @@ export function isPrimitiveTypeReference(item: unknown): item is PrimitiveTypeRe
 }
 
 export type ScAstType = {
-    ArrayDeclaration: ArrayDeclaration
     BinaryExpression: BinaryExpression
     Block: Block
     Definition: Definition
     Expression: Expression
     ForStatement: ForStatement
     FunctionDeclaration: FunctionDeclaration
+    GlobalVarName: GlobalVarName
+    GlobalVariableDeclaration: GlobalVariableDeclaration
     IfStatement: IfStatement
-    MemberCall: MemberCall
+    LocalVarName: LocalVarName
+    LocalVariableDeclaration: LocalVariableDeclaration
     NamedElement: NamedElement
     NumberExpression: NumberExpression
-    Parameter: Parameter
+    ParameterDeclaration: ParameterDeclaration
     PrimitiveTypeReference: PrimitiveTypeReference
     Program: Program
     ReturnStatement: ReturnStatement
@@ -360,29 +395,30 @@ export type ScAstType = {
     StructDeclaration: StructDeclaration
     StructMember: StructMember
     StructTypeReference: StructTypeReference
+    SymbolExpression: SymbolExpression
     TypeReference: TypeReference
     UnaryExpression: UnaryExpression
-    VariableDeclaration: VariableDeclaration
     WhileStatement: WhileStatement
 }
 
 export class ScAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [ArrayDeclaration, BinaryExpression, Block, Definition, Expression, ForStatement, FunctionDeclaration, IfStatement, MemberCall, NamedElement, NumberExpression, Parameter, PrimitiveTypeReference, Program, ReturnStatement, Statement, StructDeclaration, StructMember, StructTypeReference, TypeReference, UnaryExpression, VariableDeclaration, WhileStatement];
+        return [BinaryExpression, Block, Definition, Expression, ForStatement, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, Statement, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
         switch (subtype) {
             case BinaryExpression:
-            case MemberCall:
             case NumberExpression:
+            case SymbolExpression:
             case UnaryExpression: {
                 return this.isSubtype(Expression, supertype);
             }
             case Expression:
             case ForStatement:
             case IfStatement:
+            case LocalVariableDeclaration:
             case ReturnStatement:
             case WhileStatement: {
                 return this.isSubtype(Statement, supertype);
@@ -390,11 +426,12 @@ export class ScAstReflection extends AbstractAstReflection {
             case FunctionDeclaration: {
                 return this.isSubtype(Definition, supertype) || this.isSubtype(NamedElement, supertype);
             }
-            case NamedElement: {
-                return this.isSubtype(Definition, supertype) || this.isSubtype(Statement, supertype);
+            case GlobalVariableDeclaration: {
+                return this.isSubtype(Definition, supertype);
             }
-            case Parameter:
-            case VariableDeclaration: {
+            case GlobalVarName:
+            case LocalVarName:
+            case ParameterDeclaration: {
                 return this.isSubtype(NamedElement, supertype);
             }
             case PrimitiveTypeReference: {
@@ -415,11 +452,14 @@ export class ScAstReflection extends AbstractAstReflection {
     getReferenceType(refInfo: ReferenceInfo): string {
         const referenceId = `${refInfo.container.$type}:${refInfo.property}`;
         switch (referenceId) {
-            case 'MemberCall:element': {
-                return NamedElement;
-            }
             case 'StructTypeReference:structName': {
                 return StructDeclaration;
+            }
+            case 'SymbolExpression:element': {
+                return NamedElement;
+            }
+            case 'SymbolExpression:structMember': {
+                return StructMember;
             }
             default: {
                 throw new Error(`${referenceId} is not a valid reference id.`);
@@ -429,14 +469,6 @@ export class ScAstReflection extends AbstractAstReflection {
 
     getTypeMetaData(type: string): TypeMetaData {
         switch (type) {
-            case ArrayDeclaration: {
-                return {
-                    name: ArrayDeclaration,
-                    properties: [
-                        { name: 'dim' }
-                    ]
-                };
-            }
             case BinaryExpression: {
                 return {
                     name: BinaryExpression,
@@ -461,8 +493,8 @@ export class ScAstReflection extends AbstractAstReflection {
                     properties: [
                         { name: 'block' },
                         { name: 'condition' },
-                        { name: 'counter' },
-                        { name: 'execution' }
+                        { name: 'execution' },
+                        { name: 'init' }
                     ]
                 };
             }
@@ -477,6 +509,29 @@ export class ScAstReflection extends AbstractAstReflection {
                     ]
                 };
             }
+            case GlobalVariableDeclaration: {
+                return {
+                    name: GlobalVariableDeclaration,
+                    properties: [
+                        { name: 'type' },
+                        { name: 'varNames', defaultValue: [] }
+                    ]
+                };
+            }
+            case GlobalVarName: {
+                return {
+                    name: GlobalVarName,
+                    properties: [
+                        { name: 'array', defaultValue: false },
+                        { name: 'assignment', defaultValue: false },
+                        { name: 'dim' },
+                        { name: 'items', defaultValue: [] },
+                        { name: 'name' },
+                        { name: 'pointer', defaultValue: false },
+                        { name: 'value' }
+                    ]
+                };
+            }
             case IfStatement: {
                 return {
                     name: IfStatement,
@@ -487,13 +542,23 @@ export class ScAstReflection extends AbstractAstReflection {
                     ]
                 };
             }
-            case MemberCall: {
+            case LocalVariableDeclaration: {
                 return {
-                    name: MemberCall,
+                    name: LocalVariableDeclaration,
                     properties: [
-                        { name: 'arguments', defaultValue: [] },
-                        { name: 'element' },
-                        { name: 'explicitOperationCall', defaultValue: false }
+                        { name: 'type' },
+                        { name: 'varNames', defaultValue: [] }
+                    ]
+                };
+            }
+            case LocalVarName: {
+                return {
+                    name: LocalVarName,
+                    properties: [
+                        { name: 'array', defaultValue: false },
+                        { name: 'dim' },
+                        { name: 'name' },
+                        { name: 'pointer', defaultValue: false }
                     ]
                 };
             }
@@ -505,9 +570,9 @@ export class ScAstReflection extends AbstractAstReflection {
                     ]
                 };
             }
-            case Parameter: {
+            case ParameterDeclaration: {
                 return {
-                    name: Parameter,
+                    name: ParameterDeclaration,
                     properties: [
                         { name: 'array', defaultValue: false },
                         { name: 'name' },
@@ -560,24 +625,22 @@ export class ScAstReflection extends AbstractAstReflection {
                     ]
                 };
             }
+            case SymbolExpression: {
+                return {
+                    name: SymbolExpression,
+                    properties: [
+                        { name: 'arguments', defaultValue: [] },
+                        { name: 'element' },
+                        { name: 'indexExpression' },
+                        { name: 'structMember' }
+                    ]
+                };
+            }
             case UnaryExpression: {
                 return {
                     name: UnaryExpression,
                     properties: [
                         { name: 'operator' },
-                        { name: 'value' }
-                    ]
-                };
-            }
-            case VariableDeclaration: {
-                return {
-                    name: VariableDeclaration,
-                    properties: [
-                        { name: 'array' },
-                        { name: 'assignment', defaultValue: false },
-                        { name: 'name' },
-                        { name: 'pointer', defaultValue: false },
-                        { name: 'type' },
                         { name: 'value' }
                     ]
                 };
