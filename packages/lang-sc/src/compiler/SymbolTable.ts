@@ -64,15 +64,16 @@ export class SymbolTable {
 
   add_local(name: string, identity: SymbolIdentity, type: SymbolType, offset: number, storage: number) {
     const existing = this.find_local(name);
-    if (existing > -1) return existing;
+    if (existing > -1) return { index: existing, lines: [] };
     if (this.local_table_index >= SymbolTable.NUMBER_OF_GLOBALS + SymbolTable.NUMBER_OF_LOCALS) throw Error("local symbole table overflow");
 
+    const lines = [];
     if (storage == SymbolStorage.LSTATIC) {
-      generator.data_segment_gdata();
+      lines.push(...generator.data_segment_gdata());
       const k = generator.get_label();
-      generator.gen_label(k);
-      generator.output_line(".ds\t${offset}");
-      generator.code_segment_gtext();
+      lines.push(...generator.gen_label(k));
+      lines.push(".ds\t${offset}");
+      lines.push(...generator.code_segment_gtext());
       offset = k;
     }
 
@@ -85,7 +86,7 @@ export class SymbolTable {
     };
 
     this.local_table_index++;
-    return this.local_table_index - 1;
+    return { index: this.local_table_index - 1, lines };
   }
 
   add_global(name: string, identity: SymbolIdentity, type: SymbolType, offset: number, storage: number) {

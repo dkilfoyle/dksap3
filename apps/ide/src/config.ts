@@ -186,6 +186,10 @@ export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrap
     // compiledDocs[data.uri] = data;
   });
 
+  // const codeLineDecoration = vscode.window.createTextEditorDecorationType({
+  //   backgroundColor: "red",
+  // });
+
   // WA: Force show explorer and not search
   // await vscode.commands.executeCommand('workbench.view.explorer');
 

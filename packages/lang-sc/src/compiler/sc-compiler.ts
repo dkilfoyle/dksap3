@@ -1,9 +1,18 @@
 import { AstNode } from "langium";
-import { isFunctionDeclaration, isProgram } from "../language/generated/ast";
+import { Definition, isFunctionDeclaration, isProgram } from "../language/generated/ast";
 import { generator } from "./Generator";
 import { compileFunctionDeclaration } from "./function";
 import { symbol_table } from "./SymbolTable";
 import { tag_table } from "./TagTable";
+import { expandTracedToNode, joinTracedToNode, toStringAndTrace } from "langium/generate";
+import { IRange } from "monaco-editor";
+
+export function createError(description: string, range?: IRange) {
+  return {
+    message: `${range?.startLineNumber ? `Line ${range.startLineNumber}: ` : ""}${description}`,
+    range,
+  };
+}
 
 export const compiler = (root: AstNode) => {
   generator.init();
@@ -11,10 +20,18 @@ export const compiler = (root: AstNode) => {
   tag_table.init();
 
   if (!isProgram(root)) throw Error("Compiler expects Program root node");
-  root.definitions.forEach((def) => {
-    if (isFunctionDeclaration(def)) {
-      compileFunctionDeclaration(def);
-    }
-  });
-  return generator.asm;
+
+  return toStringAndTrace(expandTracedToNode(root)`
+    ; SmallC v2.4 8080 output
+    ${joinTracedToNode(root, "definitions")(
+      root.definitions.map((def) => compileDefinition(def)),
+      { appendNewLineIfNotEmpty: true }
+    )}
+  `);
+};
+
+const compileDefinition = (def: Definition) => {
+  if (isFunctionDeclaration(def)) {
+    return compileFunctionDeclaration(def);
+  } else throw createError("Non function definitions not implemented");
 };

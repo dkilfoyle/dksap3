@@ -1,3 +1,4 @@
+import { expandTracedToNode, joinToNode } from "langium/generate";
 import { FunctionDeclaration, isStructTypeReference, ParameterDeclaration } from "../language/generated/ast";
 import { generator, Generator } from "./Generator";
 import { compileBlock } from "./statements";
@@ -23,7 +24,7 @@ export const compileFunctionDeclaration = (fun: FunctionDeclaration) => {
 
   symbol_table.add_global(fun.name, SymbolIdentity.FUNCTION, SymbolType.CINT, SymbolIdentity.FUNCTION, SymbolStorage.PUBLIC);
 
-  generator.output_line(`${fun.name}:`, 0);
+  // generator.output_line(`${fun.name}:`, 0);
 
   symbol_table.local_table_index = SymbolTable.NUMBER_OF_GLOBALS;
 
@@ -33,7 +34,7 @@ export const compileFunctionDeclaration = (fun: FunctionDeclaration) => {
     // these checks are not actually necessary if the Ast is already valid
     if (symbol_table.find_local(param.name) > -1) throw Error(`parameter ${param.name} already exists in local symbol table`);
 
-    const argptr = symbol_table.add_local(
+    const { index: argptr, lines } = symbol_table.add_local(
       param.name,
       param.pointer || param.array ? SymbolIdentity.POINTER : SymbolIdentity.VARIABLE,
       getParameterType(param),
@@ -56,11 +57,21 @@ export const compileFunctionDeclaration = (fun: FunctionDeclaration) => {
     }
   });
 
-  compileBlock(fun.body);
+  // compileBlock(fun.body);
+  // generator.gen_label(exitLabel);
+  // generator.gen_modify_stack(0); // pop all the locals
+  // generator.output_line("ret");
 
-  generator.gen_label(exitLabel);
-  generator.gen_modify_stack(0); // pop all the locals
-  generator.output_line("ret");
+  const res = expandTracedToNode(fun)`
+    ${fun.name}:
+      ${compileBlock(fun.body)}
+    $${exitLabel}:
+      ${joinToNode(generator.gen_modify_stack(0).lines, { appendNewLineIfNotEmpty: true })}
+      ret
+  `;
+
   generator.stkp = 0;
   symbol_table.local_table_index = SymbolTable.NUMBER_OF_GLOBALS; // effectively pop all local symbols
+
+  return res;
 };

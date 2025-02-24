@@ -3,6 +3,7 @@ import { startLanguageServer } from "langium/lsp";
 import { BrowserMessageReader, BrowserMessageWriter, createConnection, NotificationType } from "vscode-languageserver/browser";
 import { createScServices } from "./sc-module";
 import { compiler } from "../compiler/sc-compiler";
+import { TraceRegion } from "langium/generate";
 
 declare const self: DedicatedWorkerGlobalScope;
 
@@ -20,6 +21,7 @@ export type ScDocumentChange = {
   uri: string;
   ast: string;
   asm: string;
+  trace: TraceRegion;
 };
 
 const debounce = (fn: Function, ms = 300) => {
@@ -32,6 +34,7 @@ const debounce = (fn: Function, ms = 300) => {
 
 const sendScDocumentChange = (document: LangiumDocument<AstNode>) => {
   const asm = compiler(document.parseResult.value);
+  console.log("ASM", asm);
   const json = Sc.serializer.JsonSerializer.serialize(document.parseResult.value, {
     sourceText: false,
     textRegions: true,
@@ -42,7 +45,8 @@ const sendScDocumentChange = (document: LangiumDocument<AstNode>) => {
   connection.sendNotification(documentChangeNotification, {
     uri: document.uri.toString(),
     ast: json,
-    asm,
+    asm: asm.text,
+    trace: asm.trace,
   });
 };
 

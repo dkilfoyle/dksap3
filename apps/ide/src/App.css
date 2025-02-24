@@ -16,3 +16,13 @@ body {
   color: var(--vscode-editorWidget-foreground);
   margin: 0;
 }
+
+.myGlyphMarginClass {
+  background: rgba(0, 122, 30, 0.4);
+  width: 8px !important;
+  margin-left: 8px;
+}
+.myContentClass {
+  /* Make sure to use transparent colors for the selection to work */
+  background: rgba(0, 122, 30, 0.4);
+}

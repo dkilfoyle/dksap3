@@ -48,6 +48,7 @@ export class Generator {
   public asm = "";
   private label_count = 0;
   public stkp = 0;
+
   private constructor() {}
 
   public static get Instance() {
@@ -59,15 +60,7 @@ export class Generator {
     this.linker = new Set();
     this.label_count = 0;
     this.stkp = 0;
-    this.gen_comment(`SmallC 8080 v2.4`, 0);
-  }
-
-  output_line(line: string, indent = 1) {
-    this.asm += "\t".repeat(indent) + line + "\n";
-  }
-
-  gen_comment(comment: string, indent = 1) {
-    this.output_line(`; ${comment}`, indent);
+    // this.gen_comment(`SmallC 8080 v2.4`, 0);
   }
 
   get_label() {
@@ -75,32 +68,34 @@ export class Generator {
   }
 
   gen_label(label: number) {
-    this.output_line(`$${label}:`, 0);
+    return [`$${label}:`];
   }
 
   gen_immediate(x: number | string) {
-    this.output_line(`lxi h, ${x}`);
+    return [`lxi h, ${x}`];
   }
 
   gen_call(sname: string) {
-    this.output_line(`call ${sname}`);
     this.linker.add(sname);
+    return [`call ${sname}`];
   }
 
   /**
    * fetch a static memory cell into the primary register
    */
   gen_get_memory(sym: ISymbol) {
+    const lines = [];
     if (sym.identity != SymbolIdentity.POINTER && sym.type == SymbolType.CCHAR) {
-      this.output_line(`lda ${sym.name}`);
-      this.gen_call("ccsxt");
+      lines.push(`lda ${sym.name}`);
+      lines.push(...this.gen_call("ccsxt"));
     } else if (sym.identity != SymbolIdentity.POINTER && sym.type == SymbolType.UCHAR) {
-      this.output_line(`lda ${sym.name}`);
-      this.output_line(`mov l,a`);
-      this.output_line(`mvi h, 0`);
+      lines.push(`lda ${sym.name}`);
+      lines.push(`mov l,a`);
+      lines.push(`mvi h, 0`);
     } else {
-      this.output_line(`lhld ${sym.name}`); // hl = sym
+      lines.push(`lhld ${sym.name}`); // hl = sym
     }
+    return lines;
   }
 
   /**
@@ -108,19 +103,20 @@ export class Generator {
    * @return which register pair contains result
    */
   gen_get_locale(sym: ISymbol) {
+    const lines = [];
     if (sym.storage == SymbolStorage.LSTATIC) {
-      this.output_line(`lxi h, $${sym.offset}`);
-      return CompilerRegs.HL_REG;
+      lines.push(`lxi h, $${sym.offset}`);
+      return { reg: CompilerRegs.HL_REG, lines };
     } else {
       if (Generator.uflag && !(sym.identity == SymbolIdentity.ARRAY)) {
         /* || (sym->identity == VARIABLE && sym->type == STRUCT))) {*/
-        this.output_line(`ldsi ${sym.offset - this.stkp}`);
-        return CompilerRegs.DE_REG;
+        lines.push(`ldsi ${sym.offset - this.stkp}`);
+        return { reg: CompilerRegs.DE_REG, lines };
       } else {
-        this.gen_comment(`Retrieve local ${sym.name}`);
-        this.output_line(`lxi h, ${sym.offset - this.stkp}`); // load h = stack offset
-        this.output_line(`dad sp`); // hl = hl + sp
-        return CompilerRegs.HL_REG;
+        lines.push(`; Retrieve local ${sym.name}`);
+        lines.push(`lxi h, ${sym.offset - this.stkp}`); // load h = stack offset
+        lines.push(`dad sp`); // hl = hl + sp
+        return { reg: CompilerRegs.HL_REG, lines };
       }
     }
   }
@@ -129,12 +125,14 @@ export class Generator {
    * asm - store the primary register into the specified static memory cell
    */
   gen_put_memory(sym: ISymbol) {
+    const lines = [];
     if (sym.identity != SymbolIdentity.POINTER && sym.type & SymbolType.CCHAR) {
-      this.output_line(`mov a, l`);
-      this.output_line(`sta ${sym.name}`);
+      lines.push(`mov a, l`);
+      lines.push(`sta ${sym.name}`);
     } else {
-      this.output_line(`shld ${sym.name}`);
+      lines.push(`shld ${sym.name}`);
     }
+    return lines;
   }
 
   /**
@@ -142,18 +140,20 @@ export class Generator {
    * at the address in secondary register (on the top of the stack)
    */
   gen_put_indirect(typeobj: number) {
+    const lines = [];
     this.gen_pop();
     if (typeobj & SymbolType.CCHAR) {
       /*gen_call("ccpchar");*/
-      this.output_line(`mov a, l`);
-      this.output_line(`stax d`);
+      lines.push(`mov a, l`);
+      lines.push(`stax d`);
     } else {
       if (Generator.uflag) {
-        this.output_line(`shlx`);
+        lines.push(`shlx`);
       } else {
         this.gen_call("ccpint");
       }
     }
+    return lines;
   }
 
   /**
@@ -161,60 +161,68 @@ export class Generator {
    * register into the primary register
    */
   gen_get_indirect(typeobj: number, reg: number) {
+    const lines = [];
     if (typeobj == SymbolType.CCHAR) {
       if (reg & CompilerRegs.DE_REG) {
-        this.output_line(`xchg`);
+        lines.push(`xchg`);
       }
       this.gen_call("ccgchar");
     } else if (typeobj == SymbolType.UCHAR) {
       if (reg & CompilerRegs.DE_REG) {
-        this.output_line(`xchg`);
+        lines.push(`xchg`);
       }
       /*gen_call("cguchar");*/
-      this.output_line(`mov l, m`);
-      this.output_line(`mvi h, 0`);
+      lines.push(`mov l, m`);
+      lines.push(`mvi h, 0`);
     } else {
       /*int*/
       if (Generator.uflag) {
         if (reg & CompilerRegs.HL_REG) {
-          this.output_line(`xchg`);
+          lines.push(`xchg`);
         }
-        this.output_line(`lhlx`);
+        lines.push(`lhlx`);
       } else {
         this.gen_call("ccgint");
       }
     }
+    return lines;
   }
 
   /**
    * push the primary register onto the stack
    */
   gen_push(reg: CompilerRegs) {
+    const lines = [];
     if (reg & CompilerRegs.DE_REG) {
-      this.output_line(`push d`);
+      lines.push(`push d`);
       this.stkp = this.stkp - Generator.INTSIZE;
     } else {
-      this.output_line(`push h`);
+      lines.push(`push h`);
       this.stkp = this.stkp - Generator.INTSIZE;
     }
+    return lines;
   }
 
   /**
    * pop the top of the stack into the secondary register
    */
   gen_pop() {
-    this.output_line(`pop d`);
+    const lines = [];
+    lines.push(`pop d`);
     this.stkp = this.stkp + Generator.INTSIZE;
+    return lines;
   }
 
   /**
    * perform subroutine call to value on top of stack
    */
   callstk() {
-    this.output_line(`lxi h, #.+5`);
-    this.output_line(`xthl`); // swap primary reg and top of stack
-    this.output_line("pchl");
+    const lines = [];
+    lines.push(`lxi h, #.+5`);
+    lines.push(`xthl`); // swap primary reg and top of stack
+    lines.push("pchl");
     this.stkp = this.stkp + Generator.INTSIZE;
+    return lines;
   }
 
   /**
@@ -223,10 +231,7 @@ export class Generator {
    * @param ft if true jnz is generated, jz otherwise
    */
   gen_test_jump(label: number, ft: number) {
-    this.output_line(`mov a, h`);
-    this.output_line(`ora l`);
-    if (ft) this.output_line(`jnz $${label}`);
-    else this.output_line(`jz $${label}`);
+    return [`mov a, h`, `ora l`, ft ? `jnz $${label}` : `jz $${label}`];
   }
 
   /**
@@ -234,62 +239,61 @@ export class Generator {
    * @param newstkp new value
    */
   gen_modify_stack(newstkp: number) {
+    const lines: string[] = [];
     let k = newstkp - this.stkp;
-    if (k == 0) return newstkp;
+    if (k == 0) return { newstkp, lines };
     if (k > 0) {
       if (k < 7) {
         if (k & 1) {
-          this.output_line(`inx sp`);
+          lines.push(`inx sp`);
           k--;
         }
         while (k) {
-          this.output_line(`pop b`);
+          lines.push(`pop b`);
           k = k - Generator.INTSIZE;
         }
-        return newstkp;
+        return { newstkp, lines };
       }
     } else {
       if (k > -7) {
         if (k & 1) {
-          this.output_line(`dcx sp`);
+          lines.push(`dcx sp`);
           k++;
         }
         while (k) {
-          this.output_line(`push b`);
+          lines.push(`push b`);
           k = k + Generator.INTSIZE;
         }
-        return newstkp;
+        return { newstkp, lines };
       }
     }
-    this.output_line(`xchg`);
-    this.output_line(`lxi h, ${k}`);
-    this.output_line(`dad sp`);
-    this.output_line(`sphl`);
-    this.output_line(`xchg`);
-    return newstkp;
+    lines.push(`xchg`);
+    lines.push(`lxi h, ${k}`);
+    lines.push(`dad sp`);
+    lines.push(`sphl`);
+    lines.push(`xchg`);
+    return { newstkp, lines };
   }
 
   /**
    * multiply the primary register by INTSIZE
    */
   gen_multiply_by_two() {
-    this.output_line(`dad h`);
+    return [`dad h`];
   }
 
   /**
    * divide the primary register by INTSIZE, never used
    */
   gen_divide_by_two() {
-    this.gen_push(CompilerRegs.HL_REG); /* push primary in prep for gasr */
-    this.output_line(`lxi h, 1`);
-    this.gen_arithm_shift_right(); /* divide by two */
+    return [...this.gen_push(CompilerRegs.HL_REG), `lxi h, 1`, ...this.gen_arithm_shift_right()];
   }
 
   /**
    * Case jump instruction
    */
   gen_jump_case() {
-    this.output_line(`jmp cccase`);
+    return [`jmp cccase`];
   }
 
   /**
@@ -299,13 +303,15 @@ export class Generator {
    * @param lval2
    */
   gen_add(lval: ILValue, lval2: ILValue) {
-    this.gen_pop();
+    const lines = [];
+    lines.push(...this.gen_pop());
     if (this.dbltest(lval2, lval)) {
-      this.output_line(`xchg`);
+      lines.push(`xchg`);
       this.gen_multiply_by_two();
-      this.output_line(`xchg`);
+      lines.push(`xchg`);
     }
-    this.output_line(`dad d`);
+    lines.push(`dad d`);
+    return lines;
   }
 
   dbltest(val1: ILValue, val2: ILValue) {
@@ -321,16 +327,14 @@ export class Generator {
    * subtract the primary register from the secondary
    */
   gen_sub() {
-    this.gen_pop();
-    this.gen_call("ccsub");
+    return [...this.gen_pop(), ...this.gen_call("ccsub")];
   }
 
   /**
    * multiply the primary and secondary registers (result in primary)
    */
   gen_mult() {
-    this.gen_pop();
-    this.gen_call("ccmul");
+    return [...this.gen_pop(), ...this.gen_call("ccmul")];
   }
 
   /**
@@ -338,8 +342,7 @@ export class Generator {
    * (quotient in primary, remainder in secondary)
    */
   gen_div() {
-    this.gen_pop();
-    this.gen_call("ccdiv");
+    return [...this.gen_pop(), ...this.gen_call("ccdiv")];
   }
 
   /**
@@ -347,8 +350,7 @@ export class Generator {
    * (quotient in primary, remainder in secondary)
    */
   gen_udiv() {
-    this.gen_pop();
-    this.gen_call("ccudiv");
+    return [...this.gen_pop(), ...this.gen_call("ccudiv")];
   }
 
   /**
@@ -357,8 +359,7 @@ export class Generator {
    * (remainder in primary, quotient in secondary)
    */
   gen_mod() {
-    this.gen_div();
-    this.output_line(`xchg`);
+    return [...this.gen_div(), `xchg`];
   }
 
   /**
@@ -367,32 +368,28 @@ export class Generator {
    * (remainder in primary, quotient in secondary)
    */
   gen_umod() {
-    this.gen_udiv();
-    this.output_line(`xchg`);
+    return [...this.gen_udiv(), `xchg`];
   }
 
   /**
    * inclusive 'or' the primary and secondary registers
    */
   gen_or() {
-    this.gen_pop();
-    this.gen_call("ccor");
+    return [...this.gen_pop(), ...this.gen_call("ccor")];
   }
 
   /**
    * exclusive 'or' the primary and secondary registers
    */
   gen_xor() {
-    this.gen_pop();
-    this.gen_call("ccxor");
+    return [...this.gen_pop(), ...this.gen_call("ccxor")];
   }
 
   /**
    * 'and' the primary and secondary registers
    */
   gen_and() {
-    this.gen_pop();
-    this.gen_call("ccand");
+    return [...this.gen_pop(), ...this.gen_call("ccand")];
   }
 
   /**
@@ -400,8 +397,7 @@ export class Generator {
    * times in the primary register (results in primary register)
    */
   gen_arithm_shift_right() {
-    this.gen_pop();
-    this.gen_call("ccasr");
+    return [...this.gen_pop(), ...this.gen_call("ccasr")];
   }
 
   /**
@@ -409,8 +405,7 @@ export class Generator {
    * times in the primary register (results in primary register)
    */
   gen_logical_shift_right() {
-    this.gen_pop();
-    this.gen_call("cclsr");
+    return [...this.gen_pop(), ...this.gen_call("cclsr")];
   }
 
   /**
@@ -418,83 +413,86 @@ export class Generator {
    * times in the primary register (results in primary register)
    */
   gen_arithm_shift_left() {
-    this.gen_pop();
-    this.gen_call("ccasl");
+    return [...this.gen_pop(), ...this.gen_call("ccasl")];
   }
 
   /**
    * two's complement of primary register
    */
   gen_twos_complement() {
-    this.gen_call("ccneg");
+    return this.gen_call("ccneg");
   }
 
   /**
    * logical complement of primary register
    */
   gen_logical_negation() {
-    this.gen_call("cclneg");
+    return this.gen_call("cclneg");
   }
 
   /**
    * one's complement of primary register
    */
   gen_complement() {
-    this.gen_call("cccom");
+    return this.gen_call("cccom");
   }
 
   /**
    * Convert primary value into logical value (0 if 0, 1 otherwise)
    */
   gen_convert_primary_reg_value_to_bool() {
-    this.gen_call("ccbool");
+    return this.gen_call("ccbool");
   }
 
   /**
    * increment the primary register by 1 if char, INTSIZE if int
    */
   gen_increment_primary_reg(lval: ILValue) {
+    const lines = [];
     switch (lval.ptr_type) {
       case SymbolType.STRUCT:
-        this.output_line(`lxi d, ${(lval.tagsym as ITagSymbol).size}`);
-        this.output_line(`dad d`);
+        lines.push(`lxi d, ${(lval.tagsym as ITagSymbol).size}`);
+        lines.push(`dad d`);
         break;
       case SymbolType.CINT:
       case SymbolType.UINT:
-        this.output_line(`inx h`);
+        lines.push(`inx h`);
       default:
-        this.output_line(`inx h`);
+        lines.push(`inx h`);
         break;
     }
+    return lines;
   }
 
   /**
    * decrement the primary register by one if char, INTSIZE if int
    */
   gen_decrement_primary_reg(lval: ILValue) {
-    this.output_line(`dcx h`);
+    const lines = [];
+    lines.push(`dcx h`);
     switch (lval.ptr_type) {
       case SymbolType.CINT:
       case SymbolType.UINT:
-        this.output_line(`dcx h`);
+        lines.push(`dcx h`);
         break;
       case SymbolType.STRUCT:
         if (lval.tagsym == 0) throw Error();
-        this.output_line(`lxi d, ${lval.tagsym.size - 1}`);
+        lines.push(`lxi d, ${lval.tagsym.size - 1}`);
         /* two's complement */
-        this.output_line(`mov a, d`);
-        this.output_line(`cma`);
-        this.output_line(`mov d, a`);
-        this.output_line(`mov a, e`);
-        this.output_line(`cma`);
-        this.output_line(`mov e, a`);
-        this.output_line(`inx d`);
+        lines.push(`mov a, d`);
+        lines.push(`cma`);
+        lines.push(`mov d, a`);
+        lines.push(`mov a, e`);
+        lines.push(`cma`);
+        lines.push(`mov e, a`);
+        lines.push(`inx d`);
         /* subtract */
-        this.output_line(`dad d`);
+        lines.push(`dad d`);
         break;
       default:
         break;
     }
+    return lines;
   }
 
   /**
@@ -508,84 +506,74 @@ export class Generator {
    * equal
    */
   gen_equal() {
-    this.gen_pop();
-    this.gen_call("cceq");
+    return [...this.gen_pop(), ...this.gen_call("cceq")];
   }
 
   /**
    * not equal
    */
   gen_not_equal() {
-    this.gen_pop();
-    this.gen_call("ccne");
+    return [...this.gen_pop(), ...this.gen_call("ccne")];
   }
 
   /**
    * less than (signed)
    */
   gen_less_than() {
-    this.gen_pop();
-    this.gen_call("cclt");
+    return [...this.gen_pop(), ...this.gen_call("cclt")];
   }
 
   /**
    * less than or equal (signed)
    */
   gen_less_or_equal() {
-    this.gen_pop();
-    this.gen_call("ccle");
+    return [...this.gen_pop(), ...this.gen_call("ccle")];
   }
 
   /**
    * greater than (signed)
    */
   gen_greater_than() {
-    this.gen_pop();
-    this.gen_call("ccgt");
+    return [...this.gen_pop(), ...this.gen_call("ccgt")];
   }
 
   /**
    * greater than or equal (signed)
    */
   gen_greater_or_equal() {
-    this.gen_pop();
-    this.gen_call("ccge");
+    return [...this.gen_pop(), ...this.gen_call("ccge")];
   }
 
   /**
    * less than (unsigned)
    */
   gen_unsigned_less_than() {
-    this.gen_pop();
-    this.gen_call("ccult");
+    return [...this.gen_pop(), ...this.gen_call("ccult")];
   }
 
   /**
    * less than or equal (unsigned)
    */
   gen_unsigned_less_or_equal() {
-    this.gen_pop();
-    this.gen_call("ccule");
+    return [...this.gen_pop(), ...this.gen_call("ccule")];
   }
 
   /**
    * greater than (unsigned)
    */
   gen_usigned_greater_than() {
-    this.gen_pop();
-    this.gen_call("ccugt");
+    return [...this.gen_pop(), ...this.gen_call("ccugt")];
   }
 
   /**
    * greater than or equal (unsigned)
    */
   gen_unsigned_greater_or_equal() {
-    this.gen_pop();
-    this.gen_call("ccuge");
+    return [...this.gen_pop(), ...this.gen_call("ccuge")];
   }
 
   inclib() {
-    return "";
+    return ["; inclib not implemented"];
   }
 
   /**
@@ -593,7 +581,7 @@ export class Generator {
    * @param d
    */
   gnargs(d: number) {
-    this.output_line(`mvi a, ${d}`);
+    return [`mvi a, ${d}`];
   }
 
   /**
@@ -601,8 +589,7 @@ export class Generator {
    * @param val the value
    */
   add_offset(val: number) {
-    this.output_line(`lxi d, ${val}`);
-    this.output_line(`dad d`);
+    return [`lxi d, ${val}`, `dad d`];
   }
 
   /**
@@ -611,53 +598,55 @@ export class Generator {
    * @param size
    */
   gen_multiply(type: number, size: number) {
+    const lines = [];
     switch (type) {
       case SymbolType.CINT:
       case SymbolType.UINT:
         this.gen_multiply_by_two();
         break;
       case SymbolType.STRUCT:
-        this.output_line(`lxi d, ${size}`);
-        this.gen_call("ccmul");
+        lines.push(`lxi d, ${size}`);
+        lines.push(...this.gen_call("ccmul"));
         break;
       default:
         break;
     }
+    return lines;
   }
 
-  /**
-   * print pseudo-op  to define a byte
-   */
-  gen_def_byte() {
-    this.output_line(".db\t");
-  }
+  // /**
+  //  * print pseudo-op  to define a byte
+  //  */
+  // gen_def_byte() {
+  //   return [".db\t"];
+  // }
 
-  /**
-   * print pseudo-op to define storage
-   */
-  gen_def_storage() {
-    this.asm += ".ds\t";
-  }
+  // /**
+  //  * print pseudo-op to define storage
+  //  */
+  // gen_def_storage() {
+  //   this.asm += ".ds\t";
+  // }
 
-  /**
-   * print pseudo-op to define a word
-   */
-  gen_def_word() {
-    this.asm += ".dw\t";
-  }
+  // /**
+  //  * print pseudo-op to define a word
+  //  */
+  // gen_def_word() {
+  //   this.asm += ".dw\t";
+  // }
 
   /**
    * text (code) segment
    */
   code_segment_gtext() {
-    this.output_line("\t.area  SMALLC_GENERATED  (REL,CON,CSEG)");
+    return ["\t.area  SMALLC_GENERATED  (REL,CON,CSEG)"];
   }
 
   /**
    * data segment
    */
   data_segment_gdata() {
-    this.output_line("\t.area  SMALLC_GENERATED_DATA  (REL,CON,DSEG)");
+    return ["\t.area  SMALLC_GENERATED_DATA  (REL,CON,DSEG)"];
   }
 }
 
