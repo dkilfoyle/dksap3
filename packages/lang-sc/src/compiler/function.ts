@@ -17,7 +17,7 @@ const getParameterType = (param: ParameterDeclaration) => {
 
 export const compileFunctionDeclaration = (fun: FunctionDeclaration) => {
   let argstk = 0;
-  const exitLabel = generator.get_label();
+  generator.fexitlab = generator.get_label();
 
   const idx = symbol_table.find_global(fun.name);
   if (idx != -1) throw Error(`function ${fun.name} already exists in global symbol table`);
@@ -65,7 +65,7 @@ export const compileFunctionDeclaration = (fun: FunctionDeclaration) => {
   const res = expandTracedToNode(fun)`
     ${fun.name}:
       ${compileBlock(fun.body)}
-    $${exitLabel}:
+    $${generator.fexitlab}:
       ${joinToNode(generator.gen_modify_stack(0).lines, { appendNewLineIfNotEmpty: true })}
       ret
   `;

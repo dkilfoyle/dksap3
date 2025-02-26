@@ -2,16 +2,18 @@ import {
   Block,
   isExpression,
   isLocalVariableDeclaration,
+  isReturnStatement,
   isStructTypeReference,
   LocalVariableDeclaration,
   LocalVarName,
+  ReturnStatement,
   Statement,
 } from "../language/generated/ast";
 import { symbol_table, SymbolIdentity, SymbolStorage, SymbolType } from "./SymbolTable";
 import { generator, Generator } from "./Generator";
 import { tag_table } from "./TagTable";
-import { compileExpression } from "./expression";
-import { expandTracedToNode, joinToNode, joinTracedToNode } from "langium/generate";
+import { compileExpression, ExpressionResult } from "./expression";
+import { CompositeGeneratorNode, expandTracedToNode, joinToNode, joinTracedToNode } from "langium/generate";
 
 const getVariableType = (v: LocalVariableDeclaration) => {
   if (v.type.type == "struct") {
@@ -32,15 +34,18 @@ export const compileBlock = (block: Block) => {
   `;
 };
 
-export const compileStatement = (statement: Statement) => {
+export const compileStatement = (statement: Statement): CompositeGeneratorNode => {
   switch (true) {
     case isLocalVariableDeclaration(statement):
       return compileLocalDeclaration(statement);
     case isExpression(statement):
-    // return compileExpression(statement);
+      return compileExpression(statement).node;
+    case isReturnStatement(statement):
+      return compileReturn(statement);
     default:
       console.error("Unimplemented statement ", statement);
   }
+  throw Error();
 };
 
 const compileLocalDeclaration = (decl: LocalVariableDeclaration) => {
@@ -117,5 +122,13 @@ const compileLocalVarName = (localVar: LocalVarName, decl: LocalVariableDeclarat
   return expandTracedToNode(localVar)`
     ; declare local ${decl.type.$cstNode!.text} ${localVar.name}
     ${joinToNode(lines, { appendNewLineIfNotEmpty: true })}
+  `;
+};
+
+const compileReturn = (ret: ReturnStatement) => {
+  const exprNode = ret.value ? compileExpression(ret.value).node : null;
+  return expandTracedToNode(ret)`
+    ${exprNode}
+    jmp $${generator.fexitlab}
   `;
 };

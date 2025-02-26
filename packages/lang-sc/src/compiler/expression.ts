@@ -21,8 +21,11 @@ import { ISymbol, symbol_table, SymbolIdentity, SymbolType } from "./SymbolTable
 import { Generator, generator } from "./Generator";
 import { CompilerRegs, ILValue } from "./interface";
 import { tag_table } from "./TagTable";
+import { CompositeGeneratorNode, expandTracedToNode, JoinOptions, joinToNode } from "langium/generate";
 
 const FETCH = 1;
+
+const NL: JoinOptions<string> = { appendNewLineIfNotEmpty: true };
 
 class AstNodeError extends Error {
   constructor(node: AstNode, message: string) {
@@ -35,45 +38,45 @@ function isNumber(value: unknown): value is number {
   return typeof value === "number";
 }
 
-interface ExpressionResult {
-  reg: number;
+export interface ExpressionResult {
+  reg: CompilerRegs;
   lval: ILValue;
+  node: CompositeGeneratorNode;
 }
 
 /**
  * Retrieve a static or indirect symbol value and store in HL
  */
 function rvalue({ reg, lval }: ExpressionResult) {
+  let lines: string[];
   if (lval.symbol != 0 && lval.indirect == 0) {
     // lval is a static memory cell
-    generator.gen_get_memory(lval.symbol);
+    lines = generator.gen_get_memory(lval.symbol);
   } else {
     // HL contains &int
     // call ccgint
-    generator.gen_get_indirect(lval.indirect, reg);
+    lines = generator.gen_get_indirect(lval.indirect, reg);
     // HL now contains value of int
   }
-  return CompilerRegs.HL_REG;
+  return { reg: CompilerRegs.HL_REG, lines };
 }
 
 function store(lval: ILValue) {
-  if ((lval.indirect = 0)) generator.gen_put_memory(lval.symbol as ISymbol);
-  else generator.gen_put_indirect(lval.indirect);
+  if ((lval.indirect = 0)) return generator.gen_put_memory(lval.symbol as ISymbol);
+  else return generator.gen_put_indirect(lval.indirect);
 }
 
-export function compileExpression(expression: Expression) {
+export function compileExpression(expression: Expression): ExpressionResult {
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
   if (isBinaryExpression(expression)) {
-    const { left, right, operator } = expression;
-
-    switch (operator) {
+    switch (expression.operator) {
       case "=":
-        return applyAssignment(left, right);
+        return applyAssignment(expression);
       case "+":
-        return applyAddition(left, right);
+        return applyAddition(expression);
       case "*":
       case "/":
-        return applyMultiplication(left, right, operator);
+        return applyMultiplication(expression);
       default:
         throw new AstNodeError(expression, "Unimplemented binary expression operator");
     }
@@ -97,88 +100,145 @@ export function compileExpression(expression: Expression) {
     //   }
     // }
   } else if (isNumberExpression(expression)) {
-    generator.gen_immediate(expression.value);
-    return { reg: 0, lval };
+    const lines = generator.gen_immediate(expression.value);
+    return { reg: 0, lval, node: leafNode(expression, lines) };
   }
   throw new AstNodeError(expression, "Unknown expression type found ");
 }
 
-function applyAssignment(left: Expression, right: Expression): ExpressionResult {
-  if (!(isSymbolExpression(left) && isLocalVarName(left.element.ref))) throw new AstNodeError(left, "lhs of assignment must be variable");
+const leafNode = (node: AstNode, lines: string[]) => {
+  return expandTracedToNode(node)`
+    ${joinToNode(lines)}
+  `;
+};
+
+function applyAssignment(binary: BinaryExpression): ExpressionResult {
+  if (!(isSymbolExpression(binary.left) && isLocalVarName(binary.left.element.ref)))
+    throw new AstNodeError(binary.left, "lhs of assignment must be variable");
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
-  const leftResult = compileExpression(left);
+  const leftResult = compileExpression(binary.left);
   if ((leftResult.reg & FETCH) == 0) throw Error("Need lval");
-  if (leftResult.lval.indirect) generator.gen_push(leftResult.reg);
-  const rightResult = compileExpression(right);
+
+  let pushLines: string[] = [];
+  if (leftResult.lval.indirect) pushLines = generator.gen_push(leftResult.reg);
+  const rightResult = compileExpression(binary.right);
   if (rightResult.reg & 1) rvalue(rightResult);
-  store(leftResult.lval);
-  return { reg: 0, lval };
+  const storeLines = store(leftResult.lval);
+  const node = expandTracedToNode(binary)`
+    ${leftResult.node}
+    ${joinToNode(pushLines, NL)}
+    ${rightResult.node}
+    ${joinToNode(storeLines, NL)}
+  `;
+  return { reg: 0, lval, node };
 }
 
-function applyAddition(left: Expression, right: Expression): ExpressionResult {
-  generator.gen_comment(`${left.$cstNode!.text} + ${right.$cstNode!.text}`);
-  generator.gen_comment(`Compile lhs: ${left.$cstNode!.text}`);
-  const leftResult = compileExpression(left);
+function applyAddition(binary: BinaryExpression): ExpressionResult {
+  const leftResult = compileExpression(binary.left);
   let k = leftResult.reg;
   // HL = &left
-  if (leftResult.reg & FETCH) k = rvalue(leftResult);
+  let rLeftLines: string[] = [];
+  if (leftResult.reg & FETCH) {
+    const { reg, lines } = rvalue(leftResult);
+    k = reg;
+    rLeftLines = lines;
+  }
   // HL = *left
-  if (leftResult.lval.indirect) generator.gen_push(k);
+  let pushLines: string[] = [];
+  if (leftResult.lval.indirect) pushLines = generator.gen_push(k);
   // top of stack now contains *left
 
-  generator.gen_comment(`Compile rhs: ${right.$cstNode!.text}`);
-  const rightResult = compileExpression(right);
+  const rightResult = compileExpression(binary.right);
   // HL = &right
-  if (rightResult.reg & 1) rvalue(rightResult);
+  let rRightLines: string[] = [];
+  if (rightResult.reg & 1) {
+    const { lines } = rvalue(rightResult);
+    rRightLines = lines;
+  }
+
   // HL = *right
 
+  let mulLines: string[] = [];
   if (dbltest(leftResult.lval, rightResult.lval)) {
     // eg mypointer + myint
     // eg myarray + myint
     // if so then myint index *= pointertype size
-    generator.gen_comment("HL *= sizeof(left) if left is pointerffset by 2 or struct array index by size");
-    generator.gen_multiply(leftResult.lval.ptr_type, leftResult.lval.tagsym ? leftResult.lval.tagsym.size : Generator.INTSIZE);
+    mulLines = [
+      "; HL *= sizeof(left) if left is pointerffset by 2 or struct array index by size",
+      ...generator.gen_multiply(leftResult.lval.ptr_type, leftResult.lval.tagsym ? leftResult.lval.tagsym.size : Generator.INTSIZE),
+    ];
   }
 
-  generator.gen_comment("add HL(rhs) and DE(lhs)");
-  generator.gen_add(leftResult.lval, rightResult.lval);
+  const addLines = generator.gen_add(leftResult.lval, rightResult.lval);
   // pop d ; d = *left
   // dad d; hl = hl + d ie right = right + left
 
   result(leftResult.lval, rightResult.lval);
-  return { reg: 0, lval: leftResult.lval };
+  const node = expandTracedToNode(binary)`
+    ; ${binary.left.$cstNode!.text} + ${binary.right.$cstNode!.text}
+    ; Compile lhs: ${binary.left.$cstNode!.text}
+    ${leftResult.node}
+    ${joinToNode(rLeftLines, NL)}
+    ${joinToNode(pushLines, NL)}
+    ; Compile rhs: ${binary.right.$cstNode!.text}
+    ${rightResult.node}
+    ${joinToNode(rRightLines, NL)}
+    ${joinToNode(mulLines, NL)}
+    ; add HL(rhs) and DE(lhs)
+    ${joinToNode(addLines, NL)}
+  `;
+  return { reg: CompilerRegs.NONE, lval: leftResult.lval, node };
 }
 
-function applyMultiplication(left: Expression, right: Expression, op: "*" | "/"): ExpressionResult {
-  generator.gen_comment(`${left.$cstNode!.text} ${op} ${right.$cstNode!.text}`);
-  generator.gen_comment(`Compile lhs: ${left.$cstNode!.text}`);
-  const leftResult = compileExpression(left);
-  let k = leftResult.reg;
+function applyMultiplication(binary: BinaryExpression): ExpressionResult {
+  const leftResult = compileExpression(binary.left);
+  var k = leftResult.reg;
   // HL = &left
-  if (leftResult.reg & FETCH) k = rvalue(leftResult);
+  let rLeftLines: string[] = [];
+  if (leftResult.reg & FETCH) {
+    const { reg, lines } = rvalue(leftResult);
+    k = reg;
+    rLeftLines = lines;
+  }
   // HL = *left
-  generator.gen_push(k);
+  const pushLines = generator.gen_push(k);
   // top of stack now contains *left
 
-  generator.gen_comment(`Compile rhs: ${right.$cstNode!.text}`);
-  const rightResult = compileExpression(right);
+  const rightResult = compileExpression(binary.right);
   // HL = &right
-  if (rightResult.reg & 1) rvalue(rightResult);
+  let rRightLines: string[] = [];
+  if (rightResult.reg & 1) {
+    const { lines } = rvalue(rightResult);
+    rRightLines = lines;
+  }
   // HL = *right
 
-  if (op == "*") {
-    generator.gen_comment("multiply HL(rhs) and DE(lhs)");
-    generator.gen_mult();
-  } else if (op == "/") {
-    nosign(leftResult.lval) || nosign(rightResult.lval) ? generator.gen_udiv() : generator.gen_div();
+  let opLines: string[] = [];
+  if (binary.operator == "*") {
+    opLines = generator.gen_mult();
+  } else if (binary.operator == "/") {
+    opLines = nosign(leftResult.lval) || nosign(rightResult.lval) ? generator.gen_udiv() : generator.gen_div();
   }
   // pop d ; d = *left
   // dad d; hl = hl + d ie right = right + left
 
-  return { reg: 0, lval: leftResult.lval };
+  const node = expandTracedToNode(binary)`
+    ; ${binary.left.$cstNode!.text} ${binary.operator} ${binary.right.$cstNode!.text}
+    ; Compile lhs: ${binary.left.$cstNode!.text}
+    ${leftResult.node}
+    ${joinToNode(rLeftLines, NL)}
+    ${joinToNode(pushLines, NL)}
+    ; Compile rhs: ${binary.right.$cstNode!.text}
+    ${rightResult.node}
+    ${joinToNode(rRightLines, NL)}
+    ; ${binary.operator == "*" ? "Multiply" : "Divide"} HL(rhs) and DE(lhs)
+    ${joinToNode(opLines, NL)}
+  `;
+
+  return { reg: 0, lval: leftResult.lval, node };
 }
 
-function compileSymbolExpression(symbolExpression: SymbolExpression): { reg: number; lval: ILValue } {
+function compileSymbolExpression(symbolExpression: SymbolExpression): ExpressionResult {
   const ref = symbolExpression.element.ref;
   let res;
   switch (true) {
@@ -208,15 +268,19 @@ function compileFunctionCall(funcCall: SymbolExpression) {
   // const args = funcCall.arguments.map((e) => compileExpression(e));
 }
 
-function compileLocalVariableReference(localVar: LocalVarName | ParameterDeclaration) {
+function compileLocalVariableReference(localVar: LocalVarName | ParameterDeclaration): ExpressionResult {
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
   let sym_idx;
   if ((sym_idx = symbol_table.find_local(localVar.name)) > -1) {
     const symbol = symbol_table.symbols[sym_idx];
 
-    const reg = generator.gen_get_locale(symbol); // hl = &local
+    const { reg, lines } = generator.gen_get_locale(symbol); // hl = &local
     // lxi h, stack offset of symbol
     // dap sp ; hl = &symbol
+
+    const node = expandTracedToNode(localVar)`
+      ${joinToNode(lines, { appendNewLineIfNotEmpty: true })}
+    `;
 
     lval.symbol = symbol;
     lval.indirect = symbol.type;
@@ -227,19 +291,20 @@ function compileLocalVariableReference(localVar: LocalVarName | ParameterDeclara
     }
     if (symbol.identity == SymbolIdentity.ARRAY || (symbol.identity == SymbolIdentity.VARIABLE && symbol.type == SymbolType.STRUCT)) {
       lval.ptr_type = symbol.type;
-      return { reg, lval };
+      return { reg, lval, node };
     }
     if (symbol.identity == SymbolIdentity.POINTER) {
       lval.indirect = SymbolType.CINT;
       lval.ptr_type = symbol.type;
     }
 
-    return { reg: 1 | reg, lval };
+    return { reg: 1 | reg, lval, node };
   } else throw new AstNodeError(localVar, `${localVar.name} not in local symbol table`);
 }
 
-function compileGlobalVariableReference(globalVar: GlobalVarName) {
+function compileGlobalVariableReference(globalVar: GlobalVarName): ExpressionResult {
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
+
   let sym_idx;
   if ((sym_idx = symbol_table.find_global(globalVar.name)) > -1) {
     const symbol = symbol_table.symbols[sym_idx];
@@ -253,12 +318,16 @@ function compileGlobalVariableReference(globalVar: GlobalVarName) {
         if (symbol.identity == SymbolIdentity.POINTER) {
           lval.ptr_type = symbol.type;
         }
-        return { reg: 1 | CompilerRegs.HL_REG, lval };
+        const node = expandTracedToNode(globalVar)``;
+        return { reg: 1 | CompilerRegs.HL_REG, lval, node };
       }
-      generator.gen_immediate(symbol.name); // lxi h, varname
+      const node = expandTracedToNode(globalVar)`
+          ${joinToNode(generator.gen_immediate(symbol.name))}
+        `;
+
       lval.indirect = symbol.type;
       lval.ptr_type = symbol.type;
-      return { reg: 0, lval };
+      return { reg: 0, lval, node };
     }
   }
   throw new AstNodeError(globalVar, `${globalVar.name} not in global symbol table`);

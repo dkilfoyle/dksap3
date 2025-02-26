@@ -48,6 +48,7 @@ export class Generator {
   public asm = "";
   private label_count = 0;
   public stkp = 0;
+  public fexitlab = -99;
 
   private constructor() {}
 
