@@ -38,6 +38,8 @@ import { AsmDocumentChange, getAsmLanguageClientConfig, getAsmLanguageExtension 
 import { EmulatorWebviewPanel } from "./components/EmulatorWebviewPanel.ts";
 import { MemoryWebviewPanel } from "./components/MemoryWebviewPanel.ts";
 import { compiledDocs } from "./debugger/AsmRuntime.ts";
+import { TraceRegion } from "langium/generate";
+import { AstNode } from "langium";
 
 export const HOME_DIR = "";
 export const WORKSPACE_PATH = `${HOME_DIR}/dk8085`;
@@ -46,6 +48,9 @@ export type ConfigResult = {
   wrapperConfig: WrapperConfig;
   workspaceFile: vscode.Uri;
 };
+
+export const traceRegions: Record<string, TraceRegion> = {};
+export const sourceAsts: Record<string, AstNode> = {};
 
 const fileSystemProvider = new RegisteredFileSystemProvider(false);
 
@@ -179,6 +184,9 @@ export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrap
     console.log(data.asm);
     console.log(JSON.parse(data.ast));
     console.log(data.uri);
+
+    traceRegions[data.uri] = data.trace;
+    sourceAsts[data.uri] = JSON.parse(data.ast);
 
     const uri = vscode.Uri.file(data.uri.replace(".c", ".asm").replace("file:///", ""));
     vscode.workspace.fs.writeFile(uri, Uint8Array.from(Array.from(data.asm).map((letter) => letter.charCodeAt(0))));

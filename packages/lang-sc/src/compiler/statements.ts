@@ -26,11 +26,14 @@ const getVariableType = (v: LocalVariableDeclaration) => {
 };
 
 export const compileBlock = (block: Block) => {
+  // return expandTracedToNode(block)`
+  //   ${joinTracedToNode(block, "statements")(
+  //     block.statements.map((s) => compileStatement(s)),
+  //     { appendNewLineIfNotEmpty: true }
+  //   )}
+  // `;
   return expandTracedToNode(block)`
-    ${joinTracedToNode(block, "statements")(
-      block.statements.map((s) => compileStatement(s)),
-      { appendNewLineIfNotEmpty: true }
-    )}
+    ${joinToNode(block.statements.map((s) => compileStatement(s)))}
   `;
 };
 
