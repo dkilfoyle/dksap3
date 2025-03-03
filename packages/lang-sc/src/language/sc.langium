@@ -95,8 +95,11 @@ Primary infers Expression:
 SymbolExpression:
     element=[NamedElement:ID]
     (("." structMember=[StructMember:ID])?)?
-    ("(" (arguments+=Expression (',' arguments+=Expression)*)? ")")?
+    functionCall=FunctionCall?
     ("[" indexExpression=Expression "]")?;
+
+FunctionCall:
+    "(" (arguments+=Expression (',' arguments+=Expression)*)? ")";
 
 UnaryExpression:
     operator=('!' | '-' | "*" | "%") value=Expression;

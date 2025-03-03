@@ -2,6 +2,7 @@ import { AstNode, interruptAndCheck } from "langium";
 import {
   BinaryExpression,
   Expression,
+  FunctionDeclaration,
   GlobalVariableDeclaration,
   GlobalVarName,
   isBinaryExpression,
@@ -14,14 +15,16 @@ import {
   isSymbolExpression,
   isUnaryExpression,
   LocalVarName,
+  NumberExpression,
   ParameterDeclaration,
   SymbolExpression,
+  UnaryExpression,
 } from "../language/generated/ast";
-import { ISymbol, symbol_table, SymbolIdentity, SymbolType } from "./SymbolTable";
+import { ISymbol, symbol_table, SymbolIdentity, SymbolStorage, SymbolType } from "./SymbolTable";
 import { Generator, generator } from "./Generator";
 import { CompilerRegs, ILValue } from "./interface";
 import { tag_table } from "./TagTable";
-import { CompositeGeneratorNode, expandTracedToNode, JoinOptions, joinToNode } from "langium/generate";
+import { CompositeGeneratorNode, expandTracedToNode, JoinOptions, joinToNode, NewLineNode } from "langium/generate";
 
 const FETCH = 1;
 
@@ -67,43 +70,38 @@ function store(lval: ILValue) {
 }
 
 export function compileExpression(expression: Expression): ExpressionResult {
-  const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
-  if (isBinaryExpression(expression)) {
-    switch (expression.operator) {
-      case "=":
-        return applyAssignment(expression);
-      case "+":
-        return applyAddition(expression);
-      case "*":
-      case "/":
-        return applyMultiplication(expression);
-      default:
-        throw new AstNodeError(expression, "Unimplemented binary expression operator");
-    }
-  } else if (isSymbolExpression(expression)) {
-    return compileSymbolExpression(expression);
-  } else if (isUnaryExpression(expression)) {
-    throw Error("unary expressions not yet implemented");
-    // const { operator, value } = expression;
-    // const actualValue = compileExpression(value);
-    // if (operator === "-") {
-    //   if (typeof actualValue === "number") {
-    //     return -actualValue;
-    //   } else {
-    //     throw new AstNodeError(expression, `Cannot apply operator '${operator}' to value of type '${typeof actualValue}'`);
-    //   }
-    // } else if (operator === "!") {
-    //   if (typeof actualValue === "boolean") {
-    //     return !actualValue;
-    //   } else {
-    //     throw new AstNodeError(expression, `Cannot apply operator '${operator}' to value of type '${typeof actualValue}'`);
-    //   }
-    // }
-  } else if (isNumberExpression(expression)) {
-    const lines = generator.gen_immediate(expression.value);
-    return { reg: 0, lval, node: leafNode(expression, lines) };
+  const res = compileSubExpression(expression);
+  if (res.reg & 1) {
+    const { reg, lines } = rvalue(res);
+    res.node = res.node.append(joinToNode(lines, NL));
+    res.reg = reg;
   }
-  throw new AstNodeError(expression, "Unknown expression type found ");
+  return res;
+}
+
+function compileSubExpression(expression: Expression): ExpressionResult {
+  switch (true) {
+    case isBinaryExpression(expression):
+      switch (expression.operator) {
+        case "=":
+          return applyAssignment(expression);
+        case "+":
+          return applyAddition(expression);
+        case "*":
+        case "/":
+          return applyMultiplication(expression);
+        default:
+          throw new AstNodeError(expression, `Unimplemented binary expression operator ${expression.operator}`);
+      }
+    case isSymbolExpression(expression):
+      return compileSymbolExpression(expression);
+    case isUnaryExpression(expression):
+      return compileUnaryExpression(expression);
+    case isNumberExpression(expression):
+      return compileNumberExpression(expression);
+    default:
+      throw new AstNodeError(expression, "Unknown expression type found ");
+  }
 }
 
 const leafNode = (node: AstNode, lines: string[]) => {
@@ -112,29 +110,55 @@ const leafNode = (node: AstNode, lines: string[]) => {
   `;
 };
 
+function compileNumberExpression(numexp: NumberExpression): ExpressionResult {
+  const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
+  const lines = generator.gen_immediate(numexp.value);
+  return { reg: 0, lval, node: leafNode(numexp, lines) };
+}
+
+function compileUnaryExpression(unary: UnaryExpression): ExpressionResult {
+  throw Error("unary expressions not yet implemented");
+  // const { operator, value } = expression;
+  // const actualValue = compileExpression(value);
+  // if (operator === "-") {
+  //   if (typeof actualValue === "number") {
+  //     return -actualValue;
+  //   } else {
+  //     throw new AstNodeError(expression, `Cannot apply operator '${operator}' to value of type '${typeof actualValue}'`);
+  //   }
+  // } else if (operator === "!") {
+  //   if (typeof actualValue === "boolean") {
+  //     return !actualValue;
+  //   } else {
+  //     throw new AstNodeError(expression, `Cannot apply operator '${operator}' to value of type '${typeof actualValue}'`);
+  //   }
+  // }
+}
+
 function applyAssignment(binary: BinaryExpression): ExpressionResult {
   if (!(isSymbolExpression(binary.left) && isLocalVarName(binary.left.element.ref)))
     throw new AstNodeError(binary.left, "lhs of assignment must be variable");
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
-  const leftResult = compileExpression(binary.left);
-  if ((leftResult.reg & FETCH) == 0) throw Error("Need lval");
-
-  let pushLines: string[] = [];
-  if (leftResult.lval.indirect) pushLines = generator.gen_push(leftResult.reg);
-  const rightResult = compileExpression(binary.right);
-  if (rightResult.reg & 1) rvalue(rightResult);
-  const storeLines = store(leftResult.lval);
+  let leftResult, rightResult: ExpressionResult;
   const node = expandTracedToNode(binary)`
-    ${leftResult.node}
-    ${joinToNode(pushLines, NL)}
-    ${rightResult.node}
-    ${joinToNode(storeLines, NL)}
+    ; ${binary.$cstNode!.text}
+    ${(leftResult = compileSubExpression(binary.left)).node}
+    ${(leftResult.reg & FETCH) == 0 ? "ERROR: Need lval" : undefined}
+    ${joinToNode(leftResult.lval.indirect ? generator.gen_push(leftResult.reg) : [])}
+    ${(rightResult = compileSubExpression(binary.right)).node}
+    ${joinToNode(rightResult.reg & 1 ? rvalue(rightResult).lines : [])}
+    ${joinToNode(store(leftResult.lval), NL)}
   `;
   return { reg: 0, lval, node };
 }
 
+const execute = (f: () => void) => {
+  f();
+  return "";
+};
+
 function applyAddition(binary: BinaryExpression): ExpressionResult {
-  const leftResult = compileExpression(binary.left);
+  const leftResult = compileSubExpression(binary.left);
   let k = leftResult.reg;
   // HL = &left
   let rLeftLines: string[] = [];
@@ -148,7 +172,7 @@ function applyAddition(binary: BinaryExpression): ExpressionResult {
   if (leftResult.lval.indirect) pushLines = generator.gen_push(k);
   // top of stack now contains *left
 
-  const rightResult = compileExpression(binary.right);
+  const rightResult = compileSubExpression(binary.right);
   // HL = &right
   let rRightLines: string[] = [];
   if (rightResult.reg & 1) {
@@ -175,23 +199,19 @@ function applyAddition(binary: BinaryExpression): ExpressionResult {
 
   result(leftResult.lval, rightResult.lval);
   const node = expandTracedToNode(binary)`
-    ; ${binary.left.$cstNode!.text} + ${binary.right.$cstNode!.text}
-    ; Compile lhs: ${binary.left.$cstNode!.text}
     ${leftResult.node}
     ${joinToNode(rLeftLines, NL)}
     ${joinToNode(pushLines, NL)}
-    ; Compile rhs: ${binary.right.$cstNode!.text}
     ${rightResult.node}
     ${joinToNode(rRightLines, NL)}
     ${joinToNode(mulLines, NL)}
-    ; add HL(rhs) and DE(lhs)
     ${joinToNode(addLines, NL)}
   `;
   return { reg: CompilerRegs.NONE, lval: leftResult.lval, node };
 }
 
 function applyMultiplication(binary: BinaryExpression): ExpressionResult {
-  const leftResult = compileExpression(binary.left);
+  const leftResult = compileSubExpression(binary.left);
   var k = leftResult.reg;
   // HL = &left
   let rLeftLines: string[] = [];
@@ -204,7 +224,7 @@ function applyMultiplication(binary: BinaryExpression): ExpressionResult {
   const pushLines = generator.gen_push(k);
   // top of stack now contains *left
 
-  const rightResult = compileExpression(binary.right);
+  const rightResult = compileSubExpression(binary.right);
   // HL = &right
   let rRightLines: string[] = [];
   if (rightResult.reg & 1) {
@@ -223,15 +243,11 @@ function applyMultiplication(binary: BinaryExpression): ExpressionResult {
   // dad d; hl = hl + d ie right = right + left
 
   const node = expandTracedToNode(binary)`
-    ; ${binary.left.$cstNode!.text} ${binary.operator} ${binary.right.$cstNode!.text}
-    ; Compile lhs: ${binary.left.$cstNode!.text}
     ${leftResult.node}
     ${joinToNode(rLeftLines, NL)}
     ${joinToNode(pushLines, NL)}
-    ; Compile rhs: ${binary.right.$cstNode!.text}
     ${rightResult.node}
     ${joinToNode(rRightLines, NL)}
-    ; ${binary.operator == "*" ? "Multiply" : "Divide"} HL(rhs) and DE(lhs)
     ${joinToNode(opLines, NL)}
   `;
 
@@ -240,12 +256,11 @@ function applyMultiplication(binary: BinaryExpression): ExpressionResult {
 
 function compileSymbolExpression(symbolExpression: SymbolExpression): ExpressionResult {
   const ref = symbolExpression.element.ref;
-  let res;
+  let res: ExpressionResult;
   switch (true) {
     case isFunctionDeclaration(ref):
-      throw new AstNodeError(symbolExpression, "Function call expression not implemented yet");
-    // res = compileFunctionCall(symbolExpression);
-    // break;
+      res = compileFunctionReference(symbolExpression);
+      break;
     case isLocalVarName(ref):
     case isParameterDeclaration(ref):
       res = compileLocalVariableReference(ref);
@@ -261,10 +276,64 @@ function compileSymbolExpression(symbolExpression: SymbolExpression): Expression
       throw new AstNodeError(symbolExpression, "Trying to compile unknown symbol expression");
   }
   if (symbolExpression.indexExpression) throw new AstNodeError(symbolExpression, "Array indexing not implemented");
+  if (symbolExpression.functionCall) return compileFunctionCall(res, symbolExpression);
   return res;
 }
 
-function compileFunctionCall(funcCall: SymbolExpression) {
+function compileFunctionCall(symbolRes: ExpressionResult, symbolExpression: SymbolExpression): ExpressionResult {
+  let ptr = symbolRes.lval.symbol;
+  let k = symbolRes.reg;
+  const node = symbolRes.node;
+  const functionCall = symbolExpression.functionCall!;
+
+  node.append(`; ${symbolExpression.$cstNode?.text}`).appendNewLine();
+
+  if (ptr != 0 && ptr.identity != SymbolIdentity.FUNCTION) {
+    const { reg, lines } = rvalue(symbolRes);
+    k = reg;
+    ptr = 0;
+    lines.unshift("; function symbol is a pointer to a function ");
+    node.append(joinToNode(lines, { appendNewLineIfNotEmpty: true }));
+  }
+
+  if (ptr == 0) {
+    node.append(...generator.gen_push(CompilerRegs.HL_REG));
+  }
+
+  node.appendTraced(
+    functionCall,
+    "arguments"
+  )(
+    ...functionCall.arguments.map((arg) =>
+      compileExpression(arg)
+        .node.appendIf(ptr == 0, "xthl")
+        .appendNewLineIfNotEmpty()
+        .append(joinToNode(generator.gen_push(CompilerRegs.HL_REG), NL))
+    )
+  );
+
+  if (ptr != 0) {
+    node.append(joinToNode(generator.gen_call((symbolRes.lval.symbol as ISymbol).name), NL));
+  } else {
+    node.append(joinToNode(["; callstk", ...generator.callstk()], { appendNewLineIfNotEmpty: true }));
+  }
+
+  const { newstkp, lines } = generator.gen_modify_stack(generator.stkp + functionCall.arguments.length * Generator.INTSIZE);
+  generator.stkp = newstkp;
+  node.append(joinToNode(lines, NL));
+
+  return { reg: 0, lval: { ...symbolRes.lval, symbol: 0 }, node };
+}
+
+function compileFunctionReference(funcCall: SymbolExpression): ExpressionResult {
+  // add to global symbol table if not already there
+  // Use offset 0 so that if function call occurs before function declaration this can be detected in function declaration
+  const sym_idx = symbol_table.add_global(funcCall.element.ref!.name, SymbolIdentity.FUNCTION, SymbolType.CINT, 0, SymbolStorage.PUBLIC);
+  if (sym_idx < 0) throw Error();
+  const symbol = symbol_table.symbols[sym_idx];
+  const lval: ILValue = { symbol: symbol, indirect: 0, ptr_type: 0, tagsym: 0 };
+  return { reg: 0, lval, node: expandTracedToNode(funcCall)`` };
+
   // const args = funcCall.arguments.map((e) => compileExpression(e));
 }
 

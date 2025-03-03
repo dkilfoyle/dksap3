@@ -155,7 +155,8 @@ export const configure = (htmlContainer?: HTMLElement): ConfigResult => {
   };
 };
 
-export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrapper, configResult: ConfigResult) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrapper, _configResult: ConfigResult) => {
   const result = wrapper.getExtensionRegisterResult("sc-language-extension") as RegisterLocalProcessExtensionResult;
   result.setAsDefaultApi();
 

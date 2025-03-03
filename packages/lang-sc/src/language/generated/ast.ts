@@ -100,7 +100,7 @@ export function isTypeReference(item: unknown): item is TypeReference {
 }
 
 export interface BinaryExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | ForStatement | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'BinaryExpression';
     left: Expression;
     operator: '!=' | '*' | '+' | '-' | '/' | '<' | '<=' | '=' | '==' | '>' | '>=' | 'and' | 'or';
@@ -138,6 +138,18 @@ export const ForStatement = 'ForStatement';
 
 export function isForStatement(item: unknown): item is ForStatement {
     return reflection.isInstance(item, ForStatement);
+}
+
+export interface FunctionCall extends AstNode {
+    readonly $container: SymbolExpression;
+    readonly $type: 'FunctionCall';
+    arguments: Array<Expression>;
+}
+
+export const FunctionCall = 'FunctionCall';
+
+export function isFunctionCall(item: unknown): item is FunctionCall {
+    return reflection.isInstance(item, FunctionCall);
 }
 
 export interface FunctionDeclaration extends AstNode {
@@ -229,7 +241,7 @@ export function isLocalVarName(item: unknown): item is LocalVarName {
 }
 
 export interface NumberExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | ForStatement | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'NumberExpression';
     value: number;
 }
@@ -319,10 +331,10 @@ export function isStructTypeReference(item: unknown): item is StructTypeReferenc
 }
 
 export interface SymbolExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | ForStatement | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'SymbolExpression';
-    arguments: Array<Expression>;
     element: Reference<NamedElement>;
+    functionCall?: FunctionCall;
     indexExpression?: Expression;
     structMember?: Reference<StructMember>;
 }
@@ -334,7 +346,7 @@ export function isSymbolExpression(item: unknown): item is SymbolExpression {
 }
 
 export interface UnaryExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | ForStatement | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'UnaryExpression';
     operator: '!' | '%' | '*' | '-';
     value: Expression;
@@ -379,6 +391,7 @@ export type ScAstType = {
     Definition: Definition
     Expression: Expression
     ForStatement: ForStatement
+    FunctionCall: FunctionCall
     FunctionDeclaration: FunctionDeclaration
     GlobalVarName: GlobalVarName
     GlobalVariableDeclaration: GlobalVariableDeclaration
@@ -404,7 +417,7 @@ export type ScAstType = {
 export class ScAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [BinaryExpression, Block, Definition, Expression, ForStatement, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, Statement, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
+        return [BinaryExpression, Block, Definition, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, Statement, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
@@ -495,6 +508,14 @@ export class ScAstReflection extends AbstractAstReflection {
                         { name: 'condition' },
                         { name: 'execution' },
                         { name: 'init' }
+                    ]
+                };
+            }
+            case FunctionCall: {
+                return {
+                    name: FunctionCall,
+                    properties: [
+                        { name: 'arguments', defaultValue: [] }
                     ]
                 };
             }
@@ -629,8 +650,8 @@ export class ScAstReflection extends AbstractAstReflection {
                 return {
                     name: SymbolExpression,
                     properties: [
-                        { name: 'arguments', defaultValue: [] },
                         { name: 'element' },
+                        { name: 'functionCall' },
                         { name: 'indexExpression' },
                         { name: 'structMember' }
                     ]

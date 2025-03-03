@@ -2,10 +2,9 @@
 
 main()
 {
-  int i, j, k;
+  int i, k;
   i = 66;
-  j = 77;
-  k = i + j * 13;
+  k = bla(i);
 }
 
 bla(int x)

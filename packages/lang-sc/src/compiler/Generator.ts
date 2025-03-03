@@ -45,10 +45,10 @@ export class Generator {
   public static readonly uflag = 0; // don't use 8085 undocumented instructions
   public static readonly INTSIZE = 2;
   public linker = new Set<string>();
-  public asm = "";
   private label_count = 0;
   public stkp = 0;
   public fexitlab = -99;
+  public litlab = 0;
 
   private constructor() {}
 
@@ -57,10 +57,10 @@ export class Generator {
   }
 
   init() {
-    this.asm = "";
     this.linker = new Set();
     this.label_count = 0;
     this.stkp = 0;
+    this.litlab = this.get_label();
     // this.gen_comment(`SmallC 8080 v2.4`, 0);
   }
 
@@ -114,7 +114,7 @@ export class Generator {
         lines.push(`ldsi ${sym.offset - this.stkp}`);
         return { reg: CompilerRegs.DE_REG, lines };
       } else {
-        lines.push(`; Retrieve local ${sym.name}`);
+        // lines.push(`; Retrieve local ${sym.name}`);
         lines.push(`lxi h, ${sym.offset - this.stkp}`); // load h = stack offset
         lines.push(`dad sp`); // hl = hl + sp
         return { reg: CompilerRegs.HL_REG, lines };
@@ -142,7 +142,7 @@ export class Generator {
    */
   gen_put_indirect(typeobj: number) {
     const lines = [];
-    this.gen_pop();
+    lines.push(...this.gen_pop());
     if (typeobj & SymbolType.CCHAR) {
       /*gen_call("ccpchar");*/
       lines.push(`mov a, l`);
@@ -151,7 +151,7 @@ export class Generator {
       if (Generator.uflag) {
         lines.push(`shlx`);
       } else {
-        this.gen_call("ccpint");
+        lines.push(...this.gen_call("ccpint"));
       }
     }
     return lines;
@@ -183,7 +183,7 @@ export class Generator {
         }
         lines.push(`lhlx`);
       } else {
-        this.gen_call("ccgint");
+        lines.push(...this.gen_call("ccgint"));
       }
     }
     return lines;
@@ -195,11 +195,11 @@ export class Generator {
   gen_push(reg: CompilerRegs) {
     const lines = [];
     if (reg & CompilerRegs.DE_REG) {
+      this.stkp = this.stkp - Generator.INTSIZE;
       lines.push(`push d`);
-      this.stkp = this.stkp - Generator.INTSIZE;
     } else {
-      lines.push(`push h`);
       this.stkp = this.stkp - Generator.INTSIZE;
+      lines.push(`push h`);
     }
     return lines;
   }
@@ -209,8 +209,8 @@ export class Generator {
    */
   gen_pop() {
     const lines = [];
-    lines.push(`pop d`);
     this.stkp = this.stkp + Generator.INTSIZE;
+    lines.push(`pop d`);
     return lines;
   }
 

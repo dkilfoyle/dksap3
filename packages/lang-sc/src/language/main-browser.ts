@@ -1,9 +1,16 @@
 import { AstNode, DocumentState, EmptyFileSystem, LangiumDocument } from "langium";
 import { startLanguageServer } from "langium/lsp";
-import { BrowserMessageReader, BrowserMessageWriter, createConnection, NotificationType } from "vscode-languageserver/browser";
+import {
+  BrowserMessageReader,
+  BrowserMessageWriter,
+  createConnection,
+  DidChangeConfigurationParams,
+  NotificationType,
+} from "vscode-languageserver/browser";
 import { createScServices } from "./sc-module";
 import { compiler } from "../compiler/sc-compiler";
 import { TraceRegion } from "langium/generate";
+import { userPreferences } from "./sc-userpreferences";
 
 declare const self: DedicatedWorkerGlobalScope;
 
@@ -11,11 +18,17 @@ const messageReader = new BrowserMessageReader(self);
 const messageWriter = new BrowserMessageWriter(self);
 
 const connection = createConnection(messageReader, messageWriter);
-
 const { shared, Sc } = createScServices({ connection, ...EmptyFileSystem });
 
 console.log("Starting SmallC main browser");
 startLanguageServer(shared);
+
+connection.onDidChangeConfiguration((params: DidChangeConfigurationParams) => {
+  console.log("sc config", params);
+  userPreferences.compiler.commentStatements = params.settings.sc.compiler.commentStatements ?? userPreferences.compiler.commentStatements;
+  userPreferences.compiler.commentExpressions = params.settings.sc.compiler.commentExpressions ?? userPreferences.compiler.commentExpressions;
+  shared.workspace.DocumentBuilder.build(shared.workspace.LangiumDocuments.all.toArray());
+});
 
 export type ScDocumentChange = {
   uri: string;

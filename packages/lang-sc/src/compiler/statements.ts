@@ -14,6 +14,7 @@ import { generator, Generator } from "./Generator";
 import { tag_table } from "./TagTable";
 import { compileExpression, ExpressionResult } from "./expression";
 import { CompositeGeneratorNode, expandTracedToNode, joinToNode, joinTracedToNode } from "langium/generate";
+import { userPreferences } from "../language/sc-userpreferences";
 
 const getVariableType = (v: LocalVariableDeclaration) => {
   if (v.type.type == "struct") {
@@ -42,7 +43,7 @@ export const compileStatement = (statement: Statement): CompositeGeneratorNode =
     case isLocalVariableDeclaration(statement):
       return compileLocalDeclaration(statement);
     case isExpression(statement):
-      return compileExpression(statement).node;
+      return compileExpression(statement).node!;
     case isReturnStatement(statement):
       return compileReturn(statement);
     default:
@@ -53,6 +54,7 @@ export const compileStatement = (statement: Statement): CompositeGeneratorNode =
 
 const compileLocalDeclaration = (decl: LocalVariableDeclaration) => {
   return expandTracedToNode(decl)`
+    ${userPreferences.compiler.commentStatements ? `; ${decl.$cstNode!.text}` : undefined}
     ${joinTracedToNode(decl, "varNames")(
       decl.varNames.map((vn) => compileLocalVarName(vn as LocalVarName, decl)),
       { appendNewLineIfNotEmpty: true }
@@ -109,6 +111,7 @@ const compileLocalVarName = (localVar: LocalVarName, decl: LocalVariableDeclarat
   if (decl.type.storage != "static") {
     const { newstkp, lines: nonstaticLines } = generator.gen_modify_stack(generator.stkp - k);
     lines = nonstaticLines;
+    // lines[0] += `\t\t\t\t${decl.type.type} ${localVar.name}`;
     generator.stkp = newstkp;
     const { index: current_symbol_table_idx } = symbol_table.add_local(localVar.name, j, typ, generator.stkp, SymbolStorage.AUTO);
     if (typ == SymbolType.STRUCT) {
@@ -123,8 +126,7 @@ const compileLocalVarName = (localVar: LocalVarName, decl: LocalVariableDeclarat
     }
   }
   return expandTracedToNode(localVar)`
-    ; declare local ${decl.type.$cstNode!.text} ${localVar.name}
-    ${joinToNode(lines, { appendNewLineIfNotEmpty: true })}
+  ${joinToNode(lines, { appendNewLineIfNotEmpty: true })}
   `;
 };
 

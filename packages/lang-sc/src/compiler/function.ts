@@ -20,9 +20,13 @@ export const compileFunctionDeclaration = (fun: FunctionDeclaration) => {
   generator.fexitlab = generator.get_label();
 
   const idx = symbol_table.find_global(fun.name);
-  if (idx != -1) throw Error(`function ${fun.name} already exists in global symbol table`);
-
-  symbol_table.add_global(fun.name, SymbolIdentity.FUNCTION, SymbolType.CINT, SymbolIdentity.FUNCTION, SymbolStorage.PUBLIC);
+  if (idx != -1) {
+    if (symbol_table.symbols[idx].identity != SymbolIdentity.FUNCTION)
+      throw Error(`Symbol ${fun.name} already exists in global symbol table and is not a function`);
+    else if (symbol_table.symbols[idx].offset == SymbolIdentity.FUNCTION)
+      throw Error(`Function ${fun.name} already exists in global symbol table`);
+    else symbol_table.symbols[idx].offset = SymbolIdentity.FUNCTION; // function call before function declaration
+  } else symbol_table.add_global(fun.name, SymbolIdentity.FUNCTION, SymbolType.CINT, SymbolIdentity.FUNCTION, SymbolStorage.PUBLIC);
 
   // generator.output_line(`${fun.name}:`, 0);
 

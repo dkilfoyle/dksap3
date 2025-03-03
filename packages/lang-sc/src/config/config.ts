@@ -48,7 +48,6 @@ export const getScLanguageExtension = (): ExtensionConfig => {
             configuration: `./sc-configuration.json`,
           },
         ],
-
         grammars: [
           {
             language: "sc",
@@ -56,6 +55,21 @@ export const getScLanguageExtension = (): ExtensionConfig => {
             path: `./sc-grammar.json`,
           },
         ],
+        configuration: {
+          title: "SmallC",
+          properties: {
+            "sc.compiler.commentStatements": {
+              type: "boolean",
+              default: true,
+              description: "Annotate the start of each statement in compiled asm code",
+            },
+            "sc.compiler.commentExpressions": {
+              type: "boolean",
+              default: true,
+              description: "Annotate the start of each expression in compiled asm code",
+            },
+          },
+        },
       },
     },
     filesOrContents: getScExtensionFiles(),

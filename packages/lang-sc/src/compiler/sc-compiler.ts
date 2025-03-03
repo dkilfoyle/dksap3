@@ -4,7 +4,7 @@ import { generator } from "./Generator";
 import { compileFunctionDeclaration } from "./function";
 import { symbol_table } from "./SymbolTable";
 import { tag_table } from "./TagTable";
-import { expandTracedToNode, joinToNode, joinTracedToNode, toStringAndTrace } from "langium/generate";
+import { expandTracedToNode, joinToNode, joinTracedToNode, NL, toStringAndTrace } from "langium/generate";
 import { IRange } from "monaco-editor";
 
 export function createError(description: string, range?: IRange) {
@@ -23,7 +23,10 @@ export const compiler = (root: AstNode) => {
 
   return toStringAndTrace(expandTracedToNode(root)`
     ; SmallC v2.4 8080 output
-    ${joinToNode(root.definitions.map((def) => compileDefinition(def)))}
+    ${joinToNode(
+      root.definitions.map((def) => compileDefinition(def)),
+      { appendNewLineIfNotEmpty: true }
+    )}
   `);
 };
 
