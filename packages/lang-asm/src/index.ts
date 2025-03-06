@@ -5,6 +5,7 @@ export * from "./language/asm-module";
 export * from "./language/asm-validator";
 export * from "./config/config";
 export * from "./language/main-browser";
+export * from "./runtime/runtime8080";
 
 // export * from "./sc-completion-provider";
 // export * from "./sc-container-manager";

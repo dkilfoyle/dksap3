@@ -18,7 +18,10 @@ export const getAsmLanguageClientConfig = (): LanguageClientConfig => {
       },
     },
     clientOptions: {
-      documentSelector: ["asm"], // the language id, NOT extension
+      documentSelector: [
+        { scheme: "file", language: "asm" },
+        { scheme: "builtin", language: "asm" },
+      ], // the language id, NOT extension
     },
   };
 };

@@ -1,4 +1,4 @@
-import { type Module, inject } from "langium";
+import { DeepPartial, type Module, inject } from "langium";
 import {
   createDefaultModule,
   createDefaultSharedModule,
@@ -17,6 +17,7 @@ import { AsmFormatter } from "./asm-formatter.js";
 import { AsmCompletionProvider } from "./asm-completion.js";
 import { AsmFoldProvider } from "./asm-fold.js";
 import { AsmScopeComputation, AsmScopeProvider } from "./asm-scope.js";
+import { AsmWorkspaceManager } from "./asm-workspace.js";
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -60,6 +61,14 @@ export const AsmModule: Module<AsmServices, PartialLangiumServices & AsmAddedSer
   },
 };
 
+export type AsmSharedServices = LangiumSharedServices;
+
+export const AsmSharedModule: Module<AsmSharedServices, DeepPartial<AsmSharedServices>> = {
+  workspace: {
+    WorkspaceManager: (services) => new AsmWorkspaceManager(services),
+  },
+};
+
 /**
  * Create the full set of services required by Langium.
  *
@@ -79,7 +88,7 @@ export function createAsmServices(context: DefaultSharedModuleContext): {
   shared: LangiumSharedServices;
   Asm: AsmServices;
 } {
-  const shared = inject(createDefaultSharedModule(context), AsmGeneratedSharedModule);
+  const shared = inject(createDefaultSharedModule(context), AsmGeneratedSharedModule, AsmSharedModule);
   const Asm = inject(createDefaultModule({ shared }), AsmGeneratedModule, AsmModule);
   shared.ServiceRegistry.register(Asm);
   registerValidationChecks(Asm);
