@@ -2,7 +2,8 @@ import { AstNode, DefaultWorkspaceManager, LangiumDocument, LangiumDocumentFacto
 import { LangiumSharedServices } from "langium/lsp";
 import { WorkspaceFolder } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { runtime8080 } from "../runtime/runtime";
+import { runtime8080 } from "../assembler/runtime8080";
+import { assembler } from "src/assembler/asm-assembler";
 
 export class AsmWorkspaceManager extends DefaultWorkspaceManager {
   private documentFactory: LangiumDocumentFactory;
@@ -18,9 +19,8 @@ export class AsmWorkspaceManager extends DefaultWorkspaceManager {
   ): Promise<void> {
     await super.loadAdditionalDocuments(folders, collector);
     // Load our library using the `builtin` URI schema
-    console.log("loading additional documents", runtime8080);
     const node = this.documentFactory.fromString(runtime8080, URI.parse("builtin:///runtime8080.asm"));
-    console.log(node);
+    assembler.runtime = node;
     collector(node);
   }
 }

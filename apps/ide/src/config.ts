@@ -5,12 +5,7 @@
 
 import * as vscode from "vscode";
 import { LogLevel } from "@codingame/monaco-vscode-api";
-import {
-  RegisteredFileSystemProvider,
-  registerFileSystemOverlay,
-  RegisteredMemoryFile,
-  InMemoryFileSystemProvider,
-} from "@codingame/monaco-vscode-files-service-override";
+import { RegisteredFileSystemProvider, registerFileSystemOverlay, RegisteredMemoryFile } from "@codingame/monaco-vscode-files-service-override";
 import getConfigurationServiceOverride from "@codingame/monaco-vscode-configuration-service-override";
 import getKeybindingsServiceOverride from "@codingame/monaco-vscode-keybindings-service-override";
 import getLifecycleServiceOverride from "@codingame/monaco-vscode-lifecycle-service-override";
@@ -184,18 +179,18 @@ export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrap
   MemoryWebviewPanel.render();
 
   wrapper.getLanguageClient("asm")?.onNotification("browser/AsmDocumentChange", (data: AsmDocumentChange) => {
-    console.log("App.tsx onNotification(browser/asmDocumentChange)", data.uri, data.machineCode.length);
-    console.log(JSON.parse(data.content));
+    // console.log("App.tsx onNotification(browser/asmDocumentChange)", data.uri, data.machineCode.length);
+    // console.log(JSON.parse(data.content));
     compiledDocs[data.uri] = data;
     MemoryWebviewPanel.sendMemory(Array.from(data.machineCode));
     MemoryWebviewPanel.sendLabels(data.identifierMap);
   });
 
   wrapper.getLanguageClient("sc")?.onNotification("browser/ScDocumentChange", async (data: ScDocumentChange) => {
-    console.log("App.tsx onNotification(browser/scDocumentChange)", data.uri);
-    console.log(data.asm);
-    console.log(JSON.parse(data.ast));
-    console.log(data.uri);
+    // console.log("App.tsx onNotification(browser/scDocumentChange)", data.uri);
+    // console.log(data.asm);
+    // console.log(JSON.parse(data.ast));
+    // console.log(data.uri);
 
     traceRegions[data.uri] = data.trace;
     sourceAsts[data.uri] = JSON.parse(data.ast);

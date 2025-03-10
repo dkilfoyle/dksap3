@@ -24,7 +24,7 @@ console.log("Starting SmallC main browser");
 startLanguageServer(shared);
 
 connection.onDidChangeConfiguration((params: DidChangeConfigurationParams) => {
-  console.log("sc config", params);
+  // console.log("sc config", params);
   userPreferences.compiler.commentStatements = params.settings.sc.compiler.commentStatements ?? userPreferences.compiler.commentStatements;
   userPreferences.compiler.commentExpressions = params.settings.sc.compiler.commentExpressions ?? userPreferences.compiler.commentExpressions;
   shared.workspace.DocumentBuilder.build(shared.workspace.LangiumDocuments.all.toArray());
@@ -47,7 +47,7 @@ const debounce = (fn: Function, ms = 300) => {
 
 const sendScDocumentChange = (document: LangiumDocument<AstNode>) => {
   const asm = compiler(document.parseResult.value);
-  console.log("ASM", asm);
+  // console.log("ASM", asm);
   const json = Sc.serializer.JsonSerializer.serialize(document.parseResult.value, {
     sourceText: false,
     textRegions: true,

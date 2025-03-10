@@ -1,4 +1,4 @@
-import { AstNode, DocumentState, EmptyFileSystem, LangiumDocument } from "langium";
+import { AstNode, DocumentState, EmptyFileSystem, LangiumDocument, URI } from "langium";
 import { startLanguageServer } from "langium/lsp";
 import {
   BrowserMessageReader,
@@ -8,7 +8,7 @@ import {
   NotificationType,
 } from "vscode-languageserver/browser.js";
 import { createAsmServices } from "./asm-module.js";
-import { assember } from "./asm-assembler.js";
+import { assember } from "../assembler/asm-assembler.js";
 import { userPreferences } from "./asm-userpreferences.js";
 
 console.info("Starting asm main browser");
@@ -47,7 +47,9 @@ const debounce = (fn: Function, ms = 300) => {
 };
 
 const sendAsmDocumentChange = (document: LangiumDocument<AstNode>) => {
-  const { bytes, lineAddressMap, identifierMap } = assember(document.parseResult.value);
+  const runtimeAst = shared.workspace.LangiumDocuments.getDocument(URI.parse("builtin:/runtime8080.asm"));
+  if (!runtimeAst) throw Error("No runtime found");
+  const { bytes, lineAddressMap, identifierMap } = assember(document.parseResult.value, runtimeAst.parseResult.value);
   const json = Asm.serializer.JsonSerializer.serialize(document.parseResult.value, {
     sourceText: false,
     textRegions: true,
@@ -68,8 +70,8 @@ const debouncedSendAsmDocumentChange = debounce(sendAsmDocumentChange, 1000);
 
 shared.workspace.DocumentBuilder.onBuildPhase(DocumentState.Validated, (documents) => {
   for (const document of documents) {
-    // console.log(document);
     // console.log("AST", document.parseResult.value);
+    // console.log("Builtin", shared.workspace.LangiumDocuments);
     if (document.diagnostics?.length == 0) {
       debouncedSendAsmDocumentChange(document);
     }
