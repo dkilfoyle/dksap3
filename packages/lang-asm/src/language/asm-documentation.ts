@@ -1,6 +1,6 @@
 import { AstNode, DocumentationProvider } from "langium";
 import { isInstr, isOperation } from "./generated/ast.js";
-import { operationInfo } from "./opcodes.js";
+import { operationInfo } from "../opcodes.js";
 
 export class AsmDocumentationProvider implements DocumentationProvider {
   getDocumentation(node: AstNode) {

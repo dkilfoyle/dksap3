@@ -3,7 +3,7 @@ import { AsmServices } from "./asm-module.js";
 import { AstNode, LangiumDocument, MaybePromise, CstUtils, DocumentationProvider, CommentProvider } from "langium";
 import { SignatureHelp, SignatureHelpParams, SignatureInformation, ParameterInformation, SignatureHelpOptions } from "vscode-languageserver";
 import { isInstruction } from "./generated/ast.js";
-import { operationInfo } from "./opcodes.js";
+import { operationInfo } from "../opcodes.js";
 
 export class AsmSignatureHelpProvider extends AbstractSignatureHelpProvider {
   documentationProvider: DocumentationProvider;

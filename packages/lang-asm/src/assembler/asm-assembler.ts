@@ -1,11 +1,11 @@
-import { AstNode, AstUtils, LangiumDocument } from "langium";
-import { isProgram, isLabel, isDirective, isAddrArgument, isImm8, isImm16, isInstr, Program, Line } from "../language/generated/ast.js";
+import { AstNode, AstUtils, LangiumDocument, Reference } from "langium";
+import { isProgram, isAddrArgument, isImm8, isImm16, Line, Instr, Label, Directive } from "../language/generated/ast.js";
 import { getInstructionInfo } from "./utils.js";
-import { getImportedLines } from "src/language/asm-linker.js";
+import { getImportedLines } from "./asm-linker.js";
 
 interface IReference {
   filename: string;
-  offset: number;
+  offset: number; // machinecode location
 }
 
 interface ILabelInfo {
@@ -17,17 +17,18 @@ interface ILabelInfo {
 interface IAssembledFile {
   filename: string;
   lines: Line[];
-  labels: ILabelInfo[];
+  labels: Record<string, ILabelInfo>;
+  numericAddresses: Record<number, IReference[]>;
+  constants: Record<string, number>;
   machineCode: Uint8Array;
   startOffset: number;
   sourceLineToLocalAddressMap: Record<number, number>;
   externs: string[];
+  size: number;
 }
 
 class Assembler {
   runtime: LangiumDocument<AstNode> | null = null;
-  labels: Record<string, ILabelInfo> = {};
-  constants: Record<string, number> = {};
   mainfile: string = "";
   files: Record<string, IAssembledFile> = {};
   constructor() {}
@@ -38,25 +39,102 @@ class Assembler {
   assembleAndLink(docs: LangiumDocument<AstNode>[]) {
     if (!this.runtime) throw Error("Assembler has no runtime");
     this.mainfile = docs[0].uri.toString();
-    this.labels = {};
-    this.constants = {};
 
-    for (const doc of docs) {
-      this.preassemble(doc); // find externs and build label list
+    // order is runtime, includes, main
+    const allDocs = [this.runtime, ...docs.slice(1, -1), docs[0]];
+    const filenames = allDocs.map((doc) => doc.uri.toString());
+
+    // build this.files
+    // - build list of local labels
+    // - build list of externs
+    for (const doc of allDocs) {
+      this.preassemble(doc);
     }
 
-    const externs = Object.values(this.files).reduce<string[]>((accum, cur) => {
-      accum.push(...cur.externs);
-      return accum;
-    }, []);
-    console.log("All externals", externs);
+    // exclude unused lines from runtime and includes
+    this.trimDocs(allDocs);
+
+    // build machinecode
+    // add reference to every referenced label
+    Object.entries(this.files).forEach(([filename, file]) => {
+      this.assemble(file);
+    });
+
+    // relocate each document to be sequential in order runtime, #includes, main
+    this.relocateFiles(filenames, 0x0);
+    // this.relocateFiles(filenames, 0x100);
+
+    // replace every address reference with file_base_addr + reference_offset
+    this.relocateAddresses();
+
+    return {
+      bytes: this.concatenateFiles(filenames),
+      labels: this.files[this.mainfile].labels,
+    };
+  }
+
+  concatenateFiles(filenames: string[]) {
+    const mclength = Object.values(this.files).reduce<number>((accum, cur) => accum + cur.size, 0);
+    const mc = new Uint8Array(mclength + 0x100);
+
+    // TODO - add boot
+    // lxi sp, 0F00h
+    // jmp main
+
+    filenames.forEach((filename) => {
+      const file = this.files[filename];
+      mc.set(file.machineCode.slice(0, file.size), file.startOffset);
+    });
+
+    return mc;
+  }
+
+  relocateAddresses() {
+    Object.values(this.files).forEach((f) => {
+      Object.values(f.labels).forEach((l) => {
+        l.references.forEach((r) => {
+          this.files[r.filename].machineCode[r.offset] = (l.localAddress + f.startOffset) & 0xff;
+          this.files[r.filename].machineCode[r.offset + 1] = ((l.localAddress + f.startOffset) >> 8) & 0xff;
+        });
+      });
+      Object.entries(f.numericAddresses).forEach(([x, refs]) => {
+        refs.forEach((r) => {
+          this.files[r.filename].machineCode[r.offset] = (parseInt(x) + f.startOffset) & 0xff;
+          this.files[r.filename].machineCode[r.offset + 1] = ((parseInt(x) + f.startOffset) >> 8) & 0xff;
+        });
+      });
+    });
+  }
+
+  relocateFiles(filenames: string[], start = 0) {
+    filenames.forEach((filename, i) => {
+      if (i == 0) {
+        this.files[filename].startOffset = start;
+      } else {
+        const prevFile = this.files[filenames[i - 1]];
+        this.files[filename].startOffset = prevFile.startOffset + prevFile.size;
+      }
+    });
+    filenames.forEach((filename) => {
+      console.log(`File ${filename} starts at ${this.files[filename].startOffset}, size ${this.files[filename].size}`);
+    });
+  }
+
+  trimDocs(docs: LangiumDocument<AstNode>[]) {
+    // TODO build a dependency tracer
+    // for now only include:
+    // - everything in main
+    // - for runtime and #includes only include what is referenced from main
+    //   (this will ignore cross dependencies within and between runtime and #includes)
+
+    const externs = this.files[this.mainfile].externs;
 
     docs.forEach((doc, i) => {
       const root = doc.parseResult.value;
       const filename = doc.uri.toString();
       if (!isProgram(root)) throw Error("Assembler expects program");
-      if (i == 0) {
-        this.files[filename].lines = root.lines;
+      if (i == docs.length - 1) {
+        this.files[filename].lines = root.lines; // don't trim main file
       } else {
         this.files[filename].lines = getImportedLines(root, externs);
         console.log(`Trimmed ${filename} lines:`, this.files[filename].lines);
@@ -69,10 +147,23 @@ class Assembler {
     const filename = doc.uri.toString();
     if (!isProgram(root)) throw Error("Assembler expects program");
 
+    this.files[filename] = {
+      filename,
+      externs: [],
+      labels: {},
+      lines: [],
+      machineCode: new Uint8Array(4096),
+      sourceLineToLocalAddressMap: {},
+      startOffset: 0,
+      constants: {},
+      size: 0,
+      numericAddresses: {},
+    };
+
     const references: Set<string> = new Set();
     root.lines.forEach((line, i) => {
       if (line.label) {
-        this.files[filename].labels.push({ name: line.label.name, localAddress: 0, references: [] });
+        this.files[filename].labels[line.label.name.toUpperCase()] = { name: line.label.name, localAddress: 0, references: [] };
       }
       if (line.instr && isAddrArgument(line.instr.arg1)) {
         const target = line.instr.arg1.identifier?.$refText.toUpperCase() || line.instr.arg1.number?.toString();
@@ -81,284 +172,127 @@ class Assembler {
       }
     });
 
-    this.files[filename].externs = Array.from(references.keys()).filter((r) => !this.files[filename].labels.find((l) => l.name == r));
+    this.files[filename].externs = Array.from(references.keys()).filter((r) => !this.files[filename].labels[r]);
+    console.log(`externs for ${filename}:`, this.files[filename].externs);
   }
 
-  preassemble2(doc: LangiumDocument<AstNode>) {
-    const root = doc.parseResult.value;
-    const filename = doc.uri.toString();
-    if (!isProgram(root)) throw Error("Assembler expects program");
+  findFileForGlobal(name: string) {
+    return Object.values(this.files).find((f) => {
+      return Object.keys(f.labels).find((l) => l == name);
+    });
+  }
 
+  assembleAddrLabelArgument = (file: IAssembledFile, arg: Reference<Label>, addr: number) => {
+    const id = arg.$refText.toUpperCase();
+    const sourceFile = file.labels[id] ? file : this.findFileForGlobal(id);
+    if (!sourceFile) throw Error(`Unable to find source file for global ${arg.$refText}`);
+    sourceFile.labels[id].references.push({ filename: file.filename, offset: addr });
+    file.machineCode[addr++] = 0; //x & 0xff;
+    file.machineCode[addr++] = 0; //(x >> 8) & 0xff;
+    return addr;
+  };
+
+  assembleAddrNumberArgument = (file: IAssembledFile, arg: number, addr: number) => {
+    if (!file.numericAddresses[arg]) {
+      file.numericAddresses[arg] = [];
+    }
+    file.numericAddresses[arg].push({ filename: file.filename, offset: addr });
+    file.machineCode[addr++] = 0; //arg.number & 0xff;
+    file.machineCode[addr++] = 0; //(arg.number >> 8) & 0xff;
+    return addr;
+  };
+
+  assembleInstr(file: IAssembledFile, node: Instr, addr: number) {
+    const instrInfo = getInstructionInfo(node);
+    file.sourceLineToLocalAddressMap[node.$cstNode!.range.start.line] = addr;
+    file.machineCode[addr++] = instrInfo.code & 0xff;
+
+    switch (true) {
+      case isAddrArgument(node.arg1):
+        if (node.arg1.identifier) addr = this.assembleAddrLabelArgument(file, node.arg1.identifier, addr);
+        else if (node.arg1.number != undefined) addr = this.assembleAddrNumberArgument(file, node.arg1.number, addr);
+        break;
+      case isImm8(node.arg1):
+        if (node.arg1.char) {
+          file.machineCode[addr++] = node.arg1.char.charCodeAt(0) & 0xff;
+        } else if (node.arg1.number !== undefined) file.machineCode[addr++] = node.arg1.number & 0xff;
+        else throw Error();
+        break;
+    }
+    switch (true) {
+      case isImm8(node.arg2):
+        if (node.arg2.char) {
+          file.machineCode[addr++] = node.arg2.char.charCodeAt(0) & 0xff;
+        } else if (node.arg2.number !== undefined) file.machineCode[addr++] = node.arg2.number & 0xff;
+        else throw Error();
+        break;
+      case isImm16(node.arg2):
+        if (node.arg2.identifier) {
+          addr = this.assembleAddrLabelArgument(file, node.arg2.identifier, addr);
+        } else if (node.arg2.number != undefined) {
+          file.machineCode[addr++] = node.arg2.number & 0xff;
+          file.machineCode[addr++] = (node.arg2.number >> 8) & 0xff;
+        }
+        break;
+    }
+
+    return addr;
+  }
+
+  assembleDirective(file: IAssembledFile, node: Directive, addr: number) {
+    switch (node.dir.opname.toUpperCase()) {
+      case "ORG":
+        {
+          const a = node.args[0].number;
+          if (a == undefined) throw Error("ORG expects number");
+          addr = a;
+        }
+        break;
+      case "DB":
+        node.args.forEach((arg) => {
+          if (arg.number == undefined) throw Error();
+          file.machineCode[addr++] = arg.number & 0xff;
+        });
+        break;
+      case "DW":
+        node.args.forEach((arg) => {
+          if (arg.number != undefined) {
+            file.machineCode[addr++] = arg.number & 0xff; // least significant byte
+            file.machineCode[addr++] = (arg.number >> 8) & 0xff; // most significant byte
+          } else if (arg.identifier != undefined) {
+            addr = this.assembleAddrLabelArgument(file, arg.identifier, addr);
+          } else throw Error();
+        });
+        break;
+      default:
+        throw Error(`Directive ${node.dir.opname} not implemented in assembler yet`);
+    }
+    return addr;
+  }
+
+  assemble(file: IAssembledFile) {
     let addr = 0;
-    const references: Record<string, number[]> = {};
-    const localLabels: string[] = [];
 
-    // first parse, build address map
-    const treeIterator1 = AstUtils.streamAllContents(root).iterator();
-    let result1: IteratorResult<AstNode>;
-    do {
-      result1 = treeIterator1.next();
-      if (!result1.done) {
-        const node = result1.value;
-        const lineNum = node.$cstNode?.range.start.line;
-        if (lineNum == undefined) throw Error("Assembler linenum undefined");
+    file.lines.forEach((line) => {
+      const linenum = line.$cstNode?.range.start.line;
 
-        if (isInstr(node)) {
-          const instrInfo = getInstructionInfo(node);
-          addr += instrInfo.bytes;
-          // lineOpcodeMap[lineNum] = `0x${instrInfo.code.toString(16).padStart(2, "0")}`;
-          if (isAddrArgument(node.arg1)) {
-            const target = node.arg1.identifier?.$refText.toUpperCase() || node.arg1.number?.toString();
-            if (!target) throw Error("assemble - invalid addr argument");
-            if (!references[target]) references[target] = [addr - 2];
-            else references[target].push(addr - 2);
-          }
-        }
-        if (isLabel(node)) {
-          const labelName = node.name.toUpperCase();
-          if (this.labels[labelName]) throw Error("assembler label already exists");
-          this.labels[labelName] = { filename, localAddress: addr, name: labelName, references: [] };
-          localLabels.push(labelName);
-        }
-        if (isDirective(node)) {
-          switch (node.dir.opname.toUpperCase()) {
-            case "ORG":
-              {
-                const a = node.args[0].number;
-                if (a == undefined) throw Error("ORG expects number");
-                addr = a;
-              }
-              break;
-            case "EQU":
-              if (!node.lhs?.identifier) throw Error("EQU missing lhs.identifier");
-              this.constants[node.lhs!.identifier.$refText.toUpperCase()] = node.args[0].number!;
-              break;
-            case "DB":
-              addr += node.args.length;
-              break;
-            case "DW":
-              addr += node.args.length * 2;
-              break;
-            default:
-              throw Error(`Directive ${node.dir.opname} not implemented in assembler yet`);
-          }
-        }
+      if (line.label) {
+        file.labels[line.label.name.toUpperCase()].localAddress = addr;
       }
-    } while (!result1.done);
-    const externals = Object.keys(references).filter((ref) => !identifierMap[ref]);
-    console.log("EXTERNALS", externals);
+
+      if (line.instr) {
+        addr = this.assembleInstr(file, line.instr, addr);
+      }
+
+      if (line.dir) {
+        addr = this.assembleDirective(file, line.dir, addr);
+      }
+    });
+
+    file.size = addr;
   }
+
+  link(file: IAssembledFile) {}
 }
 
 export const assembler = new Assembler();
-
-export const assember = (root: AstNode, runtime: AstNode) => {
-  if (!isProgram(root)) throw Error("Assembler expects Program node as root");
-
-  const identifierMap: Record<string, number> = {};
-  const lineOpcodeMap: Record<number, string> = {};
-  const lineAddressMap: Record<number, number> = {};
-  const references: Record<string, number[]> = {};
-  let addr = 0;
-
-  if (isProgram(runtime)) {
-    const imports = getExternals(runtime, externals);
-    imports.forEach((i) => console.log(i.$cstNode?.text));
-  }
-
-  // second parse, build bytes
-  const bytes = new Uint8Array(addr);
-  addr = 0;
-  const treeIterator2 = AstUtils.streamAllContents(root).iterator();
-  let result2: IteratorResult<AstNode>;
-  do {
-    result2 = treeIterator2.next();
-    if (!result2.done) {
-      const node = result2.value;
-      const lineNum = node.$cstNode?.range.start.line;
-      if (lineNum == undefined) throw Error("Assembler linenum undefined");
-      if (isDirective(node)) {
-        switch (node.dir.opname.toUpperCase()) {
-          case "ORG":
-            {
-              const a = node.args[0].number;
-              if (a == undefined) throw Error("ORG expects number");
-              addr = a;
-            }
-            break;
-          case "DB":
-            node.args.forEach((arg) => {
-              if (arg.number == undefined) throw Error();
-              bytes[addr++] = arg.number & 0xff;
-            });
-            break;
-          case "DW":
-            node.args.forEach((arg) => {
-              if (arg.number != undefined) {
-                bytes[addr++] = arg.number & 0xff; // least significant byte
-                bytes[addr++] = (arg.number >> 8) & 0xff; // most significant byte
-              } else if (arg.identifier != undefined) {
-                const x = identifierMap[arg.identifier.$refText.toUpperCase()];
-                if (x == undefined) throw Error("Identifer in DW arg not found");
-                bytes[addr++] = x & 0xff;
-                bytes[addr++] = (x >> 8) & 0xff;
-              } else throw Error();
-            });
-            break;
-          default:
-            throw Error(`Directive ${node.dir.opname} not implemented in assembler yet`);
-        }
-      } else if (isInstr(node)) {
-        const lookup = opcodes[lineOpcodeMap[lineNum]];
-        if (!lookup) throw Error();
-        lineAddressMap[node.$cstNode!.range.start.line] = addr;
-        bytes[addr++] = lookup.code & 0xff;
-
-        switch (true) {
-          case isAddrArgument(node.arg1):
-            if (node.arg1.identifier) {
-              const x = identifierMap[node.arg1.identifier.$refText.toUpperCase()];
-              bytes[addr++] = x & 0xff;
-              bytes[addr++] = (x >> 8) & 0xff;
-            } else if (node.arg1.number != undefined) {
-              bytes[addr++] = node.arg1.number & 0xff;
-              bytes[addr++] = (node.arg1.number >> 8) & 0xff;
-            }
-            break;
-          case isImm8(node.arg1):
-            if (node.arg1.char) {
-              bytes[addr++] = node.arg1.char.charCodeAt(0) & 0xff;
-            } else if (node.arg1.number !== undefined) bytes[addr++] = node.arg1.number & 0xff;
-            else throw Error();
-            break;
-        }
-        switch (true) {
-          case isImm8(node.arg2):
-            if (node.arg2.char) {
-              bytes[addr++] = node.arg2.char.charCodeAt(0) & 0xff;
-            } else if (node.arg2.number !== undefined) bytes[addr++] = node.arg2.number & 0xff;
-            else throw Error();
-            break;
-          case isImm16(node.arg2):
-            if (node.arg2.identifier) {
-              const x = identifierMap[node.arg2.identifier.$refText.toUpperCase()];
-              bytes[addr++] = x & 0xff;
-              bytes[addr++] = (x >> 8) & 0xff;
-            } else if (node.arg2.number != undefined) {
-              bytes[addr++] = node.arg2.number & 0xff;
-              bytes[addr++] = (node.arg2.number >> 8) & 0xff;
-            }
-            break;
-        }
-      }
-    }
-  } while (!result2.done);
-
-  return { bytes, identifierMap, lineAddressMap };
-};
-// export const assember = (root: AstNode) => {
-//   if (!isProgram(root)) throw Error("Assembler expects Program node as root");
-
-//   const identifierMap: Record<string, number> = {};
-//   const lineOpcodeMap: Record<number, string> = {};
-//   const lineAddressMap: Record<number, number> = {};
-//   let addr = 0;
-
-//   // first parse, build address map
-//   root.lines.forEach((line, lineNum) => {
-//     if (isInstr(line)) {
-//       const instrInfo = getInstructionInfo(line);
-//       addr += instrInfo.bytes;
-//       lineOpcodeMap[lineNum] = `0x${instrInfo.code.toString(16).padStart(2, "0")}`;
-//     }
-//     if (isLabel(line)) {
-//       identifierMap[line.name] = addr;
-//     }
-//     if (isDirective(line)) {
-//       switch (line.dir.opname.toUpperCase()) {
-//         case "ORG":
-//           const a = line.args[0].number;
-//           if (a == undefined) throw Error("ORG expects number");
-//           addr = a;
-//           break;
-//         case "EQU":
-//           if (!line.lhs?.identifier) throw Error("EQU missing lhs.identifier");
-//           identifierMap[line.lhs!.identifier!] = line.args[0].number!;
-//           break;
-//         case "DB":
-//           addr += line.args.length;
-//           break;
-//         default:
-//           throw Error(`Directive ${line.dir.opname} not implemented in assembler yet`);
-//       }
-//     }
-//   });
-
-//   const bytes = new Uint8Array(addr);
-//   addr = 0;
-
-//   // second parse, build bytes
-//   root.lines.forEach((line, lineNum) => {
-//     if (isDirective(line)) {
-//       switch (line.dir.opname.toUpperCase()) {
-//         case "ORG":
-//           const a = line.args[0].number;
-//           if (a == undefined) throw Error("ORG expects number");
-//           addr = a;
-//           break;
-//         case "DB":
-//           line.args.forEach((arg) => {
-//             if (arg.number == undefined) throw Error();
-//             bytes[addr++] = arg.number & 0xff;
-//           });
-//           break;
-//         default:
-//           throw Error(`Directive ${line.dir.opname} not implemented in assembler yet`);
-//       }
-//     } else if (isInstr(line)) {
-//       const lookup = opcodes[lineOpcodeMap[lineNum]];
-//       if (!lookup) debugger;
-//       lineAddressMap[line.$cstNode!.range.start.line] = addr;
-//       bytes[addr++] = lookup.code & 0xff;
-
-//       switch (true) {
-//         case isAddrArgument(line.arg1):
-//           if (line.arg1.identifier) {
-//             const x = identifierMap[line.arg1.identifier.$refText];
-//             bytes[addr++] = x & 0xff;
-//             bytes[addr++] = (x >> 8) & 0xff;
-//           } else if (line.arg1.number != undefined) {
-//             bytes[addr++] = line.arg1.number & 0xff;
-//             bytes[addr++] = (line.arg1.number >> 8) & 0xff;
-//           }
-//           break;
-//         case isImm8(line.arg1):
-//           if (line.arg1.char) {
-//             bytes[addr++] = line.arg1.char.charCodeAt(0) & 0xff;
-//           } else if (line.arg1.number) bytes[addr++] = line.arg1.number & 0xff;
-//           else debugger;
-//           break;
-//       }
-//       switch (true) {
-//         case isImm8(line.arg2):
-//           if (line.arg2.char) {
-//             bytes[addr++] = line.arg2.char.charCodeAt(0) & 0xff;
-//           } else if (line.arg2.number !== undefined) bytes[addr++] = line.arg2.number & 0xff;
-//           else debugger;
-//           break;
-//         case isImm16(line.arg2):
-//           if (line.arg2.identifier) {
-//             const x = identifierMap[line.arg2.identifier.$refText];
-//             bytes[addr++] = x & 0xff;
-//             bytes[addr++] = (x >> 8) & 0xff;
-//           } else if (line.arg2.number != undefined) {
-//             bytes[addr++] = line.arg2.number & 0xff;
-//             bytes[addr++] = (line.arg2.number >> 8) & 0xff;
-//           }
-//           break;
-//       }
-//     }
-//   });
-
-//   return { bytes, identifierMap, lineAddressMap };
-// };

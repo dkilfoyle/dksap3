@@ -1,4 +1,4 @@
-import { Instr, isAddrArgument, isImm8, isReg16, isReg8, isImm16 } from "src/language/generated/ast.js";
+import { Instr, isAddrArgument, isImm8, isReg16, isReg8, isImm16 } from "../language/generated/ast.js";
 import { instructionInfo, opcodes } from "../opcodes.js";
 
 export const getInstructionInfo = (instr: Instr) => {

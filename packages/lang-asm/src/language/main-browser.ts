@@ -8,7 +8,7 @@ import {
   NotificationType,
 } from "vscode-languageserver/browser.js";
 import { createAsmServices } from "./asm-module.js";
-import { assember } from "../assembler/asm-assembler.js";
+import { assembler } from "../assembler/asm-assembler.js";
 import { userPreferences } from "./asm-userpreferences.js";
 
 console.info("Starting asm main browser");
@@ -49,7 +49,7 @@ const debounce = (fn: Function, ms = 300) => {
 const sendAsmDocumentChange = (document: LangiumDocument<AstNode>) => {
   const runtimeAst = shared.workspace.LangiumDocuments.getDocument(URI.parse("builtin:/runtime8080.asm"));
   if (!runtimeAst) throw Error("No runtime found");
-  const { bytes, lineAddressMap, identifierMap } = assember(document.parseResult.value, runtimeAst.parseResult.value);
+  const { bytes } = assembler.assembleAndLink([document, runtimeAst]);
   const json = Asm.serializer.JsonSerializer.serialize(document.parseResult.value, {
     sourceText: false,
     textRegions: true,
@@ -61,8 +61,8 @@ const sendAsmDocumentChange = (document: LangiumDocument<AstNode>) => {
     uri: document.uri.toString(),
     content: json,
     machineCode: bytes,
-    identifierMap,
-    lineAddressMap,
+    identifierMap: {},
+    lineAddressMap: {},
   });
 };
 

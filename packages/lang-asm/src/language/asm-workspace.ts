@@ -3,7 +3,7 @@ import { LangiumSharedServices } from "langium/lsp";
 import { WorkspaceFolder } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { runtime8080 } from "../assembler/runtime8080";
-import { assembler } from "src/assembler/asm-assembler";
+import { assembler } from "../assembler/asm-assembler";
 
 export class AsmWorkspaceManager extends DefaultWorkspaceManager {
   private documentFactory: LangiumDocumentFactory;
