@@ -239,6 +239,16 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
           {
             "$type": "Keyword",
             "value": ":"
+          },
+          {
+            "$type": "Assignment",
+            "feature": "glob",
+            "operator": "?=",
+            "terminal": {
+              "$type": "Keyword",
+              "value": ":"
+            },
+            "cardinality": "?"
           }
         ]
       },

@@ -11,7 +11,7 @@ Line:
 ;
 
 Label:
-    name=ID ":";
+    name=ID ":" glob?=":"?;
 
 Comment:
     comment=COMMENT;

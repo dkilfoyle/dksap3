@@ -5,6 +5,6 @@ export const userPreferences = {
     style: 1,
   },
   syntax: {
-    maxLabelSize: 6,
+    maxLabelSize: 8,
   },
 };

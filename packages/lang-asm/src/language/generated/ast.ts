@@ -226,6 +226,7 @@ export function isInstr(item: unknown): item is Instr {
 export interface Label extends AstNode {
     readonly $container: Line;
     readonly $type: 'Label';
+    glob: boolean;
     name: string;
 }
 
@@ -424,6 +425,7 @@ export class AsmAstReflection extends AbstractAstReflection {
                 return {
                     name: Label,
                     properties: [
+                        { name: 'glob', defaultValue: false },
                         { name: 'name' }
                     ]
                 };

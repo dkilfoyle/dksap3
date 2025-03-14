@@ -1,30 +1,30 @@
 export const runtime8080 = `; RUNTIME
 ; fetch char from (HL) and sign extend into HL
-ccgchar: mov     a,m
+ccgchar:: mov     a,m
 ccsxt:  mov     l,a
         rlc
         sbb     a
         mov     h,a
         ret
 ; fetch int from (HL)
-ccgint: mov     a,m
+ccgint:: mov     a,m
         inx     h
         mov     h,m
         mov     l,a
         ret
 ; store char from HL into (DE)
-ccpchar: mov     a,l
+ccpchar:: mov     a,l
         stax    d
         ret
 ; store int from HL into (DE)
-ccpint: mov     a,l
+ccpint:: mov     a,l
         stax    d
         inx     d
         mov     a,h
         stax    d
         ret
 ; "or" HL and DE into HL
-ccor:   mov     a,l
+ccor::  mov     a,l
         ora     e
         mov     l,a
         mov     a,h
@@ -32,7 +32,7 @@ ccor:   mov     a,l
         mov     h,a
         ret
 ; "xor" HL and DE into HL
-ccxor:  mov     a,l
+ccxor:: mov     a,l
         xra     e
         mov     l,a
         mov     a,h
@@ -40,7 +40,7 @@ ccxor:  mov     a,l
         mov     h,a
         ret
 ; "and" HL and DE into HL
-ccand:  mov     a,l
+ccand:: mov     a,l
         ana     e
         mov     l,a
         mov     a,h
@@ -51,55 +51,55 @@ ccand:  mov     a,l
 ;......logical operations: HL set to 0 (false) or 1 (true)
 ;
 ; DE == HL
-cceq:   call    cccmp
+cceq::  call    cccmp
         rz
         dcx     h
         ret
 ; DE != HL
-ccne:   call    cccmp
+ccne::  call    cccmp
         rnz
         dcx     h
         ret
 ; DE > HL [signed]
-ccgt:   xchg
+ccgt::  xchg
         call    cccmp
         rc
         dcx     h
         ret
 ; DE <= HL [signed]
-ccle:   call    cccmp
+ccle::  call    cccmp
         rz
         rc
         dcx     h
         ret
 ; DE >= HL [signed]
-ccge:   call    cccmp
+ccge::  call    cccmp
         rnc
         dcx     h
         ret
 ; DE < HL [signed]
-cclt:   call    cccmp
+cclt::  call    cccmp
         rc
         dcx     h
         ret
 ; DE >= HL [unsigned]
-ccuge:  call    ccucmp
+ccuge:: call    ccucmp
         rnc
         dcx     h
         ret
 ; DE < HL [unsigned]
-ccult:  call    ccucmp
+ccult:: call    ccucmp
         rc
         dcx     h
         ret
 ; DE > HL [unsigned]
-ccugt:  xchg
+ccugt:: xchg
         call    ccucmp
         rc
         dcx     h
         ret
 ; DE <= HL [unsigned]
-ccule:  call    ccucmp
+ccule:: call    ccucmp
         rz
         rc
         dcx     h
@@ -107,7 +107,7 @@ ccule:  call    ccucmp
 ; signed compare of DE and HL
 ;   carry is sign of difference [set => DE < HL]
 ;   zero is zero/non-zero
-cccmp:  mov     a,e
+cccmp:: mov     a,e
         sub     l
         mov     e,a
         mov     a,d
@@ -122,7 +122,7 @@ cccmp1: ora     e
 ; unsigned compare of DE and HL
 ;   carry is sign of difference [set => DE < HL]
 ;   zero is zero/non-zero
-ccucmp: mov     a,d
+ccucmp:: mov     a,d
         cmp     h
         jnz     ccucmp1
         mov     a,e
@@ -130,7 +130,7 @@ ccucmp: mov     a,d
 ccucmp1: lxi     h,1             ;preset true
         ret
 ; shift DE right logically by HL, move to HL
-cclsr:  xchg
+cclsr:: xchg
 cclsr1: dcr     e
         rm
         stc
@@ -145,7 +145,7 @@ cclsr1: dcr     e
         cmc
         jmp     cclsr1
 ; shift DE right arithmetically by HL, move to HL
-ccasr:  xchg
+ccasr:: xchg
 ccasr1: dcr     e
         rm
         mov     a,h
@@ -158,13 +158,13 @@ ccasr1: dcr     e
         mov     l,a
         jmp     ccasr1
 ; shift DE left arithmetically by HL, move to HL
-ccasl:  xchg
+ccasl::  xchg
 ccasl1: dcr     e
         rm
         dad     h
         jmp     ccasl1
 ; HL = DE - HL
-ccsub:  mov     a,e
+ccsub:: mov     a,e
         sub     l
         mov     l,a
         mov     a,d
@@ -172,11 +172,11 @@ ccsub:  mov     a,e
         mov     h,a
         ret
 ; HL = -HL
-ccneg:  call    cccom
+ccneg:: call    cccom
         inx     h
         ret
 ; HL = ~HL
-cccom:  mov     a,h
+cccom:: mov     a,h
         cma
         mov     h,a
         mov     a,l
@@ -184,7 +184,7 @@ cccom:  mov     a,h
         mov     l,a
         ret
 ; HL = !HL
-cclneg: mov     a,h
+cclneg:: mov     a,h
         ora     l
         jz      cclneg1
         lxi     h,0
@@ -192,11 +192,11 @@ cclneg: mov     a,h
 cclneg1: inx     h
         ret
 ; HL = !!HL
-ccbool: call    cclneg
+ccbool:: call    cclneg
         jmp     cclneg
 ;
 ; HL = DE * HL [signed]
-ccmul:  mov     b,h
+ccmul::  mov     b,h
         mov     c,l
         lxi     h,0
 ccmul1: mov     a,c
@@ -223,7 +223,7 @@ ccmul2: xra     a
         rz
         jmp     ccmul1
 ; HL = DE / HL, DE = DE % HL
-ccdiv:  mov     b,h
+ccdiv:: mov     b,h
         mov     c,l
         mov     a,d
         xra     b
@@ -265,7 +265,7 @@ ccdiv3: pop     psw
         xchg
         ret
 ; {DE = -DE}
-ccdeneg:
+ccdeneg::
         mov     a,d
         cma
         mov     d,a
@@ -275,7 +275,7 @@ ccdeneg:
         inx     d
         ret
 ; {BC = -BC}
-ccbcneg:
+ccbcneg::
         mov     a,b
         cma
         mov     b,a
@@ -285,7 +285,7 @@ ccbcneg:
         inx     b
         ret
 ; {DE <r<r 1}
-ccrdel: mov     a,e
+ccrdel:: mov     a,e
         ral
         mov     e,a
         mov     a,d
@@ -294,14 +294,14 @@ ccrdel: mov     a,e
         ora     e
         ret
 ; {BC : DE}
-cccmpbd:
+cccmpbd::
         mov     a,e
         sub     c
         mov     a,d
         sbb     b
         ret
 ; case jump
-cccase: xchg                    ;switch value to DE. exchange HL with DE
+cccase:: xchg                    ;switch value to DE. exchange HL with DE
         pop     h               ;get table address
 cccase1: call    cccase4          ;get case value
         mov     a,e
@@ -348,12 +348,12 @@ etext:
 ;
 
 ; fetch char from (HL) into HL no sign extend
-cguchar: mov     l,m
+cguchar:: mov     l,m
         mvi     h,0
         ret
 ; unsigned divide DE by HL and return quotient in HL, remainder in DE
 ; HL = DE / HL, DE = DE % HL
-ccudiv: mov     b,h             ; store divisor to bc 
+ccudiv:: mov     b,h             ; store divisor to bc 
         mov     c,l
         lxi     h,0             ; clear remainder
         xra     a               ; clear carry        
