@@ -34,7 +34,6 @@ interface IAssembledFile {
   filename: string;
   lines: Line[];
   labels: Record<string, ILabelInfo>;
-  numericAddresses: Record<number, IReference[]>;
   constants: Record<string, number>;
   machineCode: Uint8Array;
   startOffset: number;
@@ -122,12 +121,6 @@ class Assembler {
           this.files[r.filename].machineCode[r.offset + 1] = ((l.localAddress + f.startOffset) >> 8) & 0xff;
         });
       });
-      Object.entries(f.numericAddresses).forEach(([x, refs]) => {
-        refs.forEach((r) => {
-          this.files[r.filename].machineCode[r.offset] = (parseInt(x) + f.startOffset) & 0xff;
-          this.files[r.filename].machineCode[r.offset + 1] = ((parseInt(x) + f.startOffset) >> 8) & 0xff;
-        });
-      });
     });
   }
 
@@ -182,7 +175,6 @@ class Assembler {
       startOffset: 0,
       constants: {},
       size: 0,
-      numericAddresses: {},
     };
 
     const references: Set<string> = new Set();
@@ -225,12 +217,8 @@ class Assembler {
   };
 
   assembleAddrNumberArgument = (file: IAssembledFile, arg: number, addr: number) => {
-    if (!file.numericAddresses[arg]) {
-      file.numericAddresses[arg] = [];
-    }
-    file.numericAddresses[arg].push({ filename: file.filename, offset: addr });
-    file.machineCode[addr++] = 0; //arg.number & 0xff;
-    file.machineCode[addr++] = 0; //(arg.number >> 8) & 0xff;
+    file.machineCode[addr++] = arg & 0xff;
+    file.machineCode[addr++] = (arg >> 8) & 0xff;
     return addr;
   };
 
