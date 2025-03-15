@@ -1,7 +1,7 @@
 import { AsmDocumentChange } from "@dksap3/lang-asm";
 import { AsmDebugSession } from "./AsmDebugSession.ts";
 import { BreakpointEvent, OutputEvent, StoppedEvent, TerminatedEvent } from "./dap/events.ts";
-import { emulator } from "@dksap3/cpusim";
+import { emulator, Registers } from "@dksap3/cpusim";
 import { EmulatorWebviewPanel } from "../components/EmulatorWebviewPanel.ts";
 import { MemoryWebviewPanel } from "../components/MemoryWebviewPanel.ts";
 import { printOutputChannel } from "./debugger.ts";
@@ -36,6 +36,9 @@ export class AsmRuntime {
 
   constructor(public logLevel = 1) {
     console.log("AsmRuntime constructed");
+    emulator.oscallback = (regs: Registers) => {
+      console.log("OSCALL", regs);
+    };
   }
 
   log(msg: string) {

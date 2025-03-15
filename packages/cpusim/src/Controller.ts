@@ -60,7 +60,7 @@ export class Controller implements IClocked {
     this.stage = this.stage_rst == 1 ? 0 : this.stage + 1;
   }
 
-  always({ alu, ir, mem, regs }: Computer) {
+  always({ alu, ir, mem, regs, oscallback }: Computer) {
     this.ctrl_word = 0;
     this.stage_rst = 0;
     const ir8 = ir.out.toString(8).padStart(3, "0");
@@ -77,6 +77,12 @@ export class Controller implements IClocked {
     } else {
       // stage 3+
       switch (true) {
+        case ir8 == "000":
+          // NOP
+          if (regs.pc == 6) oscallback(regs);
+          this.stage_max = 3;
+          this.stage_rst = 1;
+          break;
         case ir8 == "166":
           this.HLT();
           break;

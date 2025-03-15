@@ -37,6 +37,7 @@ export class Computer {
   rst = 0;
   out = 0;
   states: ComputerState[] = [];
+  oscallback: (regs: Registers) => void = () => {};
 
   constructor(program?: number[]) {
     this.reset(program);
