@@ -14,6 +14,7 @@ import {
   isDataDirective,
   isMemoryDirective,
   isSymbolDirective,
+  isLabel,
 } from "../language/generated/ast.js";
 import { getInstructionInfo } from "./utils.js";
 import { getImportedLines } from "./asm-linker.js";
@@ -37,7 +38,7 @@ interface IAssembledFile {
   constants: Record<string, number>;
   machineCode: Uint8Array;
   startOffset: number;
-  sourceLineToLocalAddressMap: Record<number, number>;
+  lineAddressMap: Record<number, { start: number; size: number }>;
   externs: string[];
   size: number;
 }
@@ -87,7 +88,13 @@ class Assembler {
 
     return {
       bytes: this.concatenateFiles(filenames),
-      labels: this.files[this.mainfile].labels,
+      files: Object.values(this.files).map((f) => ({
+        labels: f.labels,
+        size: f.size,
+        startOffset: f.startOffset,
+        lineAddressMap: f.lineAddressMap,
+        filename: f.filename,
+      })),
     };
   }
 
@@ -151,8 +158,8 @@ class Assembler {
       const root = doc.parseResult.value;
       const filename = doc.uri.toString();
       if (!isProgram(root)) throw Error("Assembler expects program");
-      if (i == docs.length - 1) {
-        this.files[filename].lines = root.lines; // don't trim main file
+      if (i == docs.length - 1 || i == 0) {
+        this.files[filename].lines = root.lines; // don't trim main file or os
       } else {
         this.files[filename].lines = getImportedLines(root, externs);
         console.log(`Trimmed ${filename} lines:`, this.files[filename].lines);
@@ -171,7 +178,7 @@ class Assembler {
       labels: {},
       lines: [],
       machineCode: new Uint8Array(4096),
-      sourceLineToLocalAddressMap: {},
+      lineAddressMap: {},
       startOffset: 0,
       constants: {},
       size: 0,
@@ -200,14 +207,21 @@ class Assembler {
     });
   }
 
-  assembleAddrLabelArgument = (file: IAssembledFile, arg: Reference<Identifier>, addr: number) => {
+  assembleAddrIdentifierArgument = (file: IAssembledFile, arg: Reference<Identifier>, addr: number) => {
     const id = arg.$refText.toUpperCase();
-    const sourceFile = file.labels[id] ? file : this.findFileForGlobal(id);
-    if (!sourceFile) throw Error(`Unable to find source file for global ${arg.$refText}`);
-    sourceFile.labels[id].references.push({ filename: file.filename, offset: addr });
-    file.machineCode[addr++] = 0; //x & 0xff;
-    file.machineCode[addr++] = 0; //(x >> 8) & 0xff;
-    return addr;
+    if (isLabel(arg.ref) || isLinkageDirective(arg.ref)) {
+      const sourceFile = file.labels[id] ? file : this.findFileForGlobal(id);
+      if (!sourceFile) throw Error(`Unable to find source file for global ${arg.$refText}`);
+      sourceFile.labels[id].references.push({ filename: file.filename, offset: addr });
+      file.machineCode[addr++] = 0; //x & 0xff;
+      file.machineCode[addr++] = 0; //(x >> 8) & 0xff;
+      return addr;
+    } else if (isSymbolDirective(arg.ref)) {
+      const x = file.constants[id];
+      file.machineCode[addr++] = x & 0xff;
+      file.machineCode[addr++] = (x >> 8) & 0xff;
+      return addr;
+    } else throw Error();
   };
 
   assembleAddrNumberArgument = (file: IAssembledFile, arg: number, addr: number) => {
@@ -222,12 +236,12 @@ class Assembler {
 
   assembleInstr(file: IAssembledFile, node: Instr, addr: number) {
     const instrInfo = getInstructionInfo(node);
-    file.sourceLineToLocalAddressMap[node.$cstNode!.range.start.line] = addr;
+    const startAddr = addr;
     file.machineCode[addr++] = instrInfo.code & 0xff;
 
     switch (true) {
       case isAddrArgument(node.arg1):
-        if (node.arg1.identifier) addr = this.assembleAddrLabelArgument(file, node.arg1.identifier, addr);
+        if (node.arg1.identifier) addr = this.assembleAddrIdentifierArgument(file, node.arg1.identifier, addr);
         else if (node.arg1.number != undefined) addr = this.assembleAddrNumberArgument(file, node.arg1.number, addr);
         break;
       case isImm8(node.arg1):
@@ -246,7 +260,7 @@ class Assembler {
         break;
       case isImm16(node.arg2):
         if (node.arg2.identifier) {
-          addr = this.assembleAddrLabelArgument(file, node.arg2.identifier, addr);
+          addr = this.assembleAddrIdentifierArgument(file, node.arg2.identifier, addr);
         } else if (node.arg2.number != undefined) {
           file.machineCode[addr++] = node.arg2.number & 0xff;
           file.machineCode[addr++] = (node.arg2.number >> 8) & 0xff;
@@ -254,6 +268,7 @@ class Assembler {
         break;
     }
 
+    file.lineAddressMap[node.$cstNode!.range.start.line] = { start: startAddr, size: addr - startAddr };
     return addr;
   }
 
@@ -278,7 +293,7 @@ class Assembler {
               file.machineCode[addr++] = arg.number & 0xff; // least significant byte
               file.machineCode[addr++] = (arg.number >> 8) & 0xff; // most significant byte
             } else if (arg.identifier != undefined) {
-              addr = this.assembleAddrLabelArgument(file, arg.identifier, addr);
+              addr = this.assembleAddrIdentifierArgument(file, arg.identifier, addr);
             } else throw Error();
           });
         }
@@ -287,7 +302,7 @@ class Assembler {
         for (let i = 0; i < node.number; i++) file.machineCode[addr++] = 0;
         break;
       case isSymbolDirective(node):
-        file.constants[node.name] = node.number;
+        file.constants[node.name.toUpperCase()] = node.number;
         break;
       default:
         throw Error("Unknown directive");
@@ -299,8 +314,6 @@ class Assembler {
     let addr = 0;
 
     file.lines.forEach((line) => {
-      const linenum = line.$cstNode?.range.start.line;
-
       if (line.label) {
         file.labels[line.label.name.toUpperCase()].localAddress = addr;
       }

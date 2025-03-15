@@ -58,7 +58,6 @@ export const AsmModule: Module<AsmServices, PartialLangiumServices & AsmAddedSer
   },
   parser: {
     ValueConverter: () => new AsmValueConverter(),
-    ParserErrorMessageProvider: () => new LangiumParserErrorMessageProvider(),
   },
 };
 

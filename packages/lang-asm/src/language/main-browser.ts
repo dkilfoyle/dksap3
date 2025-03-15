@@ -47,9 +47,9 @@ const debounce = (fn: Function, ms = 300) => {
 };
 
 const sendAsmDocumentChange = (document: LangiumDocument<AstNode>) => {
-  const runtimeAst = shared.workspace.LangiumDocuments.getDocument(URI.parse("builtin:/runtime8080.asm"));
-  if (!runtimeAst) throw Error("No runtime found");
-  const { bytes } = assembler.assembleAndLink([document, runtimeAst]);
+  const { bytes, files } = assembler.assembleAndLink([document]);
+  console.log(files);
+
   const json = Asm.serializer.JsonSerializer.serialize(document.parseResult.value, {
     sourceText: false,
     textRegions: true,
