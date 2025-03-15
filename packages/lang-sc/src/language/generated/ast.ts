@@ -11,6 +11,7 @@ export const ScTerminals = {
     WS: /\s+/,
     ID: /[_a-zA-Z][\w_]*/,
     NUMBER: /[0-9]+/,
+    ASM: /#asm[\s\S]*?#endasm/,
     ML_COMMENT: /\/\*[\s\S]*?\*\//,
     SL_COMMENT: /\/\/[^\n\r]*/,
 };
@@ -83,7 +84,7 @@ export function isNamedElement(item: unknown): item is NamedElement {
     return reflection.isInstance(item, NamedElement);
 }
 
-export type Statement = Expression | ForStatement | IfStatement | LocalVariableDeclaration | ReturnStatement | StructDeclaration | WhileStatement;
+export type Statement = Expression | ForStatement | IfStatement | InlineAssembly | LocalVariableDeclaration | ReturnStatement | StructDeclaration | WhileStatement;
 
 export const Statement = 'Statement';
 
@@ -210,6 +211,18 @@ export const IfStatement = 'IfStatement';
 
 export function isIfStatement(item: unknown): item is IfStatement {
     return reflection.isInstance(item, IfStatement);
+}
+
+export interface InlineAssembly extends AstNode {
+    readonly $container: Block;
+    readonly $type: 'InlineAssembly';
+    asm: string;
+}
+
+export const InlineAssembly = 'InlineAssembly';
+
+export function isInlineAssembly(item: unknown): item is InlineAssembly {
+    return reflection.isInstance(item, InlineAssembly);
 }
 
 export interface LocalVariableDeclaration extends AstNode {
@@ -396,6 +409,7 @@ export type ScAstType = {
     GlobalVarName: GlobalVarName
     GlobalVariableDeclaration: GlobalVariableDeclaration
     IfStatement: IfStatement
+    InlineAssembly: InlineAssembly
     LocalVarName: LocalVarName
     LocalVariableDeclaration: LocalVariableDeclaration
     NamedElement: NamedElement
@@ -417,7 +431,7 @@ export type ScAstType = {
 export class ScAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [BinaryExpression, Block, Definition, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, Statement, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
+        return [BinaryExpression, Block, Definition, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, Statement, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
@@ -431,6 +445,7 @@ export class ScAstReflection extends AbstractAstReflection {
             case Expression:
             case ForStatement:
             case IfStatement:
+            case InlineAssembly:
             case LocalVariableDeclaration:
             case ReturnStatement:
             case WhileStatement: {
@@ -560,6 +575,14 @@ export class ScAstReflection extends AbstractAstReflection {
                         { name: 'block' },
                         { name: 'condition' },
                         { name: 'elseBlock' }
+                    ]
+                };
+            }
+            case InlineAssembly: {
+                return {
+                    name: InlineAssembly,
+                    properties: [
+                        { name: 'asm' }
                     ]
                 };
             }

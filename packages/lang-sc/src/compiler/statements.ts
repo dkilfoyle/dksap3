@@ -1,6 +1,8 @@
 import {
   Block,
+  InlineAssembly,
   isExpression,
+  isInlineAssembly,
   isLocalVariableDeclaration,
   isReturnStatement,
   isStructTypeReference,
@@ -46,10 +48,18 @@ export const compileStatement = (statement: Statement): CompositeGeneratorNode =
       return compileExpression(statement).node!;
     case isReturnStatement(statement):
       return compileReturn(statement);
+    case isInlineAssembly(statement):
+      return compileAssembly(statement);
     default:
       console.error("Unimplemented statement ", statement);
   }
   throw Error();
+};
+
+const compileAssembly = (asm: InlineAssembly) => {
+  return expandTracedToNode(asm)`
+    ${asm.asm.slice(6, -7).trimStart()}
+  `;
 };
 
 const compileLocalDeclaration = (decl: LocalVariableDeclaration) => {

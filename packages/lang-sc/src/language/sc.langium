@@ -51,8 +51,12 @@ Statement:
     LocalVariableDeclaration | 
     ReturnStatement ';' | 
     StructDeclaration |
+    InlineAssembly |
     Expression ';'
 ;
+
+InlineAssembly:
+    asm=ASM;
 
 IfStatement:
     'if' '(' condition=Expression ')' block=Block ('else' elseBlock=Block)?;
@@ -126,6 +130,7 @@ hidden terminal WS: /\s+/;
 terminal ID: /[_a-zA-Z][\w_]*/;
 terminal NUMBER returns number: /[0-9]+/;
 terminal STRING: /"[^"]*"/;
+terminal ASM: /#asm[\s\S]*?#endasm/;
 
 hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;
 hidden terminal SL_COMMENT: /\/\/[^\n\r]*/;
