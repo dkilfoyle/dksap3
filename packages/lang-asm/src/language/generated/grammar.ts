@@ -22,7 +22,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@30"
+              "$ref": "#/rules@34"
             },
             "arguments": [],
             "cardinality": "*"
@@ -115,7 +115,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
               {
                 "$type": "RuleCall",
                 "rule": {
-                  "$ref": "#/rules@30"
+                  "$ref": "#/rules@34"
                 },
                 "arguments": [],
                 "cardinality": "?"
@@ -170,7 +170,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
               {
                 "$type": "RuleCall",
                 "rule": {
-                  "$ref": "#/rules@30"
+                  "$ref": "#/rules@34"
                 },
                 "arguments": [],
                 "cardinality": "?"
@@ -195,7 +195,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
               {
                 "$type": "RuleCall",
                 "rule": {
-                  "$ref": "#/rules@30"
+                  "$ref": "#/rules@34"
                 },
                 "arguments": [],
                 "cardinality": "?"
@@ -205,7 +205,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@30"
+              "$ref": "#/rules@34"
             },
             "arguments": []
           }
@@ -269,7 +269,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
         "terminal": {
           "$type": "RuleCall",
           "rule": {
-            "$ref": "#/rules@31"
+            "$ref": "#/rules@35"
           },
           "arguments": []
         }
@@ -1205,7 +1205,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@32"
+                "$ref": "#/rules@36"
               },
               "arguments": []
             }
@@ -1217,7 +1217,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "CrossReference",
               "type": {
-                "$ref": "#/rules@2"
+                "$ref": "#/types@0"
               },
               "terminal": {
                 "$type": "RuleCall",
@@ -1353,7 +1353,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@32"
+                "$ref": "#/rules@36"
               },
               "arguments": []
             }
@@ -1365,7 +1365,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@33"
+                "$ref": "#/rules@37"
               },
               "arguments": []
             }
@@ -1392,7 +1392,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@32"
+                "$ref": "#/rules@36"
               },
               "arguments": []
             }
@@ -1404,7 +1404,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "CrossReference",
               "type": {
-                "$ref": "#/rules@2"
+                "$ref": "#/types@0"
               },
               "terminal": {
                 "$type": "RuleCall",
@@ -1429,31 +1429,122 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
       "$type": "ParserRule",
       "name": "Directive",
       "definition": {
+        "$type": "Alternatives",
+        "elements": [
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@28"
+            },
+            "arguments": []
+          },
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@29"
+            },
+            "arguments": []
+          },
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@31"
+            },
+            "arguments": []
+          },
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@32"
+            },
+            "arguments": []
+          },
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@30"
+            },
+            "arguments": []
+          }
+        ]
+      },
+      "definesHiddenTokens": false,
+      "entry": false,
+      "fragment": false,
+      "hiddenTokens": [],
+      "parameters": [],
+      "wildcard": false
+    },
+    {
+      "$type": "ParserRule",
+      "name": "SymbolDirective",
+      "definition": {
         "$type": "Group",
         "elements": [
           {
             "$type": "Assignment",
-            "feature": "lhs",
+            "feature": "name",
             "operator": "=",
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@28"
+                "$ref": "#/rules@22"
               },
               "arguments": []
-            },
-            "cardinality": "?"
+            }
           },
           {
             "$type": "Assignment",
-            "feature": "dir",
+            "feature": "dirname",
+            "operator": "=",
+            "terminal": {
+              "$type": "Keyword",
+              "value": "equ"
+            }
+          },
+          {
+            "$type": "Assignment",
+            "feature": "number",
             "operator": "=",
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@29"
+                "$ref": "#/rules@36"
               },
               "arguments": []
+            }
+          }
+        ]
+      },
+      "definesHiddenTokens": false,
+      "entry": false,
+      "fragment": false,
+      "hiddenTokens": [],
+      "parameters": [],
+      "wildcard": false
+    },
+    {
+      "$type": "ParserRule",
+      "name": "DataDirective",
+      "definition": {
+        "$type": "Group",
+        "elements": [
+          {
+            "$type": "Assignment",
+            "feature": "dirname",
+            "operator": "=",
+            "terminal": {
+              "$type": "Alternatives",
+              "elements": [
+                {
+                  "$type": "Keyword",
+                  "value": "db"
+                },
+                {
+                  "$type": "Keyword",
+                  "value": "dw"
+                }
+              ]
             }
           },
           {
@@ -1463,7 +1554,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@28"
+                "$ref": "#/rules@33"
               },
               "arguments": []
             }
@@ -1482,13 +1573,121 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@28"
+                    "$ref": "#/rules@33"
                   },
                   "arguments": []
                 }
               }
             ],
             "cardinality": "*"
+          }
+        ]
+      },
+      "definesHiddenTokens": false,
+      "entry": false,
+      "fragment": false,
+      "hiddenTokens": [],
+      "parameters": [],
+      "wildcard": false
+    },
+    {
+      "$type": "ParserRule",
+      "name": "MemoryDirective",
+      "definition": {
+        "$type": "Group",
+        "elements": [
+          {
+            "$type": "Assignment",
+            "feature": "dirname",
+            "operator": "=",
+            "terminal": {
+              "$type": "Keyword",
+              "value": "ds"
+            }
+          },
+          {
+            "$type": "Assignment",
+            "feature": "number",
+            "operator": "=",
+            "terminal": {
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@36"
+              },
+              "arguments": []
+            }
+          }
+        ]
+      },
+      "definesHiddenTokens": false,
+      "entry": false,
+      "fragment": false,
+      "hiddenTokens": [],
+      "parameters": [],
+      "wildcard": false
+    },
+    {
+      "$type": "ParserRule",
+      "name": "LocationDirective",
+      "definition": {
+        "$type": "Group",
+        "elements": [
+          {
+            "$type": "Assignment",
+            "feature": "dirname",
+            "operator": "=",
+            "terminal": {
+              "$type": "Keyword",
+              "value": "org"
+            }
+          },
+          {
+            "$type": "Assignment",
+            "feature": "number",
+            "operator": "=",
+            "terminal": {
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@36"
+              },
+              "arguments": []
+            }
+          }
+        ]
+      },
+      "definesHiddenTokens": false,
+      "entry": false,
+      "fragment": false,
+      "hiddenTokens": [],
+      "parameters": [],
+      "wildcard": false
+    },
+    {
+      "$type": "ParserRule",
+      "name": "LinkageDirective",
+      "definition": {
+        "$type": "Group",
+        "elements": [
+          {
+            "$type": "Assignment",
+            "feature": "dirname",
+            "operator": "=",
+            "terminal": {
+              "$type": "Keyword",
+              "value": "extern"
+            }
+          },
+          {
+            "$type": "Assignment",
+            "feature": "name",
+            "operator": "=",
+            "terminal": {
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@22"
+              },
+              "arguments": []
+            }
           }
         ]
       },
@@ -1512,7 +1711,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@32"
+                "$ref": "#/rules@36"
               },
               "arguments": []
             }
@@ -1524,7 +1723,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "CrossReference",
               "type": {
-                "$ref": "#/rules@2"
+                "$ref": "#/types@0"
               },
               "terminal": {
                 "$type": "RuleCall",
@@ -1535,48 +1734,20 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
               },
               "deprecatedSyntax": false
             }
+          },
+          {
+            "$type": "Assignment",
+            "feature": "string",
+            "operator": "=",
+            "terminal": {
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@38"
+              },
+              "arguments": []
+            }
           }
         ]
-      },
-      "definesHiddenTokens": false,
-      "entry": false,
-      "fragment": false,
-      "hiddenTokens": [],
-      "parameters": [],
-      "wildcard": false
-    },
-    {
-      "$type": "ParserRule",
-      "name": "DirectiveOperation",
-      "definition": {
-        "$type": "Assignment",
-        "feature": "opname",
-        "operator": "=",
-        "terminal": {
-          "$type": "Alternatives",
-          "elements": [
-            {
-              "$type": "Keyword",
-              "value": "org"
-            },
-            {
-              "$type": "Keyword",
-              "value": "equ"
-            },
-            {
-              "$type": "Keyword",
-              "value": "db"
-            },
-            {
-              "$type": "Keyword",
-              "value": "ds"
-            },
-            {
-              "$type": "Keyword",
-              "value": "dw"
-            }
-          ]
-        }
       },
       "definesHiddenTokens": false,
       "entry": false,
@@ -1650,10 +1821,38 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
       "fragment": false
     }
   ],
+  "types": [
+    {
+      "$type": "Type",
+      "name": "Identifier",
+      "type": {
+        "$type": "UnionType",
+        "types": [
+          {
+            "$type": "SimpleType",
+            "typeRef": {
+              "$ref": "#/rules@2"
+            }
+          },
+          {
+            "$type": "SimpleType",
+            "typeRef": {
+              "$ref": "#/rules@28"
+            }
+          },
+          {
+            "$type": "SimpleType",
+            "typeRef": {
+              "$ref": "#/rules@32"
+            }
+          }
+        ]
+      }
+    }
+  ],
   "definesHiddenTokens": false,
   "hiddenTokens": [],
   "imports": [],
   "interfaces": [],
-  "types": [],
   "usedGrammars": []
 }`));

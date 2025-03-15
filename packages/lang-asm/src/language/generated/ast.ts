@@ -13,6 +13,7 @@ export const AsmTerminals = {
     COMMENT: /;[^\n\r]*/,
     NUMBER: /[0-9][0-9a-fA-F]*[h]?/,
     CHARACTER: /'[ -~]'/,
+    STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/,
     WS: /[ \t]/,
 };
 
@@ -52,6 +53,7 @@ export type AsmKeywordNames =
     | "dw"
     | "e"
     | "equ"
+    | "extern"
     | "h"
     | "hlt"
     | "inr"
@@ -111,6 +113,22 @@ export type AsmKeywordNames =
 
 export type AsmTokenNames = AsmTerminalNames | AsmKeywordNames;
 
+export type Directive = DataDirective | LinkageDirective | LocationDirective | MemoryDirective | SymbolDirective;
+
+export const Directive = 'Directive';
+
+export function isDirective(item: unknown): item is Directive {
+    return reflection.isInstance(item, Directive);
+}
+
+export type Identifier = Label | LinkageDirective | SymbolDirective;
+
+export const Identifier = 'Identifier';
+
+export function isIdentifier(item: unknown): item is Identifier {
+    return reflection.isInstance(item, Identifier);
+}
+
 export type Instruction = Instr;
 
 export const Instruction = 'Instruction';
@@ -122,7 +140,7 @@ export function isInstruction(item: unknown): item is Instruction {
 export interface AddrArgument extends AstNode {
     readonly $container: Instr;
     readonly $type: 'AddrArgument';
-    identifier?: Reference<Label>;
+    identifier?: Reference<Identifier>;
     number?: number;
 }
 
@@ -144,25 +162,25 @@ export function isComment(item: unknown): item is Comment {
     return reflection.isInstance(item, Comment);
 }
 
-export interface Directive extends AstNode {
+export interface DataDirective extends AstNode {
     readonly $container: Line;
-    readonly $type: 'Directive';
+    readonly $type: 'DataDirective';
     args: Array<DirectiveArgument>;
-    dir: DirectiveOperation;
-    lhs?: DirectiveArgument;
+    dirname: 'db' | 'dw';
 }
 
-export const Directive = 'Directive';
+export const DataDirective = 'DataDirective';
 
-export function isDirective(item: unknown): item is Directive {
-    return reflection.isInstance(item, Directive);
+export function isDataDirective(item: unknown): item is DataDirective {
+    return reflection.isInstance(item, DataDirective);
 }
 
 export interface DirectiveArgument extends AstNode {
-    readonly $container: Directive;
+    readonly $container: DataDirective;
     readonly $type: 'DirectiveArgument';
-    identifier?: Reference<Label>;
+    identifier?: Reference<Identifier>;
     number?: number;
+    string?: string;
 }
 
 export const DirectiveArgument = 'DirectiveArgument';
@@ -171,22 +189,10 @@ export function isDirectiveArgument(item: unknown): item is DirectiveArgument {
     return reflection.isInstance(item, DirectiveArgument);
 }
 
-export interface DirectiveOperation extends AstNode {
-    readonly $container: Directive;
-    readonly $type: 'DirectiveOperation';
-    opname: 'db' | 'ds' | 'dw' | 'equ' | 'org';
-}
-
-export const DirectiveOperation = 'DirectiveOperation';
-
-export function isDirectiveOperation(item: unknown): item is DirectiveOperation {
-    return reflection.isInstance(item, DirectiveOperation);
-}
-
 export interface Imm16 extends AstNode {
     readonly $container: Instr;
     readonly $type: 'Imm16';
-    identifier?: Reference<Label>;
+    identifier?: Reference<Identifier>;
     number?: number;
 }
 
@@ -251,6 +257,45 @@ export function isLine(item: unknown): item is Line {
     return reflection.isInstance(item, Line);
 }
 
+export interface LinkageDirective extends AstNode {
+    readonly $container: Line;
+    readonly $type: 'LinkageDirective';
+    dirname: 'extern';
+    name: string;
+}
+
+export const LinkageDirective = 'LinkageDirective';
+
+export function isLinkageDirective(item: unknown): item is LinkageDirective {
+    return reflection.isInstance(item, LinkageDirective);
+}
+
+export interface LocationDirective extends AstNode {
+    readonly $container: Line;
+    readonly $type: 'LocationDirective';
+    dirname: 'org';
+    number: number;
+}
+
+export const LocationDirective = 'LocationDirective';
+
+export function isLocationDirective(item: unknown): item is LocationDirective {
+    return reflection.isInstance(item, LocationDirective);
+}
+
+export interface MemoryDirective extends AstNode {
+    readonly $container: Line;
+    readonly $type: 'MemoryDirective';
+    dirname: 'ds';
+    number: number;
+}
+
+export const MemoryDirective = 'MemoryDirective';
+
+export function isMemoryDirective(item: unknown): item is MemoryDirective {
+    return reflection.isInstance(item, MemoryDirective);
+}
+
 export interface Operation extends AstNode {
     readonly $container: Instr;
     readonly $type: 'Operation';
@@ -298,34 +343,65 @@ export function isReg8(item: unknown): item is Reg8 {
     return reflection.isInstance(item, Reg8);
 }
 
+export interface SymbolDirective extends AstNode {
+    readonly $container: Line;
+    readonly $type: 'SymbolDirective';
+    dirname: 'equ';
+    name: string;
+    number: number;
+}
+
+export const SymbolDirective = 'SymbolDirective';
+
+export function isSymbolDirective(item: unknown): item is SymbolDirective {
+    return reflection.isInstance(item, SymbolDirective);
+}
+
 export type AsmAstType = {
     AddrArgument: AddrArgument
     Comment: Comment
+    DataDirective: DataDirective
     Directive: Directive
     DirectiveArgument: DirectiveArgument
-    DirectiveOperation: DirectiveOperation
+    Identifier: Identifier
     Imm16: Imm16
     Imm8: Imm8
     Instr: Instr
     Instruction: Instruction
     Label: Label
     Line: Line
+    LinkageDirective: LinkageDirective
+    LocationDirective: LocationDirective
+    MemoryDirective: MemoryDirective
     Operation: Operation
     Program: Program
     Reg16: Reg16
     Reg8: Reg8
+    SymbolDirective: SymbolDirective
 }
 
 export class AsmAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [AddrArgument, Comment, Directive, DirectiveArgument, DirectiveOperation, Imm16, Imm8, Instr, Instruction, Label, Line, Operation, Program, Reg16, Reg8];
+        return [AddrArgument, Comment, DataDirective, Directive, DirectiveArgument, Identifier, Imm16, Imm8, Instr, Instruction, Label, Line, LinkageDirective, LocationDirective, MemoryDirective, Operation, Program, Reg16, Reg8, SymbolDirective];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
         switch (subtype) {
+            case DataDirective:
+            case LocationDirective:
+            case MemoryDirective: {
+                return this.isSubtype(Directive, supertype);
+            }
             case Instr: {
                 return this.isSubtype(Instruction, supertype);
+            }
+            case Label: {
+                return this.isSubtype(Identifier, supertype);
+            }
+            case LinkageDirective:
+            case SymbolDirective: {
+                return this.isSubtype(Directive, supertype) || this.isSubtype(Identifier, supertype);
             }
             default: {
                 return false;
@@ -339,7 +415,7 @@ export class AsmAstReflection extends AbstractAstReflection {
             case 'AddrArgument:identifier':
             case 'DirectiveArgument:identifier':
             case 'Imm16:identifier': {
-                return Label;
+                return Identifier;
             }
             default: {
                 throw new Error(`${referenceId} is not a valid reference id.`);
@@ -366,13 +442,12 @@ export class AsmAstReflection extends AbstractAstReflection {
                     ]
                 };
             }
-            case Directive: {
+            case DataDirective: {
                 return {
-                    name: Directive,
+                    name: DataDirective,
                     properties: [
                         { name: 'args', defaultValue: [] },
-                        { name: 'dir' },
-                        { name: 'lhs' }
+                        { name: 'dirname' }
                     ]
                 };
             }
@@ -381,15 +456,8 @@ export class AsmAstReflection extends AbstractAstReflection {
                     name: DirectiveArgument,
                     properties: [
                         { name: 'identifier' },
-                        { name: 'number' }
-                    ]
-                };
-            }
-            case DirectiveOperation: {
-                return {
-                    name: DirectiveOperation,
-                    properties: [
-                        { name: 'opname' }
+                        { name: 'number' },
+                        { name: 'string' }
                     ]
                 };
             }
@@ -441,6 +509,33 @@ export class AsmAstReflection extends AbstractAstReflection {
                     ]
                 };
             }
+            case LinkageDirective: {
+                return {
+                    name: LinkageDirective,
+                    properties: [
+                        { name: 'dirname' },
+                        { name: 'name' }
+                    ]
+                };
+            }
+            case LocationDirective: {
+                return {
+                    name: LocationDirective,
+                    properties: [
+                        { name: 'dirname' },
+                        { name: 'number' }
+                    ]
+                };
+            }
+            case MemoryDirective: {
+                return {
+                    name: MemoryDirective,
+                    properties: [
+                        { name: 'dirname' },
+                        { name: 'number' }
+                    ]
+                };
+            }
             case Operation: {
                 return {
                     name: Operation,
@@ -470,6 +565,16 @@ export class AsmAstReflection extends AbstractAstReflection {
                     name: Reg8,
                     properties: [
                         { name: 'register' }
+                    ]
+                };
+            }
+            case SymbolDirective: {
+                return {
+                    name: SymbolDirective,
+                    properties: [
+                        { name: 'dirname' },
+                        { name: 'name' },
+                        { name: 'number' }
                     ]
                 };
             }

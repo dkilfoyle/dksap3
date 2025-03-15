@@ -1,7 +1,7 @@
 import type { AstNode, AstNodeDescription, LangiumDocument, PrecomputedScopes, Scope } from "langium";
 import { AstUtils, Cancellation, DefaultScopeComputation, DefaultScopeProvider, interruptAndCheck, MultiMap } from "langium";
 import { AsmServices } from "./asm-module.js";
-import { isLabel, Program } from "./generated/ast.js";
+import { isLabel, isLinkageDirective, isSymbolDirective, Program, SymbolDirective } from "./generated/ast.js";
 
 export class AsmScopeProvider extends DefaultScopeProvider {
   override createScope(elements: Iterable<AstNodeDescription>, outerScope?: Scope): Scope {
@@ -32,7 +32,7 @@ export class AsmScopeComputation extends DefaultScopeComputation {
    */
   protected override processNode(node: AstNode, document: LangiumDocument, scopes: PrecomputedScopes): void {
     // boost non-global labels out of line scope to program scope
-    const container = isLabel(node) && !node.glob ? node.$container.$container : node.$container;
+    const container = (isLabel(node) && !node.glob) || isLinkageDirective(node) ? node.$container.$container : node.$container;
     if (container) {
       const name = this.nameProvider.getName(node);
       if (name) {
@@ -43,7 +43,21 @@ export class AsmScopeComputation extends DefaultScopeComputation {
 
   async computeExports(document: LangiumDocument): Promise<AstNodeDescription[]> {
     const model = document.parseResult.value as Program;
+    const exports: AstNodeDescription[] = [];
+
     // export all global labels ("::") to file scope
-    return model.lines.filter((l) => l.label && l.label.glob).map((l) => this.descriptions.createDescription(l.label!, l.label!.name));
+    model.lines
+      .filter((l) => l.label && l.label.glob)
+      .forEach((ll) => exports.push(this.descriptions.createDescription(ll.label!, ll.label!.name)));
+
+    // export all EQU names to file scope
+    model.lines
+      .filter((l) => isSymbolDirective(l.dir))
+      .forEach((l) => {
+        const dir = l.dir as SymbolDirective;
+        exports.push(this.descriptions.createDescription(dir, dir.name));
+      });
+
+    return exports;
   }
 }

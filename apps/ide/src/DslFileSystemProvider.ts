@@ -1,8 +1,15 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import * as vscode from "vscode";
 
 import { runtime8080 } from "../../../packages/lang-asm";
 const runtime8080bytes = Uint8Array.from(Array.from(runtime8080).map((letter) => letter.charCodeAt(0)));
+
+import { os8080 } from "../../../packages/lang-asm";
+const os8080bytes = Uint8Array.from(Array.from(os8080).map((letter) => letter.charCodeAt(0)));
+
+const lib: Record<string, Uint8Array> = {
+  "builtin:/os8080.asm": os8080bytes,
+  "builtin:/runtime8080.asm": runtime8080bytes,
+};
 
 export class DslLibraryFileSystemProvider implements vscode.FileSystemProvider {
   stat(uri: vscode.Uri): vscode.FileStat {
@@ -10,7 +17,7 @@ export class DslLibraryFileSystemProvider implements vscode.FileSystemProvider {
     return {
       ctime: date,
       mtime: date,
-      size: runtime8080bytes.length,
+      size: lib[uri.toString()].length,
       type: vscode.FileType.File,
     };
   }
@@ -18,7 +25,7 @@ export class DslLibraryFileSystemProvider implements vscode.FileSystemProvider {
   readFile(uri: vscode.Uri): Uint8Array {
     // We could return different libraries based on the URI
     // We have only one, so we always return the same
-    return runtime8080bytes;
+    return lib[uri.toString()];
   }
 
   // The following class members only serve to satisfy the interface

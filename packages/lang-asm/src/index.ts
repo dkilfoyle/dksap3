@@ -6,6 +6,7 @@ export * from "./language/asm-validator";
 export * from "./config/config";
 export * from "./language/main-browser";
 export * from "./assembler/runtime8080";
+export * from "./assembler/os8080";
 
 // export * from "./sc-completion-provider";
 // export * from "./sc-container-manager";

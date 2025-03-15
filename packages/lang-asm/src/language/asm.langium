@@ -67,7 +67,9 @@ NoArgOperation infers Operation:
     opname=("rlc"|"ral"|"rar"|"rrc"|"cma"|"stc"|"cmc"|"ret"|"rp"|"rm"|"rnz"|"rz"|"rpo"|"rpe"|"rnc"|"rc"|"nop"|"hlt"|"xchg"|"pchl"|"xthl");
 
 AddrArgument:
-    number=NUMBER | identifier=[Label:ID];
+    number=NUMBER | identifier=[Identifier:ID];
+
+type Identifier = Label | SymbolDirective | LinkageDirective;
 
 terminal ID: /[_a-zA-Z$][a-zA-Z0-9._]*/;
 Reg8:
@@ -77,14 +79,28 @@ Reg16:
 Imm8:
     number=NUMBER | char=CHARACTER;
 Imm16:
-    number=NUMBER | identifier=[Label:ID];
+    number=NUMBER | identifier=[Identifier:ID];
 
 Directive:
-    lhs=DirectiveArgument? dir=DirectiveOperation args+=DirectiveArgument ("," args+=DirectiveArgument)*;
+    SymbolDirective | DataDirective | LocationDirective | LinkageDirective | MemoryDirective;
+
+SymbolDirective:
+    name=ID dirname="equ" number=NUMBER;
+
+DataDirective:
+    dirname=("db"|"dw")  args+=DirectiveArgument ("," args+=DirectiveArgument)*;
+
+MemoryDirective:
+    dirname="ds"  number=NUMBER;
+
+LocationDirective:
+    dirname="org" number=NUMBER;
+
+LinkageDirective:
+    dirname="extern" name=ID;
+
 DirectiveArgument:
-    number=NUMBER | identifier=[Label:ID];
-DirectiveOperation:
-    opname=("org"|"equ"|"db"|"ds"|"dw");
+    number=NUMBER | identifier=[Identifier:ID] | string=STRING;
 
 terminal EOL: /[\r\n]+/;
 terminal COMMENT: /;[^\n\r]*/;

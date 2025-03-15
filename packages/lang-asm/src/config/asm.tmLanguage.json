@@ -38,7 +38,7 @@
       "patterns": [
         {
           "name": "keyword.control.i8080asm",
-          "match": "(?i:(?<=\\s)(?:set|equ|label|forward|port|eval|enum|enumconf|nextenum|r?org|align|(?:de)?phase|shift|binclude|read|end|maxnest|function|(?:end)?struct|(?:end)?section)\\b)"
+          "match": "(?i:(?<=\\s)(?:set|equ|extern|label|forward|port|eval|enum|enumconf|nextenum|r?org|align|(?:de)?phase|shift|binclude|read|end|maxnest|function|(?:end)?struct|(?:end)?section)\\b)"
         },
         {
           "name": "keyword.control.i8080asm",

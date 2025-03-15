@@ -1,5 +1,20 @@
 import { AstNode, AstUtils, LangiumDocument, Reference } from "langium";
-import { isProgram, isAddrArgument, isImm8, isImm16, Line, Instr, Label, Directive } from "../language/generated/ast.js";
+import {
+  isProgram,
+  isAddrArgument,
+  isImm8,
+  isImm16,
+  Line,
+  Instr,
+  Label,
+  Directive,
+  Identifier,
+  isLocationDirective,
+  isLinkageDirective,
+  isDataDirective,
+  isMemoryDirective,
+  isSymbolDirective,
+} from "../language/generated/ast.js";
 import { getInstructionInfo } from "./utils.js";
 import { getImportedLines } from "./asm-linker.js";
 
@@ -29,6 +44,8 @@ interface IAssembledFile {
 
 class Assembler {
   runtime: LangiumDocument<AstNode> | null = null;
+  os: LangiumDocument<AstNode> | null = null;
+
   mainfile: string = "";
   files: Record<string, IAssembledFile> = {};
   constructor() {}
@@ -38,10 +55,11 @@ class Assembler {
    */
   assembleAndLink(docs: LangiumDocument<AstNode>[]) {
     if (!this.runtime) throw Error("Assembler has no runtime");
+    if (!this.os) throw Error("Assembler has no os");
     this.mainfile = docs[0].uri.toString();
 
     // order is runtime, includes, main
-    const allDocs = [this.runtime, ...docs.slice(1, -1), docs[0]];
+    const allDocs = [this.os, this.runtime, ...docs.slice(1, -1), docs[0]];
     const filenames = allDocs.map((doc) => doc.uri.toString());
 
     // build this.files
@@ -182,7 +200,7 @@ class Assembler {
     });
   }
 
-  assembleAddrLabelArgument = (file: IAssembledFile, arg: Reference<Label>, addr: number) => {
+  assembleAddrLabelArgument = (file: IAssembledFile, arg: Reference<Identifier>, addr: number) => {
     const id = arg.$refText.toUpperCase();
     const sourceFile = file.labels[id] ? file : this.findFileForGlobal(id);
     if (!sourceFile) throw Error(`Unable to find source file for global ${arg.$refText}`);
@@ -240,32 +258,39 @@ class Assembler {
   }
 
   assembleDirective(file: IAssembledFile, node: Directive, addr: number) {
-    switch (node.dir.opname.toUpperCase()) {
-      case "ORG":
-        {
-          const a = node.args[0].number;
-          if (a == undefined) throw Error("ORG expects number");
-          addr = a;
+    switch (true) {
+      case isLocationDirective(node):
+        addr = node.number;
+        break;
+      case isLinkageDirective(node):
+        // do nothing
+        break;
+      case isDataDirective(node):
+        if (node.dirname.toUpperCase() == "DB") {
+          node.args.forEach((arg) => {
+            if (arg.number == undefined) throw Error();
+            file.machineCode[addr++] = arg.number & 0xff;
+          });
+        } else {
+          // DW
+          node.args.forEach((arg) => {
+            if (arg.number != undefined) {
+              file.machineCode[addr++] = arg.number & 0xff; // least significant byte
+              file.machineCode[addr++] = (arg.number >> 8) & 0xff; // most significant byte
+            } else if (arg.identifier != undefined) {
+              addr = this.assembleAddrLabelArgument(file, arg.identifier, addr);
+            } else throw Error();
+          });
         }
         break;
-      case "DB":
-        node.args.forEach((arg) => {
-          if (arg.number == undefined) throw Error();
-          file.machineCode[addr++] = arg.number & 0xff;
-        });
+      case isMemoryDirective(node):
+        for (let i = 0; i < node.number; i++) file.machineCode[addr++] = 0;
         break;
-      case "DW":
-        node.args.forEach((arg) => {
-          if (arg.number != undefined) {
-            file.machineCode[addr++] = arg.number & 0xff; // least significant byte
-            file.machineCode[addr++] = (arg.number >> 8) & 0xff; // most significant byte
-          } else if (arg.identifier != undefined) {
-            addr = this.assembleAddrLabelArgument(file, arg.identifier, addr);
-          } else throw Error();
-        });
+      case isSymbolDirective(node):
+        file.constants[node.name] = node.number;
         break;
       default:
-        throw Error(`Directive ${node.dir.opname} not implemented in assembler yet`);
+        throw Error("Unknown directive");
     }
     return addr;
   }

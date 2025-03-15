@@ -1,4 +1,4 @@
-import { DeepPartial, type Module, inject } from "langium";
+import { DeepPartial, LangiumParserErrorMessageProvider, type Module, inject } from "langium";
 import {
   createDefaultModule,
   createDefaultSharedModule,
@@ -58,6 +58,7 @@ export const AsmModule: Module<AsmServices, PartialLangiumServices & AsmAddedSer
   },
   parser: {
     ValueConverter: () => new AsmValueConverter(),
+    ParserErrorMessageProvider: () => new LangiumParserErrorMessageProvider(),
   },
 };
 
