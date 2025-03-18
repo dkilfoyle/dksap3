@@ -183,7 +183,7 @@ export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrap
     // console.log(JSON.parse(data.content));
     compiledDocs[data.uri] = data;
     MemoryWebviewPanel.sendMemory(Array.from(data.machineCode));
-    MemoryWebviewPanel.sendLabels(data.identifierMap);
+    MemoryWebviewPanel.sendLinkerInfoFileMap(data.linkerInfoFileMap);
   });
 
   wrapper.getLanguageClient("sc")?.onNotification("browser/ScDocumentChange", async (data: ScDocumentChange) => {

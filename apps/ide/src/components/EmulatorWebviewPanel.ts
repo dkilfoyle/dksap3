@@ -1,5 +1,5 @@
 import { Disposable, Webview, WebviewPanel, window, ViewColumn } from "vscode";
-import { ComputerState } from "sapsim";
+import { ComputerState } from "@dksap3/cpusim";
 
 function getNonce() {
   let text = "";

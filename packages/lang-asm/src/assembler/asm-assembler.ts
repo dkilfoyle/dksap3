@@ -1,4 +1,4 @@
-import { AstNode, AstUtils, LangiumDocument, Reference } from "langium";
+import { AstNode, LangiumDocument, Reference } from "langium";
 import {
   isProgram,
   isAddrArgument,
@@ -6,7 +6,6 @@ import {
   isImm16,
   Line,
   Instr,
-  Label,
   Directive,
   Identifier,
   isLocationDirective,
@@ -19,15 +18,15 @@ import {
 import { getInstructionInfo } from "./utils.js";
 import { getImportedLines } from "./asm-linker.js";
 
-interface IReference {
+export interface ILabelReference {
   filename: string;
   offset: number; // machinecode location
 }
 
-interface ILabelInfo {
+export interface ILabelInfo {
   name: string;
   localAddress: number;
-  references: IReference[];
+  references: ILabelReference[];
 }
 
 interface IAssembledFile {
@@ -40,6 +39,22 @@ interface IAssembledFile {
   lineAddressMap: Record<number, { start: number; size: number }>;
   externs: string[];
   size: number;
+}
+
+export type ILinkerInfoFileMap = Record<string, ILinkerFileInfo>;
+
+export interface ILinkerFileInfo {
+  labels: Record<string, ILabelInfo>;
+  size: number;
+  startOffset: number;
+  lineAddressMap: Record<
+    number,
+    {
+      start: number;
+      size: number;
+    }
+  >;
+  filename: string;
 }
 
 class Assembler {
@@ -74,7 +89,7 @@ class Assembler {
 
     // build machinecode
     // add reference to every referenced label
-    Object.entries(this.files).forEach(([filename, file]) => {
+    Object.entries(this.files).forEach(([, file]) => {
       this.assemble(file);
     });
 
@@ -87,13 +102,16 @@ class Assembler {
 
     return {
       bytes: this.concatenateFiles(filenames),
-      files: Object.values(this.files).map((f) => ({
-        labels: f.labels,
-        size: f.size,
-        startOffset: f.startOffset,
-        lineAddressMap: f.lineAddressMap,
-        filename: f.filename,
-      })),
+      linkerInfoFileMap: Object.values(this.files).reduce<ILinkerInfoFileMap>((accum, cur) => {
+        accum[cur.filename] = {
+          filename: cur.filename,
+          labels: cur.labels,
+          lineAddressMap: cur.lineAddressMap,
+          size: cur.size,
+          startOffset: cur.startOffset,
+        };
+        return accum;
+      }, {}),
     };
   }
 
@@ -178,7 +196,7 @@ class Assembler {
     };
 
     const references: Set<string> = new Set();
-    root.lines.forEach((line, i) => {
+    root.lines.forEach((line) => {
       if (line.label) {
         this.files[filename].labels[line.label.name.toUpperCase()] = { name: line.label.name, localAddress: 0, references: [] };
       }
@@ -317,8 +335,6 @@ class Assembler {
 
     file.size = addr;
   }
-
-  link(file: IAssembledFile) {}
 }
 
 export const assembler = new Assembler();

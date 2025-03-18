@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import "./App.css";
 import _ from "lodash";
@@ -6,6 +6,8 @@ import clsx from "clsx";
 import { Label } from "./components/ui/label";
 import { Input } from "./components/ui/input";
 import { Button } from "./components/ui/button";
+import { getFileNumForAddress, getLabel, getNearestPreceedingLabelForAddress } from "../../lang-asm/src/assembler/utils";
+import { ILinkerInfoFileMap } from "../../lang-asm/src/assembler/asm-assembler";
 
 // // @ts-expect-error will be provided by vscode webview
 // const vscode = acquireVsCodeApi();
@@ -31,11 +33,9 @@ function App() {
   const [pointers, setPointers] = useState<{ sp: number; sb: number; pc: number; hl: number }>({ ...oldState.pointers });
   const [start, setStart] = useState(oldState.start);
   const [end, setEnd] = useState(oldState.end);
-  const startInputRef = useRef<HTMLInputElement>(null);
-  const endInputRef = useRef<HTMLInputElement>(null);
   const [hoverCell, setHoverCell] = useState<number>();
   const [selection, setSelection] = useState(oldState.selection);
-  const [labels, setLabels] = useState<Record<string, number>>({});
+  const [linkerInfoFileMap, setLinkerInfoFileMap] = useState<ILinkerInfoFileMap>({});
 
   // useEffect(() => {
   //   vscode.setState({
@@ -58,8 +58,8 @@ function App() {
         case "setPointers":
           setPointers({ sp: message.data.sp, sb: message.data.sb, pc: message.data.pc, hl: message.data.hl });
           break;
-        case "setLabels":
-          setLabels(message.data);
+        case "setLinkerInfoFileMap":
+          setLinkerInfoFileMap(message.data);
           break;
         case "setRange":
           setStart(message.data.start);
@@ -87,50 +87,99 @@ function App() {
     // if (val && val > 31 && val < 255) x += `, ${String.fromCharCode(val)}`;
 
     // add label offset
-    let nearestLabel = "";
-    let nearestOffset = 0;
-    Object.entries(labels).forEach(([label, offset]) => {
-      if (offset <= addr && offset > nearestOffset) {
-        nearestLabel = label;
-        nearestOffset = offset;
-      }
-    });
+    const nearest = getNearestPreceedingLabelForAddress(linkerInfoFileMap, addr);
+    if (nearest.file != "") x += ` [${nearest.label.name} + ${nearest.distance}]`;
 
-    if (nearestLabel != "") x += ` [${nearestLabel} + ${addr - nearestOffset}]`;
     return x;
-  }, [hoverCell, labels, memory]);
+  }, [hoverCell, linkerInfoFileMap, memory]);
 
   const onZero = useCallback(() => {
     setSelection("0");
     setStart(0);
     setEnd(memory.length);
-    if (startInputRef.current) startInputRef.current.value = "0000";
-    if (endInputRef.current) endInputRef.current.value = memory.length.toString(16).padStart(4, "0");
   }, [memory.length]);
 
   const onSP = useCallback(() => {
     setSelection("SP");
     setStart(pointers.sp);
     setEnd(pointers.sb);
-    if (startInputRef.current) startInputRef.current.value = pointers.sp.toString(16).padStart(4, "0");
-    if (endInputRef.current) endInputRef.current.value = pointers.sb.toString(16).padStart(4, "0");
   }, [pointers.sb, pointers.sp]);
 
   const onPC = useCallback(() => {
     setSelection("PC");
     setStart(pointers.pc);
     setEnd(pointers.pc + 100);
-    if (startInputRef.current) startInputRef.current.value = pointers.pc.toString(16).padStart(4, "0");
-    if (endInputRef.current) endInputRef.current.value = (pointers.pc + 100).toString(16).padStart(4, "0");
   }, [pointers]);
 
   const onHL = useCallback(() => {
     setSelection("HL");
     setStart(pointers.hl);
     setEnd(pointers.hl + 100);
-    if (startInputRef.current) startInputRef.current.value = pointers.hl.toString(16).padStart(4, "0");
-    if (endInputRef.current) endInputRef.current.value = (pointers.hl + 100).toString(16).padStart(4, "0");
   }, [pointers.hl]);
+
+  const getMemoryCellClass = useCallback(
+    (addr: number) => {
+      const f = getFileNumForAddress(linkerInfoFileMap, addr);
+
+      return clsx(
+        "text-gray-400",
+        "hover:text-black hover:bg-gray-200",
+        addr < start && "text-gray-600",
+        addr > end && "text-gray-600",
+        addr == pointers.pc && "border border-orange-500",
+        addr == pointers.sp && "border border-green-500",
+        addr == pointers.hl && "border border-blue-500",
+        f == -1 ? "" : f % 2 ? "bg-gray-500" : "bg-gray-700"
+      );
+    },
+    [end, linkerInfoFileMap, pointers.hl, pointers.pc, pointers.sp, start]
+  );
+
+  const parseSeleection = useCallback(
+    (x: string) => {
+      // is x a label
+      const label = getLabel(linkerInfoFileMap, x);
+      if (label) {
+        const labelStart = label.file.startOffset + label.label.localAddress;
+        setStart(labelStart);
+        setEnd(labelStart + 16 * 32);
+        setSelection(x);
+        return;
+      }
+      if (x[0] == "@") {
+        const target = x.slice(1);
+        switch (target.toUpperCase()) {
+          case "SP":
+            setStart(pointers.sp);
+            setEnd(pointers.sb);
+            setSelection("SP");
+            return;
+          case "PC":
+            setStart(pointers.pc);
+            setEnd(pointers.pc + 16 * 32);
+            setSelection("PC");
+            return;
+          case "HL":
+            setStart(pointers.pc);
+            setEnd(pointers.pc + 16 * 32);
+            setSelection("PC");
+            return;
+        }
+      }
+      if (!isNaN(parseInt(x[0]))) {
+        const ends = x.split("-");
+        if (x[0] != "") {
+          setStart(parseInt(ends[0]));
+          if (ends.length == 2) setEnd(parseInt(ends[1]));
+          else setEnd(parseInt(ends[0] + 16 * 32));
+          setSelection(x);
+          return;
+        }
+      }
+      setSelection(x);
+    },
+    [linkerInfoFileMap, pointers.pc, pointers.sb, pointers.sp]
+  );
 
   return (
     <div className="flex font-mono p-3">
@@ -141,29 +190,12 @@ function App() {
               Addr
             </Label>
             <Input
-              ref={startInputRef}
               id="from"
               variant="vscode"
               sizeVariant="sm"
-              size={4}
-              onKeyUp={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                if (e.key == "Enter") {
-                  setSelection("custom");
-                  setStart(parseInt(`0x${e.currentTarget.value}`));
-                }
-              }}></Input>
-            <Label>-</Label>
-            <Input
-              ref={endInputRef}
-              variant="vscode"
-              sizeVariant="sm"
-              size={4}
-              onKeyUp={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                if (e.key == "Enter") {
-                  setSelection("custom");
-                  setEnd(parseInt(`0x${e.currentTarget.value}`));
-                }
-              }}></Input>
+              size={6}
+              value={selection}
+              onChange={(e) => parseSeleection(e.target.value)}></Input>
             <Button size="xs" variant={selection == "0" ? "vscodePrimary" : "vscodeSecondary"} onClick={onZero}>
               <span className="w-3">0</span>
             </Button>
@@ -204,25 +236,14 @@ function App() {
           {_.range(page.firstRow, page.lastRow).map((r) => (
             <React.Fragment key={`row${r}`}>
               <span className="text-right pr-4 text-yellow-700">{(r * 16).toString(16).padStart(4, "0")}</span>
-              {_.range(0, 16).map((i) => (
+              {_.range(r * 16, (r + 1) * 16).map((addr) => (
                 <span
-                  key={`cell${r * 16 + i}`}
-                  className={clsx(
-                    "text-gray-400",
-                    r * 16 + i < start && "text-gray-600",
-                    r * 16 + i > end && "text-gray-600",
-                    "hover:text-black hover:bg-gray-200",
-                    r * 16 + i == pointers.pc && "border border-orange-500",
-                    r * 16 + i == pointers.sp && "border border-green-500",
-                    r * 16 + i == pointers.hl && "border border-blue-500"
-                  )}
+                  key={`cell${addr}`}
+                  className={getMemoryCellClass(addr)}
                   onMouseOver={() => {
-                    setHoverCell(r * 16 + i);
+                    setHoverCell(addr);
                   }}>
-                  {memory
-                    .at(r * 16 + i)
-                    ?.toString(16)
-                    .padStart(2, "0")}
+                  {memory.at(addr)?.toString(16).padStart(2, "0")}
                 </span>
               ))}
               <div className="text-right pl-4 memview-ascii invisible min-[400px]:visible overflow-hidden inline-flex">

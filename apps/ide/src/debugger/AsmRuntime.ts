@@ -5,6 +5,7 @@ import { emulator, Registers } from "@dksap3/cpusim";
 import { EmulatorWebviewPanel } from "../components/EmulatorWebviewPanel.ts";
 import { MemoryWebviewPanel } from "../components/MemoryWebviewPanel.ts";
 import { printOutputChannel } from "./debugger.ts";
+import { getLabelForAddress, getSourceLocationForAddress } from "@dksap3/lang-asm";
 
 interface IAsmBreakpoint {
   id: number;
@@ -28,7 +29,7 @@ export class AsmRuntime {
   // RUNTIME is zero based positions
   private _breakPoints = new Map<string, IAsmBreakpoint[]>();
   private _breakpointId = 1;
-  public asmSource?: AsmDocumentChange;
+  public compiledAsm?: AsmDocumentChange;
   private _debugger?: AsmDebugSession;
   public frames: IStackFrame[] = [];
   public animateRunning = false;
@@ -51,8 +52,8 @@ export class AsmRuntime {
 
   setSource(program: string) {
     // const fn = `file://${program.replace("\\", "/").replace("\\", "/")}`;
-    this.asmSource = compiledDocs[program];
-    if (!this.asmSource) {
+    this.compiledAsm = compiledDocs[program];
+    if (!this.compiledAsm) {
       console.log(compiledDocs);
       throw Error(`No compiled result for ${program}`);
     }
@@ -77,27 +78,27 @@ export class AsmRuntime {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   start(program: string, _stopOnEntry: boolean) {
     if (!this._debugger) throw Error("No debug session set");
-    if (!this.asmSource) throw Error("No source");
+    if (!this.compiledAsm) throw Error("No source");
     this.runUntilReturnFrom = "";
 
-    MemoryWebviewPanel.sendLabels(this.asmSource.identifierMap);
+    MemoryWebviewPanel.sendLinkerInfoFileMap(this.compiledAsm.linkerInfoFileMap);
 
     this.frames = [
       {
         index: 0,
-        file: this.asmSource.uri,
+        file: this.compiledAsm.uri,
         line: 0,
         name: "__main__",
       },
     ];
 
-    this.log(`Asm runtime start uri=${this.asmSource.uri}`);
-    emulator.reset(Array.from(this.asmSource.machineCode));
+    this.log(`Asm runtime start uri=${this.compiledAsm.uri}`);
+    emulator.reset(Array.from(this.compiledAsm.machineCode));
     emulator.ctrl.bdos = this.bdos;
 
     this.setCurrentLine();
     this.verifyBreakpoints(program);
-    this.stop("entry", `Runtime started: machine code ${this.asmSource.machineCode.length} bytes`);
+    this.stop("entry", `Runtime started: machine code ${this.compiledAsm.machineCode.length} bytes`);
   }
 
   updateUI() {
@@ -143,22 +144,23 @@ export class AsmRuntime {
     }
 
     switch (emulator.ir.out) {
-      case 0xcd:
-      case 0xf4:
-      case 0xfc:
-      case 0xc4:
-      case 0xcc:
-      case 0xe4:
-      case 0xec:
-      case 0xd4:
-      case 0xdc:
+      case 0xcd: // call
+      case 0xf4: // cp
+      case 0xfc: // cm
+      case 0xc4: // cnz
+      case 0xcc: // cz
+      case 0xe4: // cpo
+      case 0xec: // cpe
+      case 0xd4: // cnc
+      case 0xdc: // cc
         if (!emulator.ctrl.skipCall) {
           // call or conditional call
-          const label = Object.entries(this.asmSource!.identifierMap).find(([, addr]) => addr == emulator.regs.pc);
-          const name = label ? label[0] : "unknown";
+          const label = getLabelForAddress(this.compiledAsm!.linkerInfoFileMap, emulator.regs.pc);
+          if (!label) throw Error("Unable to find label");
+          const name = label ? label.labelInfo.name : "unknown";
           this.frames.unshift({
             name,
-            file: this.asmSource!.uri,
+            file: label?.filename,
             line: 0,
             index: this.frames.length - 1,
           });
@@ -197,16 +199,19 @@ export class AsmRuntime {
   }
 
   isBreakpoint() {
-    if (!this.asmSource) throw Error("isBreakpoint no source");
+    if (!this.compiledAsm) throw Error("isBreakpoint no source");
     const curLine = this.frames[0].line;
-    const bps = this._breakPoints.get(this.asmSource.uri.replace("file:///", "\\").replace("/", "\\"));
+    const bps = this._breakPoints.get(this.compiledAsm.uri.replace("file:///", "\\").replace("/", "\\"));
     return bps?.find((bp) => bp.line == curLine);
   }
 
   setCurrentLine() {
     const pc = emulator.regs.pc;
-    const line = Object.entries(this.asmSource!.lineAddressMap).find(([, address]) => address == pc);
-    if (line) this.frames[0].line = parseInt(line[0]);
+    const filepos = getSourceLocationForAddress(this.compiledAsm!.linkerInfoFileMap, pc);
+    if (filepos) {
+      this.frames[0].line = filepos.line;
+      this.frames[0].file = filepos.filename;
+    }
   }
 
   run(mode: IStepMode) {
@@ -235,10 +240,12 @@ export class AsmRuntime {
 
   verifyBreakpoints(path: string) {
     const bps = this._breakPoints.get(path);
+    if (!this.compiledAsm) throw Error("VerityBreakpoints no source");
     if (bps) {
       bps.forEach((bp) => {
-        if (!this.asmSource) throw Error("VerityBreakpoints no source");
-        if (this.asmSource.lineAddressMap[bp.line]) {
+        const lineAddressMap = this.compiledAsm!.linkerInfoFileMap[path].lineAddressMap;
+        if (!lineAddressMap) throw Error(`No linkerinfo for ${path}`);
+        if (lineAddressMap[bp.line]) {
           // only instruction lines appear in lineAddressMap
           bp.verified = true;
           this._debugger?.sendEvent(new BreakpointEvent("changed", { verified: bp.verified, id: bp.id }));

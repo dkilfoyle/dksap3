@@ -1,4 +1,5 @@
 import { Disposable, Webview, WebviewPanel, window, ViewColumn } from "vscode";
+import { ILinkerInfoFileMap } from "@dksap3/lang-asm";
 
 function getNonce() {
   let text = "";
@@ -61,9 +62,9 @@ export class MemoryWebviewPanel {
     }
   }
 
-  static sendLabels(labels: Record<string, number>) {
+  static sendLinkerInfoFileMap(linkerInfoFileMap: ILinkerInfoFileMap) {
     if (MemoryWebviewPanel.currentPanel) {
-      MemoryWebviewPanel.currentPanel?._panel.webview.postMessage({ command: "setLabels", data: labels });
+      MemoryWebviewPanel.currentPanel?._panel.webview.postMessage({ command: "setLinkerInfoFileMap", data: linkerInfoFileMap });
     }
   }
 
@@ -90,6 +91,7 @@ export class MemoryWebviewPanel {
 
   private _setWebviewMessageListener(webview: Webview) {
     webview.onDidReceiveMessage(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (message: any) => {
         const command = message.command;
         const text = message.text;

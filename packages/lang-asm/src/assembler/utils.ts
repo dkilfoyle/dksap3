@@ -1,5 +1,6 @@
 import { Instr, isAddrArgument, isImm8, isReg16, isReg8, isImm16 } from "../language/generated/ast.js";
-import { instructionInfo, opcodes } from "../opcodes.js";
+import { instructionInfo } from "../opcodes.js";
+import { ILabelInfo, ILinkerInfoFileMap } from "./asm-assembler.js";
 
 export const getInstructionInfo = (instr: Instr) => {
   let instrKey = `${instr.op.opname.toUpperCase()}`;
@@ -30,3 +31,56 @@ export const getInstructionInfo = (instr: Instr) => {
   if (instructionInfo[instrKey] == undefined) throw Error(`No instruction info for ${instrKey}`);
   return instructionInfo[instrKey];
 };
+
+export function getLabel(linkerInfoFileMap: ILinkerInfoFileMap, labelName: string) {
+  for (const f of Object.values(linkerInfoFileMap)) {
+    const res = Object.values(f.labels).find((l) => l.name == labelName);
+    if (res) return { file: f, label: res };
+  }
+}
+
+export function getSourceLocationForAddress(linkerInfoFileMap: ILinkerInfoFileMap, addr: number) {
+  for (const f of Object.values(linkerInfoFileMap)) {
+    const res = Object.entries(f.lineAddressMap).find(([, { start, size }]) => {
+      return addr >= start && addr < start + size;
+    });
+    if (res) return { filename: f.filename, line: parseInt(res[0]), start: res[1].start, size: res[1].size };
+  }
+}
+
+export function getLabelForAddress(linkerInfoFileMap: ILinkerInfoFileMap, addr: number) {
+  for (const f of Object.values(linkerInfoFileMap)) {
+    const res = Object.values(f.labels).find((labelInfo) => {
+      return labelInfo.localAddress + f.startOffset == addr;
+    });
+    if (res) return { file: f, label: res };
+  }
+}
+
+export function getNearestPreceedingLabelForAddress(linkerInfoFileMap: ILinkerInfoFileMap, addr: number) {
+  let nearestDistance = 1000000;
+  let nearestLabel: ILabelInfo = { name: "unknown", localAddress: 0, references: [] };
+  let nearestFile: string = "";
+
+  for (const f of Object.values(linkerInfoFileMap)) {
+    Object.values(f.labels).forEach((l) => {
+      const distance = addr - (l.localAddress + f.startOffset);
+      if (distance >= 0 && distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestLabel = l;
+        nearestFile = f.filename;
+      }
+    });
+  }
+
+  return { file: nearestFile, distance: nearestDistance, label: nearestLabel };
+}
+
+export function getFileNumForAddress(linkerInfoFileMap: ILinkerInfoFileMap, addr: number) {
+  let i = 0;
+  for (const f of Object.values(linkerInfoFileMap)) {
+    if (addr >= f.startOffset && addr < f.startOffset + f.size) return i;
+    i++;
+  }
+  return -1;
+}

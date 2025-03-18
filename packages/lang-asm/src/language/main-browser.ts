@@ -1,4 +1,4 @@
-import { AstNode, DocumentState, EmptyFileSystem, LangiumDocument, URI } from "langium";
+import { AstNode, DocumentState, EmptyFileSystem, LangiumDocument } from "langium";
 import { startLanguageServer } from "langium/lsp";
 import {
   BrowserMessageReader,
@@ -8,7 +8,7 @@ import {
   NotificationType,
 } from "vscode-languageserver/browser.js";
 import { createAsmServices } from "./asm-module.js";
-import { assembler } from "../assembler/asm-assembler.js";
+import { assembler, ILinkerInfoFileMap } from "../assembler/asm-assembler.js";
 import { userPreferences } from "./asm-userpreferences.js";
 
 console.info("Starting asm main browser");
@@ -32,10 +32,9 @@ connection.onDidChangeConfiguration((params: DidChangeConfigurationParams) => {
 
 export type AsmDocumentChange = {
   uri: string;
-  content: string;
+  ast: string;
   machineCode: Uint8Array;
-  identifierMap: Record<string, number>;
-  lineAddressMap: Record<number, number>;
+  linkerInfoFileMap: ILinkerInfoFileMap;
 };
 
 const debounce = (fn: Function, ms = 300) => {
@@ -47,8 +46,8 @@ const debounce = (fn: Function, ms = 300) => {
 };
 
 const sendAsmDocumentChange = (document: LangiumDocument<AstNode>) => {
-  const { bytes, files } = assembler.assembleAndLink([document]);
-  console.log(files);
+  const { bytes, linkerInfoFileMap } = assembler.assembleAndLink([document]);
+  console.log(linkerInfoFileMap);
 
   const json = Asm.serializer.JsonSerializer.serialize(document.parseResult.value, {
     sourceText: false,
@@ -59,10 +58,9 @@ const sendAsmDocumentChange = (document: LangiumDocument<AstNode>) => {
   // console.log("Sending notification from browser:", hackvm.trace);
   connection.sendNotification(documentChangeNotification, {
     uri: document.uri.toString(),
-    content: json,
+    ast: json,
     machineCode: bytes,
-    identifierMap: {},
-    lineAddressMap: {},
+    linkerInfoFileMap: linkerInfoFileMap,
   });
 };
 

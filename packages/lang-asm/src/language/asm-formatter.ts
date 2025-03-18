@@ -42,9 +42,10 @@ export class AsmFormatter extends AbstractFormatter {
         node.op.opname.length + (node.arg1 ? node.arg1!.$cstNode!.length + 1 : 0) + (node.arg2 ? node.arg2!.$cstNode!.length + 2 : 0);
     } else if (isDirective(node)) {
       const formatter = this.getNodeFormatter(node);
-      formatter.property("dir").prepend(move({ tabs: userPreferences.format.indentTabs, lines: this.hasLabel ? 0 : 1 }));
-      formatter.properties("args").prepend(Formatting.spaces(1));
-      this.instrLength = node.dir.opname.length + node.args.join(", ").length;
+      formatter.property("dirname").prepend(move({ tabs: userPreferences.format.indentTabs, lines: this.hasLabel ? 0 : 1 }));
+      throw Error("TODO: format directives");
+      // formatter.properties("args").prepend(Formatting.spaces(1));
+      // this.instrLength = node.dirname.length + node.args.join(", ").length;
     } else if (isComment(node)) {
       const formatter = this.getNodeFormatter(node);
       const tabs = userPreferences.format.commentTabs;
@@ -71,9 +72,10 @@ export class AsmFormatter extends AbstractFormatter {
       }
 
       if (node.dir) {
-        const dirFormatter = this.getNodeFormatter(node.dir);
-        dirFormatter.property("dir").prepend({ moves: [{ tabs: userPreferences.format.indentTabs }], options: {} });
-        dirFormatter.properties("args").prepend(Formatting.spaces(1));
+        throw Error("TODO: Format directives");
+        // const dirFormatter = this.getNodeFormatter(node.dir);
+        // dirFormatter.property("dir").prepend({ moves: [{ tabs: userPreferences.format.indentTabs }], options: {} });
+        // dirFormatter.properties("args").prepend(Formatting.spaces(1));
       }
 
       if (node.comment) {
@@ -86,7 +88,7 @@ export class AsmFormatter extends AbstractFormatter {
             node.instr.op.opname.length +
             (node.instr.arg1 ? node.instr.arg1.$cstNode!.length + 1 : 0) +
             (node.instr.arg2 ? node.instr.arg2.$cstNode!.length + 2 : 0);
-        else if (node.dir) length = indentSize + node.dir.$cstNode!.text.length;
+        // else if (node.dir) length = indentSize + node.dir!.$cstNode!.text.length;
         else if (node.label) length = indentSize + 8;
 
         if (length != 0)

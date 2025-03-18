@@ -274,8 +274,8 @@ export class AsmDebugSession extends DebugSession {
         variablesReference: 0,
       });
     } else if (id == "Labels") {
-      if (!asmRuntime.asmSource) throw Error();
-      Object.entries(asmRuntime.asmSource.identifierMap).forEach(([lbl, addr]) => {
+      if (!asmRuntime.compiledAsm) throw Error();
+      Object.entries(asmRuntime.compiledAsm.identifierMap).forEach(([lbl, addr]) => {
         variables.push({
           name: lbl,
           type: "integer",

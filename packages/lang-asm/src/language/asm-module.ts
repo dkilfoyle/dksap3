@@ -1,4 +1,4 @@
-import { DeepPartial, LangiumParserErrorMessageProvider, type Module, inject } from "langium";
+import { DeepPartial, type Module, inject } from "langium";
 import {
   createDefaultModule,
   createDefaultSharedModule,
