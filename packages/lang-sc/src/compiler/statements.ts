@@ -11,12 +11,12 @@ import {
   ReturnStatement,
   Statement,
 } from "../language/generated/ast";
-import { symbol_table, SymbolIdentity, SymbolStorage, SymbolType } from "./SymbolTable";
-import { generator, Generator } from "./Generator";
-import { tag_table } from "./TagTable";
+import { SymbolIdentity, SymbolStorage, SymbolType } from "./SymbolTable";
+import { AsmGenerator } from "./Generator";
 import { compileExpression, ExpressionResult } from "./expression";
 import { CompositeGeneratorNode, expandTracedToNode, joinToNode, joinTracedToNode } from "langium/generate";
 import { userPreferences } from "../language/sc-userpreferences";
+import { ScCompiler } from "./sc-compiler";
 
 const getVariableType = (v: LocalVariableDeclaration) => {
   if (v.type.type == "struct") {
@@ -28,7 +28,7 @@ const getVariableType = (v: LocalVariableDeclaration) => {
   }
 };
 
-export const compileBlock = (block: Block) => {
+export const compileBlock = (scc: ScCompiler, block: Block) => {
   // return expandTracedToNode(block)`
   //   ${joinTracedToNode(block, "statements")(
   //     block.statements.map((s) => compileStatement(s)),
@@ -36,49 +36,49 @@ export const compileBlock = (block: Block) => {
   //   )}
   // `;
   return expandTracedToNode(block)`
-    ${joinToNode(block.statements.map((s) => compileStatement(s)))}
+    ${joinToNode(block.statements.map((s) => compileStatement(scc, s)))}
   `;
 };
 
-export const compileStatement = (statement: Statement): CompositeGeneratorNode => {
+export const compileStatement = (scc: ScCompiler, statement: Statement): CompositeGeneratorNode => {
   switch (true) {
     case isLocalVariableDeclaration(statement):
-      return compileLocalDeclaration(statement);
+      return compileLocalDeclaration(scc, statement);
     case isExpression(statement):
-      return compileExpression(statement).node!;
+      return compileExpression(scc, statement).node!;
     case isReturnStatement(statement):
-      return compileReturn(statement);
+      return compileReturn(scc, statement);
     case isInlineAssembly(statement):
-      return compileAssembly(statement);
+      return compileAssembly(scc, statement);
     default:
       console.error("Unimplemented statement ", statement);
   }
   throw Error();
 };
 
-const compileAssembly = (asm: InlineAssembly) => {
+const compileAssembly = (scc: ScCompiler, asm: InlineAssembly) => {
   return expandTracedToNode(asm)`
     ${asm.asm.slice(6, -7).trimStart()}
   `;
 };
 
-const compileLocalDeclaration = (decl: LocalVariableDeclaration) => {
+const compileLocalDeclaration = (scc: ScCompiler, decl: LocalVariableDeclaration) => {
   return expandTracedToNode(decl)`
     ${userPreferences.compiler.commentStatements ? `; ${decl.$cstNode!.text}` : undefined}
     ${joinTracedToNode(decl, "varNames")(
-      decl.varNames.map((vn) => compileLocalVarName(vn as LocalVarName, decl)),
+      decl.varNames.map((vn) => compileLocalVarName(scc, vn as LocalVarName, decl)),
       { appendNewLineIfNotEmpty: true }
     )}
   `;
 };
 
-const compileLocalVarName = (localVar: LocalVarName, decl: LocalVariableDeclaration) => {
-  if (symbol_table.find_local(localVar.name) != -1) throw Error(`${localVar.name} is already in local symbol table`);
+const compileLocalVarName = (scc: ScCompiler, localVar: LocalVarName, decl: LocalVariableDeclaration) => {
+  if (scc.symbol_table.find_local(localVar.name) != -1) throw Error(`${localVar.name} is already in local symbol table`);
   const typ = getVariableType(decl);
 
   let otag = -1;
   if (isStructTypeReference(decl.type)) {
-    otag = tag_table.find(decl.type.structName.$refText);
+    otag = scc.tag_table.find(decl.type.structName.$refText);
   }
 
   let j, k;
@@ -89,19 +89,19 @@ const compileLocalVarName = (localVar: LocalVarName, decl: LocalVariableDeclarat
       // [dim]
       j = SymbolIdentity.ARRAY;
       if (typ & SymbolType.CINT) {
-        k = k * Generator.INTSIZE;
+        k = k * AsmGenerator.INTSIZE;
       } else if (typ == SymbolType.STRUCT) {
-        k = k * tag_table.tags[otag].size;
+        k = k * scc.tag_table.tags[otag].size;
       }
     } else {
       // []
       j = SymbolIdentity.POINTER;
-      k = Generator.INTSIZE;
+      k = AsmGenerator.INTSIZE;
     }
   } else {
     // not array
     if (j == SymbolIdentity.POINTER) {
-      k = Generator.INTSIZE;
+      k = AsmGenerator.INTSIZE;
     } else {
       switch (typ) {
         case SymbolType.CCHAR:
@@ -109,30 +109,30 @@ const compileLocalVarName = (localVar: LocalVarName, decl: LocalVariableDeclarat
           k = 1;
           break;
         case SymbolType.STRUCT:
-          k = tag_table.tags[otag].size;
+          k = scc.tag_table.tags[otag].size;
           break;
         default:
-          k = Generator.INTSIZE;
+          k = AsmGenerator.INTSIZE;
       }
     }
   }
   let lines: string[];
 
   if (decl.type.storage != "static") {
-    const { newstkp, lines: nonstaticLines } = generator.gen_modify_stack(generator.stkp - k);
+    const { newstkp, lines: nonstaticLines } = scc.generator.gen_modify_stack(scc.generator.stkp - k);
     lines = nonstaticLines;
     // lines[0] += `\t\t\t\t${decl.type.type} ${localVar.name}`;
-    generator.stkp = newstkp;
-    const { index: current_symbol_table_idx } = symbol_table.add_local(localVar.name, j, typ, generator.stkp, SymbolStorage.AUTO);
+    scc.generator.stkp = newstkp;
+    const { index: current_symbol_table_idx } = scc.symbol_table.add_local(localVar.name, j, typ, scc.generator.stkp, SymbolStorage.AUTO);
     if (typ == SymbolType.STRUCT) {
-      symbol_table.symbols[current_symbol_table_idx].tagidx = otag;
+      scc.symbol_table.symbols[current_symbol_table_idx].tagidx = otag;
     }
   } else {
     /* local structs need their tagidx set */
-    const { index: current_symbol_table_idx, lines: staticLines } = symbol_table.add_local(localVar.name, j, typ, k, SymbolStorage.LSTATIC);
+    const { index: current_symbol_table_idx, lines: staticLines } = scc.symbol_table.add_local(localVar.name, j, typ, k, SymbolStorage.LSTATIC);
     lines = staticLines;
     if (typ == SymbolType.STRUCT) {
-      symbol_table.symbols[current_symbol_table_idx].tagidx = otag;
+      scc.symbol_table.symbols[current_symbol_table_idx].tagidx = otag;
     }
   }
   return expandTracedToNode(localVar)`
@@ -140,10 +140,10 @@ const compileLocalVarName = (localVar: LocalVarName, decl: LocalVariableDeclarat
   `;
 };
 
-const compileReturn = (ret: ReturnStatement) => {
-  const exprNode = ret.value ? compileExpression(ret.value).node : null;
+const compileReturn = (scc: ScCompiler, ret: ReturnStatement) => {
+  const exprNode = ret.value ? compileExpression(scc, ret.value).node : null;
   return expandTracedToNode(ret)`
     ${exprNode}
-    jmp $${generator.fexitlab}
+    jmp $${scc.generator.fexitlab}
   `;
 };

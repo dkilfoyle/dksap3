@@ -1,4 +1,4 @@
-import { type Module, inject } from "langium";
+import { DeepPartial, type Module, inject } from "langium";
 import {
   createDefaultModule,
   createDefaultSharedModule,
@@ -10,6 +10,7 @@ import {
 import { ScGeneratedModule, ScGeneratedSharedModule } from "./generated/module";
 import { ScValidator, registerValidationChecks } from "./sc-validator";
 import { ScScopeComputation } from "./sc-scope";
+import { ScWorkspaceManager } from "./sc-workspace";
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -43,6 +44,14 @@ export const ScModule: Module<ScServices, PartialLangiumServices & ScAddedServic
   },
 };
 
+export type ScSharedServices = LangiumSharedServices;
+
+export const ScSharedModule: Module<ScSharedServices, DeepPartial<ScSharedServices>> = {
+  workspace: {
+    WorkspaceManager: (services) => new ScWorkspaceManager(services),
+  },
+};
+
 /**
  * Create the full set of services required by Langium.
  *
@@ -62,7 +71,7 @@ export function createScServices(context: DefaultSharedModuleContext): {
   shared: LangiumSharedServices;
   Sc: ScServices;
 } {
-  const shared = inject(createDefaultSharedModule(context), ScGeneratedSharedModule);
+  const shared = inject(createDefaultSharedModule(context), ScGeneratedSharedModule, ScSharedModule);
   const Sc = inject(createDefaultModule({ shared }), ScGeneratedModule, ScModule);
   shared.ServiceRegistry.register(Sc);
   registerValidationChecks(Sc);

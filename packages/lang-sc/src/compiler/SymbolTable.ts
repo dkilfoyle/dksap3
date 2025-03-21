@@ -1,4 +1,4 @@
-import { Generator, generator } from "./Generator";
+import { AsmGenerator } from "./Generator";
 
 export interface ISymbol {
   name: string;
@@ -41,7 +41,10 @@ export class SymbolTable {
   public symbols: ISymbol[] = [];
   public global_table_index = 0;
   public local_table_index = SymbolTable.NUMBER_OF_GLOBALS;
+
   // public current_symbol_table_index = 0;
+
+  constructor(public generator: AsmGenerator) {}
 
   init() {
     this.local_table_index = SymbolTable.NUMBER_OF_GLOBALS;
@@ -69,11 +72,11 @@ export class SymbolTable {
 
     const lines = [];
     if (storage == SymbolStorage.LSTATIC) {
-      lines.push(...generator.data_segment_gdata());
-      const k = generator.get_label();
-      lines.push(...generator.gen_label(k));
+      lines.push(...this.generator.data_segment_gdata());
+      const k = this.generator.get_label();
+      lines.push(...this.generator.gen_label(k));
       lines.push(".ds\t${offset}");
-      lines.push(...generator.code_segment_gtext());
+      lines.push(...this.generator.code_segment_gtext());
       offset = k;
     }
 
@@ -104,5 +107,3 @@ export class SymbolTable {
     return this.global_table_index - 1;
   }
 }
-
-export const symbol_table = new SymbolTable();

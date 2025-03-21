@@ -6,6 +6,7 @@ import { assembler } from "../assembler/asm-assembler";
 
 import { runtime8080 } from "../assembler/runtime8080";
 import { os8080 } from "../assembler/os8080";
+import { stdlib8080 } from "../assembler/stdlib8080";
 
 export class AsmWorkspaceManager extends DefaultWorkspaceManager {
   private documentFactory: LangiumDocumentFactory;
@@ -28,5 +29,9 @@ export class AsmWorkspaceManager extends DefaultWorkspaceManager {
     const os = this.documentFactory.fromString(os8080, URI.parse("builtin:///os8080.asm"));
     assembler.os = os;
     collector(os);
+    // load stdlib
+    const stdlib = this.documentFactory.fromString(stdlib8080, URI.parse("builtin:///stdlib8080.asm"));
+    assembler.stdlib = stdlib;
+    collector(stdlib);
   }
 }

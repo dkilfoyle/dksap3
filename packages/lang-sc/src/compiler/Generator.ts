@@ -40,8 +40,7 @@ import { ITagSymbol } from "./TagTable";
 //     newline ();
 // }
 
-export class Generator {
-  private static _instance: Generator;
+export class AsmGenerator {
   public static readonly uflag = 0; // don't use 8085 undocumented instructions
   public static readonly INTSIZE = 2;
   public linker = new Set<string>();
@@ -50,11 +49,7 @@ export class Generator {
   public fexitlab = -99;
   public litlab = 0;
 
-  private constructor() {}
-
-  public static get Instance() {
-    return this._instance || (this._instance = new this());
-  }
+  constructor() {}
 
   init() {
     this.linker = new Set();
@@ -109,7 +104,7 @@ export class Generator {
       lines.push(`lxi h, $${sym.offset}`);
       return { reg: CompilerRegs.HL_REG, lines };
     } else {
-      if (Generator.uflag && !(sym.identity == SymbolIdentity.ARRAY)) {
+      if (AsmGenerator.uflag && !(sym.identity == SymbolIdentity.ARRAY)) {
         /* || (sym->identity == VARIABLE && sym->type == STRUCT))) {*/
         lines.push(`ldsi ${sym.offset - this.stkp}`);
         return { reg: CompilerRegs.DE_REG, lines };
@@ -148,7 +143,7 @@ export class Generator {
       lines.push(`mov a, l`);
       lines.push(`stax d`);
     } else {
-      if (Generator.uflag) {
+      if (AsmGenerator.uflag) {
         lines.push(`shlx`);
       } else {
         lines.push(...this.gen_call("ccpint"));
@@ -177,7 +172,7 @@ export class Generator {
       lines.push(`mvi h, 0`);
     } else {
       /*int*/
-      if (Generator.uflag) {
+      if (AsmGenerator.uflag) {
         if (reg & CompilerRegs.HL_REG) {
           lines.push(`xchg`);
         }
@@ -195,10 +190,10 @@ export class Generator {
   gen_push(reg: CompilerRegs) {
     const lines = [];
     if (reg & CompilerRegs.DE_REG) {
-      this.stkp = this.stkp - Generator.INTSIZE;
+      this.stkp = this.stkp - AsmGenerator.INTSIZE;
       lines.push(`push d`);
     } else {
-      this.stkp = this.stkp - Generator.INTSIZE;
+      this.stkp = this.stkp - AsmGenerator.INTSIZE;
       lines.push(`push h`);
     }
     return lines;
@@ -209,7 +204,7 @@ export class Generator {
    */
   gen_pop() {
     const lines = [];
-    this.stkp = this.stkp + Generator.INTSIZE;
+    this.stkp = this.stkp + AsmGenerator.INTSIZE;
     lines.push(`pop d`);
     return lines;
   }
@@ -222,7 +217,7 @@ export class Generator {
     lines.push(`lxi h, #.+5`);
     lines.push(`xthl`); // swap primary reg and top of stack
     lines.push("pchl");
-    this.stkp = this.stkp + Generator.INTSIZE;
+    this.stkp = this.stkp + AsmGenerator.INTSIZE;
     return lines;
   }
 
@@ -251,7 +246,7 @@ export class Generator {
         }
         while (k) {
           lines.push(`pop b`);
-          k = k - Generator.INTSIZE;
+          k = k - AsmGenerator.INTSIZE;
         }
         return { newstkp, lines };
       }
@@ -263,7 +258,7 @@ export class Generator {
         }
         while (k) {
           lines.push(`push b`);
-          k = k + Generator.INTSIZE;
+          k = k + AsmGenerator.INTSIZE;
         }
         return { newstkp, lines };
       }
@@ -650,5 +645,3 @@ export class Generator {
     return ["\t.area  SMALLC_GENERATED_DATA  (REL,CON,DSEG)"];
   }
 }
-
-export const generator = Generator.Instance;

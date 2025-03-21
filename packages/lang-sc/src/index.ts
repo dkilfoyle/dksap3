@@ -5,6 +5,8 @@ export * from "./language/sc-module";
 export * from "./language/sc-validator";
 export * from "./config/config";
 export * from "./language/main-browser";
+export * from "./compiler/stdlib";
+export * from "./compiler/sc-compiler";
 // export * from "./sc-completion-provider";
 // export * from "./sc-container-manager";
 // export * from "./sc-data-types";

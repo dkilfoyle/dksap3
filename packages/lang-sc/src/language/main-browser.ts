@@ -8,9 +8,9 @@ import {
   NotificationType,
 } from "vscode-languageserver/browser";
 import { createScServices } from "./sc-module";
-import { compiler } from "../compiler/sc-compiler";
 import { TraceRegion } from "langium/generate";
 import { userPreferences } from "./sc-userpreferences";
+import { scCompiler } from "../compiler/sc-compiler";
 
 declare const self: DedicatedWorkerGlobalScope;
 
@@ -46,7 +46,8 @@ const debounce = (fn: Function, ms = 300) => {
 };
 
 const sendScDocumentChange = (document: LangiumDocument<AstNode>) => {
-  const asm = compiler(document.parseResult.value);
+  const asm = scCompiler.compile(document.parseResult.value);
+
   // console.log("ASM", asm);
   const json = Sc.serializer.JsonSerializer.serialize(document.parseResult.value, {
     sourceText: false,

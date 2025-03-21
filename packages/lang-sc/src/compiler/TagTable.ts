@@ -5,14 +5,10 @@ export interface ITagSymbol {
   number_of_members: number;
 }
 
-class TagTable {
-  private static _instance: TagTable;
+export class TagTable {
   tags: ITagSymbol[] = [];
   tag_table_index = 0;
-  private constructor() {}
-  public static get Instance() {
-    return this._instance || (this._instance = new this());
-  }
+  public constructor() {}
   init() {
     this.tag_table_index = 0;
   }
@@ -20,5 +16,3 @@ class TagTable {
     return this.tags.findIndex((s) => s.name == name);
   }
 }
-
-export const tag_table = TagTable.Instance;

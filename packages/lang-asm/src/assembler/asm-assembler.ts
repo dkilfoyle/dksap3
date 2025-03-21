@@ -1,4 +1,4 @@
-import { AstNode, LangiumDocument, Reference } from "langium";
+import { AstNode, LangiumDocument, Reference, URI } from "langium";
 import {
   isProgram,
   isAddrArgument,
@@ -17,6 +17,7 @@ import {
 } from "../language/generated/ast.js";
 import { getInstructionInfo } from "./utils.js";
 import { getImportedLines } from "./asm-linker.js";
+import { LangiumSharedServices } from "langium/lsp";
 
 export interface ILabelReference {
   filename: string;
@@ -58,23 +59,34 @@ export interface ILinkerFileInfo {
 }
 
 class Assembler {
+  private static _instance: Assembler;
+
   runtime: LangiumDocument<AstNode> | null = null;
   os: LangiumDocument<AstNode> | null = null;
+  stdlib: LangiumDocument<AstNode> | null = null;
 
   mainfile: string = "";
   files: Record<string, IAssembledFile> = {};
-  constructor() {}
+
+  private constructor() {}
+
+  public static get Instance() {
+    return this._instance || (this._instance = new this());
+  }
+
   /** Assemble and link source documents and runtime
    * @param docs List of source documents excluding runtime. The first document must contain function main.
    * @returns Machine code
    */
-  assembleAndLink(docs: LangiumDocument<AstNode>[]) {
+  assembleAndLink(shared: LangiumSharedServices, docs: LangiumDocument<AstNode>[]) {
     if (!this.runtime) throw Error("Assembler has no runtime");
     if (!this.os) throw Error("Assembler has no os");
+    if (!this.stdlib) throw Error("Assembler has no stdlib");
+
     this.mainfile = docs[0].uri.toString();
 
-    // order is runtime, includes, main
-    const allDocs = [this.os, this.runtime, ...docs.slice(1, -1), docs[0]];
+    // order in memory is os, runtime, stdlib, includes, main
+    const allDocs = [this.os, this.runtime, this.stdlib, ...docs.slice(1, -1), docs[0]];
     const filenames = allDocs.map((doc) => doc.uri.toString());
 
     // build this.files
@@ -163,7 +175,8 @@ class Assembler {
     // - for runtime and #includes only include what is referenced from main
     //   (this will ignore cross dependencies within and between runtime and #includes)
 
-    const externs = this.files[this.mainfile].externs;
+    const externs = [...this.files[this.mainfile].externs, ...this.files["builtin:/stdlib8080.asm"].externs];
+    // const externs = this.files[this.mainfile].externs;
 
     docs.forEach((doc, i) => {
       const root = doc.parseResult.value;
@@ -337,4 +350,4 @@ class Assembler {
   }
 }
 
-export const assembler = new Assembler();
+export const assembler = Assembler.Instance;

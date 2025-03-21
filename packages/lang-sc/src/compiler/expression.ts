@@ -20,11 +20,11 @@ import {
   SymbolExpression,
   UnaryExpression,
 } from "../language/generated/ast";
-import { ISymbol, symbol_table, SymbolIdentity, SymbolStorage, SymbolType } from "./SymbolTable";
-import { Generator, generator } from "./Generator";
+import { ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./SymbolTable";
+import { AsmGenerator } from "./Generator";
 import { CompilerRegs, ILValue } from "./interface";
-import { tag_table } from "./TagTable";
 import { CompositeGeneratorNode, expandTracedToNode, JoinOptions, joinToNode, NewLineNode } from "langium/generate";
+import { ScCompiler } from "./sc-compiler";
 
 const FETCH = 1;
 
@@ -50,55 +50,55 @@ export interface ExpressionResult {
 /**
  * Retrieve a static or indirect symbol value and store in HL
  */
-function rvalue({ reg, lval }: ExpressionResult) {
+function rvalue(scc: ScCompiler, { reg, lval }: ExpressionResult) {
   let lines: string[];
   if (lval.symbol != 0 && lval.indirect == 0) {
     // lval is a static memory cell
-    lines = generator.gen_get_memory(lval.symbol);
+    lines = scc.generator.gen_get_memory(lval.symbol);
   } else {
     // HL contains &int
     // call ccgint
-    lines = generator.gen_get_indirect(lval.indirect, reg);
+    lines = scc.generator.gen_get_indirect(lval.indirect, reg);
     // HL now contains value of int
   }
   return { reg: CompilerRegs.HL_REG, lines };
 }
 
-function store(lval: ILValue) {
-  if ((lval.indirect = 0)) return generator.gen_put_memory(lval.symbol as ISymbol);
-  else return generator.gen_put_indirect(lval.indirect);
+function store(scc: ScCompiler, lval: ILValue) {
+  if ((lval.indirect = 0)) return scc.generator.gen_put_memory(lval.symbol as ISymbol);
+  else return scc.generator.gen_put_indirect(lval.indirect);
 }
 
-export function compileExpression(expression: Expression): ExpressionResult {
-  const res = compileSubExpression(expression);
+export function compileExpression(scc: ScCompiler, expression: Expression): ExpressionResult {
+  const res = compileSubExpression(scc, expression);
   if (res.reg & 1) {
-    const { reg, lines } = rvalue(res);
+    const { reg, lines } = rvalue(scc, res);
     res.node = res.node.append(joinToNode(lines, NL));
     res.reg = reg;
   }
   return res;
 }
 
-function compileSubExpression(expression: Expression): ExpressionResult {
+function compileSubExpression(scc: ScCompiler, expression: Expression): ExpressionResult {
   switch (true) {
     case isBinaryExpression(expression):
       switch (expression.operator) {
         case "=":
-          return applyAssignment(expression);
+          return applyAssignment(scc, expression);
         case "+":
-          return applyAddition(expression);
+          return applyAddition(scc, expression);
         case "*":
         case "/":
-          return applyMultiplication(expression);
+          return applyMultiplication(scc, expression);
         default:
           throw new AstNodeError(expression, `Unimplemented binary expression operator ${expression.operator}`);
       }
     case isSymbolExpression(expression):
-      return compileSymbolExpression(expression);
+      return compileSymbolExpression(scc, expression);
     case isUnaryExpression(expression):
-      return compileUnaryExpression(expression);
+      return compileUnaryExpression(scc, expression);
     case isNumberExpression(expression):
-      return compileNumberExpression(expression);
+      return compileNumberExpression(scc, expression);
     default:
       throw new AstNodeError(expression, "Unknown expression type found ");
   }
@@ -110,13 +110,13 @@ const leafNode = (node: AstNode, lines: string[]) => {
   `;
 };
 
-function compileNumberExpression(numexp: NumberExpression): ExpressionResult {
+function compileNumberExpression(scc: ScCompiler, numexp: NumberExpression): ExpressionResult {
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
-  const lines = generator.gen_immediate(numexp.value);
+  const lines = scc.generator.gen_immediate(numexp.value);
   return { reg: 0, lval, node: leafNode(numexp, lines) };
 }
 
-function compileUnaryExpression(unary: UnaryExpression): ExpressionResult {
+function compileUnaryExpression(scc: ScCompiler, unary: UnaryExpression): ExpressionResult {
   throw Error("unary expressions not yet implemented");
   // const { operator, value } = expression;
   // const actualValue = compileExpression(value);
@@ -135,19 +135,19 @@ function compileUnaryExpression(unary: UnaryExpression): ExpressionResult {
   // }
 }
 
-function applyAssignment(binary: BinaryExpression): ExpressionResult {
+function applyAssignment(scc: ScCompiler, binary: BinaryExpression): ExpressionResult {
   if (!(isSymbolExpression(binary.left) && isLocalVarName(binary.left.element.ref)))
     throw new AstNodeError(binary.left, "lhs of assignment must be variable");
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
   let leftResult, rightResult: ExpressionResult;
   const node = expandTracedToNode(binary)`
     ; ${binary.$cstNode!.text}
-    ${(leftResult = compileSubExpression(binary.left)).node}
+    ${(leftResult = compileSubExpression(scc, binary.left)).node}
     ${(leftResult.reg & FETCH) == 0 ? "ERROR: Need lval" : undefined}
-    ${joinToNode(leftResult.lval.indirect ? generator.gen_push(leftResult.reg) : [])}
-    ${(rightResult = compileSubExpression(binary.right)).node}
-    ${joinToNode(rightResult.reg & 1 ? rvalue(rightResult).lines : [])}
-    ${joinToNode(store(leftResult.lval), NL)}
+    ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg) : [])}
+    ${(rightResult = compileSubExpression(scc, binary.right)).node}
+    ${joinToNode(rightResult.reg & 1 ? rvalue(scc, rightResult).lines : [])}
+    ${joinToNode(store(scc, leftResult.lval), NL)}
   `;
   return { reg: 0, lval, node };
 }
@@ -157,26 +157,26 @@ const execute = (f: () => void) => {
   return "";
 };
 
-function applyAddition(binary: BinaryExpression): ExpressionResult {
-  const leftResult = compileSubExpression(binary.left);
+function applyAddition(scc: ScCompiler, binary: BinaryExpression): ExpressionResult {
+  const leftResult = compileSubExpression(scc, binary.left);
   let k = leftResult.reg;
   // HL = &left
   let rLeftLines: string[] = [];
   if (leftResult.reg & FETCH) {
-    const { reg, lines } = rvalue(leftResult);
+    const { reg, lines } = rvalue(scc, leftResult);
     k = reg;
     rLeftLines = lines;
   }
   // HL = *left
   let pushLines: string[] = [];
-  if (leftResult.lval.indirect) pushLines = generator.gen_push(k);
+  if (leftResult.lval.indirect) pushLines = scc.generator.gen_push(k);
   // top of stack now contains *left
 
-  const rightResult = compileSubExpression(binary.right);
+  const rightResult = compileSubExpression(scc, binary.right);
   // HL = &right
   let rRightLines: string[] = [];
   if (rightResult.reg & 1) {
-    const { lines } = rvalue(rightResult);
+    const { lines } = rvalue(scc, rightResult);
     rRightLines = lines;
   }
 
@@ -189,11 +189,11 @@ function applyAddition(binary: BinaryExpression): ExpressionResult {
     // if so then myint index *= pointertype size
     mulLines = [
       "; HL *= sizeof(left) if left is pointerffset by 2 or struct array index by size",
-      ...generator.gen_multiply(leftResult.lval.ptr_type, leftResult.lval.tagsym ? leftResult.lval.tagsym.size : Generator.INTSIZE),
+      ...scc.generator.gen_multiply(leftResult.lval.ptr_type, leftResult.lval.tagsym ? leftResult.lval.tagsym.size : AsmGenerator.INTSIZE),
     ];
   }
 
-  const addLines = generator.gen_add(leftResult.lval, rightResult.lval);
+  const addLines = scc.generator.gen_add(leftResult.lval, rightResult.lval);
   // pop d ; d = *left
   // dad d; hl = hl + d ie right = right + left
 
@@ -210,34 +210,34 @@ function applyAddition(binary: BinaryExpression): ExpressionResult {
   return { reg: CompilerRegs.NONE, lval: leftResult.lval, node };
 }
 
-function applyMultiplication(binary: BinaryExpression): ExpressionResult {
-  const leftResult = compileSubExpression(binary.left);
+function applyMultiplication(scc: ScCompiler, binary: BinaryExpression): ExpressionResult {
+  const leftResult = compileSubExpression(scc, binary.left);
   var k = leftResult.reg;
   // HL = &left
   let rLeftLines: string[] = [];
   if (leftResult.reg & FETCH) {
-    const { reg, lines } = rvalue(leftResult);
+    const { reg, lines } = rvalue(scc, leftResult);
     k = reg;
     rLeftLines = lines;
   }
   // HL = *left
-  const pushLines = generator.gen_push(k);
+  const pushLines = scc.generator.gen_push(k);
   // top of stack now contains *left
 
-  const rightResult = compileSubExpression(binary.right);
+  const rightResult = compileSubExpression(scc, binary.right);
   // HL = &right
   let rRightLines: string[] = [];
   if (rightResult.reg & 1) {
-    const { lines } = rvalue(rightResult);
+    const { lines } = rvalue(scc, rightResult);
     rRightLines = lines;
   }
   // HL = *right
 
   let opLines: string[] = [];
   if (binary.operator == "*") {
-    opLines = generator.gen_mult();
+    opLines = scc.generator.gen_mult();
   } else if (binary.operator == "/") {
-    opLines = nosign(leftResult.lval) || nosign(rightResult.lval) ? generator.gen_udiv() : generator.gen_div();
+    opLines = nosign(leftResult.lval) || nosign(rightResult.lval) ? scc.generator.gen_udiv() : scc.generator.gen_div();
   }
   // pop d ; d = *left
   // dad d; hl = hl + d ie right = right + left
@@ -254,19 +254,19 @@ function applyMultiplication(binary: BinaryExpression): ExpressionResult {
   return { reg: 0, lval: leftResult.lval, node };
 }
 
-function compileSymbolExpression(symbolExpression: SymbolExpression): ExpressionResult {
+function compileSymbolExpression(scc: ScCompiler, symbolExpression: SymbolExpression): ExpressionResult {
   const ref = symbolExpression.element.ref;
   let res: ExpressionResult;
   switch (true) {
     case isFunctionDeclaration(ref):
-      res = compileFunctionReference(symbolExpression);
+      res = compileFunctionReference(scc, symbolExpression);
       break;
     case isLocalVarName(ref):
     case isParameterDeclaration(ref):
-      res = compileLocalVariableReference(ref);
+      res = compileLocalVariableReference(scc, ref);
       break;
     case isGlobalVarName(ref):
-      res = compileGlobalVariableReference(ref);
+      res = compileGlobalVariableReference(scc, ref);
       break;
     // case isStructReference(symbolExpression):
     //   return compileStructReference(symbolExpression);
@@ -276,11 +276,11 @@ function compileSymbolExpression(symbolExpression: SymbolExpression): Expression
       throw new AstNodeError(symbolExpression, "Trying to compile unknown symbol expression");
   }
   if (symbolExpression.indexExpression) throw new AstNodeError(symbolExpression, "Array indexing not implemented");
-  if (symbolExpression.functionCall) return compileFunctionCall(res, symbolExpression);
+  if (symbolExpression.functionCall) return compileFunctionCall(scc, res, symbolExpression);
   return res;
 }
 
-function compileFunctionCall(symbolRes: ExpressionResult, symbolExpression: SymbolExpression): ExpressionResult {
+function compileFunctionCall(scc: ScCompiler, symbolRes: ExpressionResult, symbolExpression: SymbolExpression): ExpressionResult {
   let ptr = symbolRes.lval.symbol;
   let k = symbolRes.reg;
   const node = symbolRes.node;
@@ -289,7 +289,7 @@ function compileFunctionCall(symbolRes: ExpressionResult, symbolExpression: Symb
   node.append(`; ${symbolExpression.$cstNode?.text}`).appendNewLine();
 
   if (ptr != 0 && ptr.identity != SymbolIdentity.FUNCTION) {
-    const { reg, lines } = rvalue(symbolRes);
+    const { reg, lines } = rvalue(scc, symbolRes);
     k = reg;
     ptr = 0;
     lines.unshift("; function symbol is a pointer to a function ");
@@ -297,7 +297,7 @@ function compileFunctionCall(symbolRes: ExpressionResult, symbolExpression: Symb
   }
 
   if (ptr == 0) {
-    node.append(...generator.gen_push(CompilerRegs.HL_REG));
+    node.append(...scc.generator.gen_push(CompilerRegs.HL_REG));
   }
 
   node.appendTraced(
@@ -305,45 +305,45 @@ function compileFunctionCall(symbolRes: ExpressionResult, symbolExpression: Symb
     "arguments"
   )(
     ...functionCall.arguments.map((arg) =>
-      compileExpression(arg)
+      compileExpression(scc, arg)
         .node.appendIf(ptr == 0, "xthl")
         .appendNewLineIfNotEmpty()
-        .append(joinToNode(generator.gen_push(CompilerRegs.HL_REG), NL))
+        .append(joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG), NL))
     )
   );
 
   if (ptr != 0) {
-    node.append(joinToNode(generator.gen_call((symbolRes.lval.symbol as ISymbol).name), NL));
+    node.append(joinToNode(scc.generator.gen_call((symbolRes.lval.symbol as ISymbol).name), NL));
   } else {
-    node.append(joinToNode(["; callstk", ...generator.callstk()], { appendNewLineIfNotEmpty: true }));
+    node.append(joinToNode(["; callstk", ...scc.generator.callstk()], { appendNewLineIfNotEmpty: true }));
   }
 
-  const { newstkp, lines } = generator.gen_modify_stack(generator.stkp + functionCall.arguments.length * Generator.INTSIZE);
-  generator.stkp = newstkp;
+  const { newstkp, lines } = scc.generator.gen_modify_stack(scc.generator.stkp + functionCall.arguments.length * AsmGenerator.INTSIZE);
+  scc.generator.stkp = newstkp;
   node.append(joinToNode(lines, NL));
 
   return { reg: 0, lval: { ...symbolRes.lval, symbol: 0 }, node };
 }
 
-function compileFunctionReference(funcCall: SymbolExpression): ExpressionResult {
+function compileFunctionReference(scc: ScCompiler, funcCall: SymbolExpression): ExpressionResult {
   // add to global symbol table if not already there
   // Use offset 0 so that if function call occurs before function declaration this can be detected in function declaration
-  const sym_idx = symbol_table.add_global(funcCall.element.ref!.name, SymbolIdentity.FUNCTION, SymbolType.CINT, 0, SymbolStorage.PUBLIC);
+  const sym_idx = scc.symbol_table.add_global(funcCall.element.ref!.name, SymbolIdentity.FUNCTION, SymbolType.CINT, 0, SymbolStorage.PUBLIC);
   if (sym_idx < 0) throw Error();
-  const symbol = symbol_table.symbols[sym_idx];
+  const symbol = scc.symbol_table.symbols[sym_idx];
   const lval: ILValue = { symbol: symbol, indirect: 0, ptr_type: 0, tagsym: 0 };
   return { reg: 0, lval, node: expandTracedToNode(funcCall)`` };
 
   // const args = funcCall.arguments.map((e) => compileExpression(e));
 }
 
-function compileLocalVariableReference(localVar: LocalVarName | ParameterDeclaration): ExpressionResult {
+function compileLocalVariableReference(scc: ScCompiler, localVar: LocalVarName | ParameterDeclaration): ExpressionResult {
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
   let sym_idx;
-  if ((sym_idx = symbol_table.find_local(localVar.name)) > -1) {
-    const symbol = symbol_table.symbols[sym_idx];
+  if ((sym_idx = scc.symbol_table.find_local(localVar.name)) > -1) {
+    const symbol = scc.symbol_table.symbols[sym_idx];
 
-    const { reg, lines } = generator.gen_get_locale(symbol); // hl = &local
+    const { reg, lines } = scc.generator.gen_get_locale(symbol); // hl = &local
     // lxi h, stack offset of symbol
     // dap sp ; hl = &symbol
 
@@ -356,7 +356,7 @@ function compileLocalVariableReference(localVar: LocalVarName | ParameterDeclara
     // memberCall returns &symbol
 
     if (symbol.type == SymbolType.STRUCT) {
-      lval.tagsym = tag_table.tags[symbol.tagidx!];
+      lval.tagsym = scc.tag_table.tags[symbol.tagidx!];
     }
     if (symbol.identity == SymbolIdentity.ARRAY || (symbol.identity == SymbolIdentity.VARIABLE && symbol.type == SymbolType.STRUCT)) {
       lval.ptr_type = symbol.type;
@@ -371,17 +371,17 @@ function compileLocalVariableReference(localVar: LocalVarName | ParameterDeclara
   } else throw new AstNodeError(localVar, `${localVar.name} not in local symbol table`);
 }
 
-function compileGlobalVariableReference(globalVar: GlobalVarName): ExpressionResult {
+function compileGlobalVariableReference(scc: ScCompiler, globalVar: GlobalVarName): ExpressionResult {
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
 
   let sym_idx;
-  if ((sym_idx = symbol_table.find_global(globalVar.name)) > -1) {
-    const symbol = symbol_table.symbols[sym_idx];
+  if ((sym_idx = scc.symbol_table.find_global(globalVar.name)) > -1) {
+    const symbol = scc.symbol_table.symbols[sym_idx];
     if (symbol.identity != SymbolIdentity.FUNCTION) {
       lval.symbol = symbol;
       lval.indirect = 0;
       if (symbol.type == SymbolType.STRUCT) {
-        lval.tagsym = tag_table.tags[symbol.tagidx!];
+        lval.tagsym = scc.tag_table.tags[symbol.tagidx!];
       }
       if (symbol.identity != SymbolIdentity.ARRAY && (symbol.identity != SymbolIdentity.VARIABLE || symbol.type != SymbolType.STRUCT)) {
         if (symbol.identity == SymbolIdentity.POINTER) {
@@ -391,7 +391,7 @@ function compileGlobalVariableReference(globalVar: GlobalVarName): ExpressionRes
         return { reg: 1 | CompilerRegs.HL_REG, lval, node };
       }
       const node = expandTracedToNode(globalVar)`
-          ${joinToNode(generator.gen_immediate(symbol.name))}
+          ${joinToNode(scc.generator.gen_immediate(symbol.name))}
         `;
 
       lval.indirect = symbol.type;

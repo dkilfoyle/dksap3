@@ -6,9 +6,13 @@ const runtime8080bytes = Uint8Array.from(Array.from(runtime8080).map((letter) =>
 import { os8080 } from "../../../packages/lang-asm";
 const os8080bytes = Uint8Array.from(Array.from(os8080).map((letter) => letter.charCodeAt(0)));
 
+import { stdlibsrc } from "../../../packages/lang-sc";
+const stdlibbytes = Uint8Array.from(Array.from(stdlibsrc).map((letter) => letter.charCodeAt(0)));
+
 const lib: Record<string, Uint8Array> = {
   "builtin:/os8080.asm": os8080bytes,
   "builtin:/runtime8080.asm": runtime8080bytes,
+  "builtin:/stdlib.c": stdlibbytes,
 };
 
 export class DslLibraryFileSystemProvider implements vscode.FileSystemProvider {
