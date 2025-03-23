@@ -170,7 +170,6 @@ export class AsmRuntime {
           // call or conditional call
           const label = getLabelForAddress(this.compiledAsm!.linkerInfo, emulator.regs.pc);
           if (!label) {
-            debugger;
             throw Error("Unable to find label");
           }
           const name = label ? label.labelInfo.name : "unknown";

@@ -7,6 +7,7 @@ export * from "./config/config";
 export * from "./language/main-browser";
 export * from "./assembler/runtime8080";
 export * from "./assembler/os8080";
+export * from "./assembler/stdlib8080";
 export * from "./assembler/asm-assembler";
 export * from "./assembler/asm-linker";
 export * from "./assembler/utils";

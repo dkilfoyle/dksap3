@@ -13,9 +13,9 @@ bdos::
   call 7
   mov h, b
   mov l, a
-
 $1:
   ret
+  
 putchar::
   ; bdos(2, c);
   lxi h, 2

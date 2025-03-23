@@ -2,13 +2,7 @@
 
 main()
 {
-  int i, k;
+  int i;
   i = 66;
-  k = bla(i);
-  putchar(k);
-}
-
-bla(int x)
-{
-  return x * 2;
+  putchar(i);
 }
