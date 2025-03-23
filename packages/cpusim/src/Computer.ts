@@ -37,7 +37,8 @@ export class Computer {
   rst = 0;
   out = 0;
   states: ComputerState[] = [];
-  oscallback: (regs: Registers) => void = () => {};
+  bdosCallback: (regs: Registers) => void = () => {};
+  bdosAddress: number = -1;
 
   constructor(program?: number[]) {
     this.reset(program);
@@ -73,7 +74,8 @@ export class Computer {
 
   step() {
     this.states = [];
-    this.ctrl.skipCall = false;
+    this.ctrl.callResult = "unknown";
+    this.ctrl.returnResult = "unknown";
     do {
       this.halftick(); // tock
       this.halftick(); // tick

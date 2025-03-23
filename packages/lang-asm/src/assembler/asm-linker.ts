@@ -1,4 +1,5 @@
 import { Line, Program } from "../language/generated/ast";
+import { ILabelInfo } from "./asm-assembler";
 
 const usedLines: Set<number> = new Set();
 const alreadyImported: Set<string> = new Set();
@@ -49,3 +50,81 @@ export const getImportedLines = (program: Program, externals: string[]) => {
 
   return program.lines.filter((line) => usedLines.has(line.$cstNode!.range.start.line));
 };
+
+export type ILinkerInfo = Record<string, ILinkerFileInfo>;
+
+export interface ILinkerFileInfo {
+  labels: Record<string, ILabelInfo>;
+  size: number;
+  startOffset: number;
+  lineAddressMap: Record<
+    number,
+    {
+      start: number;
+      size: number;
+    }
+  >;
+  filename: string;
+}
+
+export function getLabelInfo(linkerInfo: ILinkerInfo, name: string, filename?: string) {
+  if (filename) {
+    if (linkerInfo[filename].labels[name]) {
+      const f = linkerInfo[filename];
+      const l = linkerInfo[filename].labels[name];
+      return { file: f, labelInfo: l, globalAddress: f.startOffset + l.localAddress };
+    } else return undefined;
+  } else {
+    for (let f of Object.values(linkerInfo)) {
+      for (let l of Object.values(f.labels)) {
+        if (l.name == name) return { file: f, labelInfo: l, globalAddress: f.startOffset + l.localAddress };
+      }
+    }
+  }
+}
+
+export function getSourceLocationForAddress(linkerInfo: ILinkerInfo, addr: number) {
+  for (const f of Object.values(linkerInfo)) {
+    const res = Object.entries(f.lineAddressMap).find(([, { start, size }]) => {
+      return addr >= f.startOffset + start && addr < f.startOffset + start + size;
+    });
+    if (res) return { filename: f.filename, line: parseInt(res[0]), start: res[1].start, size: res[1].size };
+  }
+}
+
+export function getLabelForAddress(linkerInfo: ILinkerInfo, addr: number) {
+  for (const f of Object.values(linkerInfo)) {
+    const res = Object.values(f.labels).find((labelInfo) => {
+      return labelInfo.localAddress + f.startOffset == addr;
+    });
+    if (res) return { file: f, labelInfo: res };
+  }
+}
+
+export function getNearestPreceedingLabelForAddress(linkerInfo: ILinkerInfo, addr: number) {
+  let nearestDistance = 1000000;
+  let nearestLabel: ILabelInfo = { name: "unknown", localAddress: 0, references: [] };
+  let nearestFile: string = "";
+
+  for (const f of Object.values(linkerInfo)) {
+    Object.values(f.labels).forEach((l) => {
+      const distance = addr - (l.localAddress + f.startOffset);
+      if (distance >= 0 && distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestLabel = l;
+        nearestFile = f.filename;
+      }
+    });
+  }
+
+  return { file: nearestFile, distance: nearestDistance, labelInfo: nearestLabel };
+}
+
+export function getFileForAddress(linkerInfo: ILinkerInfo, addr: number) {
+  let i = 0;
+  for (const f of Object.values(linkerInfo)) {
+    if (addr >= f.startOffset && addr < f.startOffset + f.size) return { file: f, num: i };
+    i++;
+  }
+  return { file: undefined, num: -1 };
+}

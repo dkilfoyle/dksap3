@@ -84,6 +84,7 @@ registerFileUrl("./extension.js", "data:text/javascript;base64," + window.btoa("
 void getApi().then(async (debuggerVscodeApi) => {
   outputChannel = vscode.window.createOutputChannel("8085 Emulator");
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   debuggerVscodeApi.commands.registerCommand("extension.asm-debug.runEditorContents", (resource: vscode.Uri) => {
     let targetResource; // = resource;
     let fn: string | undefined;
@@ -99,7 +100,7 @@ void getApi().then(async (debuggerVscodeApi) => {
           name: "Run File",
           request: "launch",
           program: targetResource.toString(),
-          labels: compiledDocs[fn].identifierMap,
+          linkerInfo: compiledDocs[fn].linkerInfo,
           stopOnEntry: false,
         },
         { noDebug: true }
@@ -117,7 +118,7 @@ void getApi().then(async (debuggerVscodeApi) => {
         request: "launch",
         program: config.program || editor?.document.uri.toString(),
         stopOnEntry: config.stopOnEntry || false,
-        labels: config.labels || {},
+        linkerInfo: compiledDocs[editor?.document.uri.toString()].linkerInfo,
       };
     },
   });

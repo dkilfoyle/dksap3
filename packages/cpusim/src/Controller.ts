@@ -37,7 +37,9 @@ export class Controller implements IClocked {
   stage_rst = 1;
   stage_max = 2;
   public bdos: (c: number, de: number) => void = () => {};
-  skipCall = false;
+
+  callResult = "unknown";
+  returnResult = "unknown";
 
   setControl(bits: number | number[], value = 1) {
     this.ctrl_word = setBits(this.ctrl_word, bits, value);
@@ -60,7 +62,7 @@ export class Controller implements IClocked {
     this.stage = this.stage_rst == 1 ? 0 : this.stage + 1;
   }
 
-  always({ alu, ir, mem, regs, oscallback }: Computer) {
+  always({ alu, ir, mem, regs, bdosCallback, bdosAddress }: Computer) {
     this.ctrl_word = 0;
     this.stage_rst = 0;
     const ir8 = ir.out.toString(8).padStart(3, "0");
@@ -79,7 +81,7 @@ export class Controller implements IClocked {
       switch (true) {
         case ir8 == "000":
           // NOP
-          if (regs.pc == 6) oscallback(regs);
+          if (regs.pc == bdosAddress) bdosCallback(regs);
           this.stage_max = 3;
           this.stage_rst = 1;
           break;
@@ -778,16 +780,16 @@ export class Controller implements IClocked {
     this.stage_max = 15;
     switch (this.stage) {
       case 3:
-        if (mem.ram.at(regs.pc) == 5) {
-          // bdos call
-          this.bdos(regs.c, regs.de);
-          // skip the address bytes
-          this.setControls("pc+2");
-          this.stage_rst = 1;
-          this.stage_max = 3;
-          this.skipCall = true;
-          return;
-        }
+        // if (mem.ram.at(regs.pc) == 5) {
+        //   // bdos call
+        //   this.bdos(regs.c, regs.de);
+        //   // skip the address bytes
+        //   this.setControls("pc+2");
+        //   this.stage_rst = 1;
+        //   this.stage_max = 3;
+        //   this.skipCall = true;
+        //   return;
+        // }
         if (flags !== undefined) {
           const conditionalFlag = getBits(irout, [5, 4]);
           const condition = getBit(irout, 3);
@@ -796,10 +798,11 @@ export class Controller implements IClocked {
             this.setControls("pc+2");
             this.stage_rst = 1;
             this.stage_max = 3;
-            this.skipCall = true;
+            this.callResult = "fail";
             return;
           }
         }
+        this.callResult = "pass"; // unconditional call
         this.setControls("mar=reg", REGSEL.PC);
         break;
       case 4:
@@ -847,8 +850,13 @@ export class Controller implements IClocked {
     switch (this.stage) {
       case 3:
         if (!(flags == undefined) && getBit(flags, getBits(irout, [5, 4])) != getBit(irout, 3)) {
+          // condition failed, don't return
           this.stage_rst = 1;
-        } else this.setControls("mar=reg", REGSEL.SP);
+          this.returnResult = "fail";
+          return;
+        }
+        this.returnResult = "pass";
+        this.setControls("mar=reg", REGSEL.SP);
         break;
       case 4:
         this.setControls("reg=mem", REGSEL.W); // pop hi(ret address) from stack

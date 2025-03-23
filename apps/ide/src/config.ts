@@ -37,7 +37,7 @@ import { ScDocumentChange, getScLanguageClientConfig, getScLanguageExtension } f
 import { AsmDocumentChange, getAsmLanguageClientConfig, getAsmLanguageExtension } from "@dksap3/lang-asm";
 import { EmulatorWebviewPanel } from "./components/EmulatorWebviewPanel.ts";
 import { MemoryWebviewPanel } from "./components/MemoryWebviewPanel.ts";
-import { compiledDocs } from "./debugger/AsmRuntime.ts";
+import { asmRuntime, compiledDocs } from "./debugger/AsmRuntime.ts";
 import { TraceRegion } from "langium/generate";
 import { AstNode } from "langium";
 import { DslLibraryFileSystemProvider } from "./DslFileSystemProvider.ts";
@@ -178,12 +178,14 @@ export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrap
   EmulatorWebviewPanel.render();
   MemoryWebviewPanel.render();
 
-  wrapper.getLanguageClient("asm")?.onNotification("browser/AsmDocumentChange", (data: AsmDocumentChange) => {
+  wrapper.getLanguageClient("asm")?.onNotification("browser/AsmDocumentChange", async (data: AsmDocumentChange) => {
     // console.log("App.tsx onNotification(browser/asmDocumentChange)", data.uri, data.machineCode.length);
     // console.log(JSON.parse(data.content));
-    compiledDocs[data.uri] = data;
-    MemoryWebviewPanel.sendMemory(Array.from(data.machineCode));
-    MemoryWebviewPanel.sendLinkerInfoFileMap(data.linkerInfoFileMap);
+    if (!asmRuntime.isDebugging) {
+      compiledDocs[data.uri] = data;
+      MemoryWebviewPanel.sendMemory(Array.from(data.machineCode));
+      MemoryWebviewPanel.sendLinkerInfo(data.linkerInfo);
+    }
   });
 
   wrapper.getLanguageClient("sc")?.onNotification("browser/ScDocumentChange", async (data: ScDocumentChange) => {

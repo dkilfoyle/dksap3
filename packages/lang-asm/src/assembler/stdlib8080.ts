@@ -10,7 +10,7 @@ bdos::
   push d
   push b
   push h
-  call 5
+  call 7
   mov h, b
   mov l, a
 

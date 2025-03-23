@@ -1,5 +1,6 @@
 import { Disposable, Webview, WebviewPanel, window, ViewColumn } from "vscode";
-import { ILinkerInfoFileMap } from "@dksap3/lang-asm";
+import { ILinkerInfo } from "@dksap3/lang-asm";
+import { IStackFrame } from "src/debugger/AsmRuntime";
 
 function getNonce() {
   let text = "";
@@ -56,15 +57,21 @@ export class MemoryWebviewPanel {
     } else console.error("No memory currentPanel");
   }
 
+  static sendStackFrames(frames: IStackFrame[]) {
+    if (MemoryWebviewPanel.currentPanel) {
+      MemoryWebviewPanel.currentPanel?._panel.webview.postMessage({ command: "setStackFrames", data: frames });
+    } else console.error("No memory currentPanel");
+  }
+
   static sendPointers(pointers: { sp: number; sb: number; pc: number; hl: number }) {
     if (MemoryWebviewPanel.currentPanel) {
       MemoryWebviewPanel.currentPanel?._panel.webview.postMessage({ command: "setPointers", data: pointers });
     }
   }
 
-  static sendLinkerInfoFileMap(linkerInfoFileMap: ILinkerInfoFileMap) {
+  static sendLinkerInfo(linkerInfo: ILinkerInfo) {
     if (MemoryWebviewPanel.currentPanel) {
-      MemoryWebviewPanel.currentPanel?._panel.webview.postMessage({ command: "setLinkerInfoFileMap", data: linkerInfoFileMap });
+      MemoryWebviewPanel.currentPanel?._panel.webview.postMessage({ command: "setLinkerInfo", data: linkerInfo });
     }
   }
 

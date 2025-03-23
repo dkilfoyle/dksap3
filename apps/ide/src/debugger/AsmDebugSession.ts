@@ -8,11 +8,12 @@ import { Breakpoint, Scope, Source, StackFrame, Thread } from "./dap/features";
 import { asmRuntime } from "./AsmRuntime";
 import { emulator } from "@dksap3/cpusim";
 import { DebugProtocol } from "@vscode/debugprotocol";
+import { getLabelInfo, ILinkerInfo } from "@dksap3/lang-asm";
 
 interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
   /** An absolute path to the "program" to debug. */
   program: string;
-  labels: Record<string, number>;
+  linkerInfo: ILinkerInfo;
   /** Automatically stop target after launch. If not specified, target does not stop. */
   stopOnEntry?: boolean;
   /** enable logging the Debug Adapter Protocol */
@@ -23,11 +24,11 @@ export class AsmDebugSession extends DebugSession {
   public static THREAD_ID = 1;
   private _variableHandles = new Handles<string>();
   private _cancelationTokens = new Map<number, boolean>();
-  labels: Record<string, number> = {};
+  linkerInfo: ILinkerInfo = {};
 
   private _configurationDone = new Subject();
   constructor() {
-    super(false);
+    super(true);
     this.setDebuggerLinesStartAt1(false);
     this.setDebuggerColumnsStartAt1(false);
     asmRuntime.setDebugSession(this);
@@ -58,7 +59,7 @@ export class AsmDebugSession extends DebugSession {
     // logger.setup(args.trace ? Logger.LogLevel.Verbose : Logger.LogLevel.Stop, false);
 
     asmRuntime.setSource(args.program);
-    this.labels = args.labels;
+    this.linkerInfo = args.linkerInfo;
 
     // wait until configuration has finished (and configurationDoneRequest has been called)
     await this._configurationDone.wait(1000);
@@ -274,13 +275,14 @@ export class AsmDebugSession extends DebugSession {
         variablesReference: 0,
       });
     } else if (id == "Labels") {
-      if (!asmRuntime.compiledAsm) throw Error();
-      Object.entries(asmRuntime.compiledAsm.identifierMap).forEach(([lbl, addr]) => {
-        variables.push({
-          name: lbl,
-          type: "integer",
-          value: "0x" + addr.toString(16),
-          variablesReference: 0,
+      Object.entries(this.linkerInfo).forEach(([filename, fileinfo]) => {
+        Object.entries(fileinfo.labels).forEach(([labelname, labelinfo]) => {
+          variables.push({
+            name: labelinfo.name,
+            type: "integer",
+            value: "0x" + (fileinfo.startOffset + labelinfo.localAddress).toString(16),
+            variablesReference: 0,
+          });
         });
       });
     } else if (id == "Pointers") {
@@ -356,15 +358,17 @@ export class AsmDebugSession extends DebugSession {
             emulator.regs.hl
           }\n@hl: 0x${emulator.mem.ram.at(emulator.regs.hl)?.toString(16)}, ${emulator.mem.ram.at(emulator.regs.hl)}`;
           break;
-        default:
-          // could be a label
-          if (this.labels[args.expression] != undefined) {
-            result = ` ${args.expression}: 0x${this.labels[args.expression].toString(16)}, ${this.labels[args.expression]}\n@${
+        default: // could be a label
+        {
+          const label = getLabelInfo(this.linkerInfo, args.expression);
+          if (label) {
+            result = ` ${args.expression}: 0x${label.globalAddress.toString(16)}, ${label.globalAddress}}\n@${
               args.expression
-            }: 0x${emulator.mem.ram.at(this.labels[args.expression])?.toString(16)}, ${emulator.mem.ram.at(this.labels[args.expression])}`;
+            }: 0x${emulator.mem.ram.at(label.globalAddress)?.toString(16)}, ${emulator.mem.ram.at(label.globalAddress)}`;
           } else {
             return this.sendResponse(response);
           }
+        }
       }
     }
     response.body = {

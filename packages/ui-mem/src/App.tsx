@@ -6,8 +6,16 @@ import clsx from "clsx";
 import { Label } from "./components/ui/label";
 import { Input } from "./components/ui/input";
 import { Button } from "./components/ui/button";
-import { getFileNumForAddress, getLabel, getNearestPreceedingLabelForAddress } from "../../lang-asm/src/assembler/utils";
-import { ILinkerInfoFileMap } from "../../lang-asm/src/assembler/asm-assembler";
+import { getFileForAddress, getLabelInfo, getNearestPreceedingLabelForAddress } from "../../lang-asm/src/assembler/asm-linker";
+import { ILinkerInfo } from "../../lang-asm/src/assembler/asm-linker";
+
+interface IStackFrame {
+  index: number;
+  name: string;
+  file: string;
+  line: number;
+  stackBase: number;
+}
 
 // // @ts-expect-error will be provided by vscode webview
 // const vscode = acquireVsCodeApi();
@@ -26,16 +34,18 @@ const oldState = {
   start: 0,
   end: 255,
   selection: "0",
+  stack: [],
 };
 
 function App() {
   const [memory, setMemory] = useState<number[]>(oldState.memory);
+  const [stack, setStack] = useState<IStackFrame[]>(oldState.stack);
   const [pointers, setPointers] = useState<{ sp: number; sb: number; pc: number; hl: number }>({ ...oldState.pointers });
   const [start, setStart] = useState(oldState.start);
   const [end, setEnd] = useState(oldState.end);
   const [hoverCell, setHoverCell] = useState<number>();
   const [selection, setSelection] = useState(oldState.selection);
-  const [linkerInfoFileMap, setLinkerInfoFileMap] = useState<ILinkerInfoFileMap>({});
+  const [linkerInfo, setLinkerInfo] = useState<ILinkerInfo>({});
 
   // useEffect(() => {
   //   vscode.setState({
@@ -58,8 +68,11 @@ function App() {
         case "setPointers":
           setPointers({ sp: message.data.sp, sb: message.data.sb, pc: message.data.pc, hl: message.data.hl });
           break;
-        case "setLinkerInfoFileMap":
-          setLinkerInfoFileMap(message.data);
+        case "setLinkerInfo":
+          setLinkerInfo(message.data);
+          break;
+        case "setStackFrames":
+          setStack(message.data);
           break;
         case "setRange":
           setStart(message.data.start);
@@ -68,6 +81,23 @@ function App() {
       }
     });
   }, [end, memory, memory.length, pointers, selection, start]);
+
+  const getStackFrameForAddress = useCallback(
+    (addr: number) => {
+      for (let i = 0; i < stack.length; i++) {
+        if (addr <= stack[i].stackBase) return i;
+      }
+      return -1;
+    },
+    [stack]
+  );
+
+  const isInStackRange = useCallback(
+    (addr: number) => {
+      return stack.length > 0 && addr >= pointers.sp && addr <= stack[stack.length - 1].stackBase;
+    },
+    [pointers.sp, stack]
+  );
 
   const page = useMemo(() => {
     const firstRow = Math.floor(start / 16);
@@ -86,12 +116,19 @@ function App() {
     // add character represention if printable
     // if (val && val > 31 && val < 255) x += `, ${String.fromCharCode(val)}`;
 
-    // add label offset
-    const nearest = getNearestPreceedingLabelForAddress(linkerInfoFileMap, addr);
-    if (nearest.file != "") x += ` [${nearest.label.name} + ${nearest.distance}]`;
+    if (isInStackRange(addr)) {
+      const s = getStackFrameForAddress(addr);
+      if (s != -1) {
+        x += ` [${stack[s].name} stack-${stack[s].stackBase - addr}`;
+      }
+    } else {
+      // add label offset
+      const nearest = getNearestPreceedingLabelForAddress(linkerInfo, addr);
+      if (nearest.file != "") x += ` [${nearest.labelInfo.name} + ${nearest.distance}]`;
+    }
 
     return x;
-  }, [hoverCell, linkerInfoFileMap, memory]);
+  }, [getStackFrameForAddress, hoverCell, isInStackRange, linkerInfo, memory, stack]);
 
   const onZero = useCallback(() => {
     setSelection("0");
@@ -119,30 +156,32 @@ function App() {
 
   const getMemoryCellClass = useCallback(
     (addr: number) => {
-      const f = getFileNumForAddress(linkerInfoFileMap, addr);
+      const { num } = getFileForAddress(linkerInfo, addr);
+
+      const s = isInStackRange(addr) ? getStackFrameForAddress(addr) : -1;
 
       return clsx(
         "text-gray-400",
         "hover:text-black hover:bg-gray-200",
         addr < start && "text-gray-600",
         addr > end && "text-gray-600",
-        addr == pointers.pc && "border border-orange-500",
-        addr == pointers.sp && "border border-green-500",
+        addr == pointers.pc && "border border-orange-200",
+        addr == pointers.sp && "border border-green-200",
         addr == pointers.hl && "border border-blue-500",
-        f == -1 ? "" : f % 2 ? "bg-gray-500" : "bg-gray-700"
+        num == -1 ? "" : num % 2 ? "bg-indigo-700" : "bg-indigo-900",
+        s == -1 ? "" : s % 2 ? "bg-green-700" : "bg-green-900"
       );
     },
-    [end, linkerInfoFileMap, pointers.hl, pointers.pc, pointers.sp, start]
+    [end, getStackFrameForAddress, isInStackRange, linkerInfo, pointers.hl, pointers.pc, pointers.sp, start]
   );
 
   const parseSeleection = useCallback(
     (x: string) => {
       // is x a label
-      const label = getLabel(linkerInfoFileMap, x);
+      const label = getLabelInfo(linkerInfo, x);
       if (label) {
-        const labelStart = label.file.startOffset + label.label.localAddress;
-        setStart(labelStart);
-        setEnd(labelStart + 16 * 32);
+        setStart(label.globalAddress);
+        setEnd(label.globalAddress + 16 * 32);
         setSelection(x);
         return;
       }
@@ -171,14 +210,14 @@ function App() {
         if (x[0] != "") {
           setStart(parseInt(ends[0]));
           if (ends.length == 2) setEnd(parseInt(ends[1]));
-          else setEnd(parseInt(ends[0] + 16 * 32));
+          else setEnd(parseInt(ends[0] + 255));
           setSelection(x);
           return;
         }
       }
       setSelection(x);
     },
-    [linkerInfoFileMap, pointers.pc, pointers.sb, pointers.sp]
+    [linkerInfo, pointers.pc, pointers.sb, pointers.sp]
   );
 
   return (
@@ -194,8 +233,10 @@ function App() {
               variant="vscode"
               sizeVariant="sm"
               size={6}
-              value={selection}
-              onChange={(e) => parseSeleection(e.target.value)}></Input>
+              defaultValue={selection}
+              onKeyDown={(e) => {
+                if (e.key == "Enter") parseSeleection(e.currentTarget.value);
+              }}></Input>
             <Button size="xs" variant={selection == "0" ? "vscodePrimary" : "vscodeSecondary"} onClick={onZero}>
               <span className="w-3">0</span>
             </Button>

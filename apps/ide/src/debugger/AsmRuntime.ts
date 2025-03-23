@@ -13,11 +13,12 @@ interface IAsmBreakpoint {
   verified: boolean;
 }
 
-interface IStackFrame {
+export interface IStackFrame {
   index: number;
   name: string;
   file: string;
   line: number;
+  stackBase: number;
 }
 
 type IStepMode = "stepInto" | "stepOut" | "stepOver" | "continue";
@@ -34,12 +35,14 @@ export class AsmRuntime {
   public frames: IStackFrame[] = [];
   public animateRunning = false;
   public runUntilReturnFrom = "";
+  public isDebugging = false;
 
   constructor(public logLevel = 1) {
     console.log("AsmRuntime constructed");
-    emulator.oscallback = (regs: Registers) => {
+    emulator.bdosCallback = (regs: Registers) => {
       console.log("OSCALL", regs);
     };
+    emulator.bdosAddress = 7;
   }
 
   log(msg: string) {
@@ -80,8 +83,9 @@ export class AsmRuntime {
     if (!this._debugger) throw Error("No debug session set");
     if (!this.compiledAsm) throw Error("No source");
     this.runUntilReturnFrom = "";
+    this.isDebugging = true;
 
-    MemoryWebviewPanel.sendLinkerInfoFileMap(this.compiledAsm.linkerInfoFileMap);
+    MemoryWebviewPanel.sendLinkerInfo(this.compiledAsm.linkerInfo);
 
     this.frames = [
       {
@@ -89,6 +93,7 @@ export class AsmRuntime {
         file: this.compiledAsm.uri,
         line: 0,
         name: "__main__",
+        stackBase: 0x0140 - 1, // ugly hack, TODO: set to mem.size or config.initialStackBase
       },
     ];
 
@@ -105,6 +110,7 @@ export class AsmRuntime {
     // if (emulator.states.length == 1) debugger;
     EmulatorWebviewPanel.sendComputerState(emulator.states);
     MemoryWebviewPanel.sendMemory(Array.from(emulator.mem.ram));
+    MemoryWebviewPanel.sendStackFrames(this.frames);
     MemoryWebviewPanel.sendPointers({
       sp: emulator.regs.sp,
       sb: emulator.regs.stackBase || 0,
@@ -123,6 +129,7 @@ export class AsmRuntime {
         break;
       case "hlt":
         this._debugger!.sendEvent(new TerminatedEvent());
+        this.isDebugging = false;
         break;
       case "breakpoint":
         this._debugger!.sendEvent(new StoppedEvent("breakpoint", AsmDebugSession.THREAD_ID));
@@ -136,12 +143,18 @@ export class AsmRuntime {
   }
 
   step(mode: IStepMode): IStepResult {
-    this.log(`${mode} line ${this.frames[0].line + 1}, PC=${emulator.regs.pc}, Instr=${emulator.mem.ram.at(emulator.regs.pc)}`);
+    this.log(
+      `${mode} file ${this.frames[0].file} line ${this.frames[0].line + 1}, fn=${this.frames[0].name} PC=${
+        emulator.regs.pc
+      }, Instr=${emulator.mem.ram.at(emulator.regs.pc)} until ${this.runUntilReturnFrom}`
+    );
     emulator.step();
 
     if (this.animateRunning) {
       // await this.updateUI();
     }
+
+    // console.log(this.frames);
 
     switch (emulator.ir.out) {
       case 0xcd: // call
@@ -153,33 +166,49 @@ export class AsmRuntime {
       case 0xec: // cpe
       case 0xd4: // cnc
       case 0xdc: // cc
-        if (!emulator.ctrl.skipCall) {
+        if (emulator.ctrl.callResult == "pass") {
           // call or conditional call
-          const label = getLabelForAddress(this.compiledAsm!.linkerInfoFileMap, emulator.regs.pc);
-          if (!label) throw Error("Unable to find label");
+          const label = getLabelForAddress(this.compiledAsm!.linkerInfo, emulator.regs.pc);
+          if (!label) {
+            debugger;
+            throw Error("Unable to find label");
+          }
           const name = label ? label.labelInfo.name : "unknown";
           this.frames.unshift({
             name,
-            file: label?.filename,
+            file: label?.file.filename,
             line: 0,
             index: this.frames.length - 1,
+            stackBase: emulator.regs.sp - 1,
           });
           this.setCurrentLine();
           if (mode != "stepInto") {
             if (mode != "continue" && this.runUntilReturnFrom == "") this.runUntilReturnFrom = this.frames[0].name;
             return "continue";
           }
-        } else this.setCurrentLine();
+        } else {
+          this.setCurrentLine();
+        }
         break;
-      case 0xc9: //ret{}
-        {
+
+      case 0xc9: // ret
+      case 0xf0: // rp
+      case 0xf8: // rm
+      case 0xc0: // rnz
+      case 0xc8: // rz
+      case 0xe0: // rpo
+      case 0xe8: // rpe
+      case 0xd0: // rnc
+      case 0xd8: // rc
+        if (emulator.ctrl.returnResult == "pass") {
           const name = this.frames.shift()!.name;
+          console.log("returning from ", name, " until ", this.runUntilReturnFrom);
           this.setCurrentLine();
           if (mode != "stepInto" && this.runUntilReturnFrom == name) {
             this.runUntilReturnFrom = "";
             return this.stop("step", `Stepped out of ${name} at PC = ${emulator.regs.pc - 1}`);
           }
-        }
+        } else this.setCurrentLine();
         break;
       case 0x76: // hlt
         this.setCurrentLine();
@@ -207,7 +236,7 @@ export class AsmRuntime {
 
   setCurrentLine() {
     const pc = emulator.regs.pc;
-    const filepos = getSourceLocationForAddress(this.compiledAsm!.linkerInfoFileMap, pc);
+    const filepos = getSourceLocationForAddress(this.compiledAsm!.linkerInfo, pc);
     if (filepos) {
       this.frames[0].line = filepos.line;
       this.frames[0].file = filepos.filename;
@@ -243,7 +272,7 @@ export class AsmRuntime {
     if (!this.compiledAsm) throw Error("VerityBreakpoints no source");
     if (bps) {
       bps.forEach((bp) => {
-        const lineAddressMap = this.compiledAsm!.linkerInfoFileMap[path].lineAddressMap;
+        const lineAddressMap = this.compiledAsm!.linkerInfo[path].lineAddressMap;
         if (!lineAddressMap) throw Error(`No linkerinfo for ${path}`);
         if (lineAddressMap[bp.line]) {
           // only instruction lines appear in lineAddressMap

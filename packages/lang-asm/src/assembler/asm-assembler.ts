@@ -1,4 +1,4 @@
-import { AstNode, LangiumDocument, Reference, URI } from "langium";
+import { AstNode, LangiumDocument, Reference } from "langium";
 import {
   isProgram,
   isAddrArgument,
@@ -16,8 +16,7 @@ import {
   isLabel,
 } from "../language/generated/ast.js";
 import { getInstructionInfo } from "./utils.js";
-import { getImportedLines } from "./asm-linker.js";
-import { LangiumSharedServices } from "langium/lsp";
+import { getImportedLines, ILinkerInfo } from "./asm-linker.js";
 
 export interface ILabelReference {
   filename: string;
@@ -42,22 +41,6 @@ interface IAssembledFile {
   size: number;
 }
 
-export type ILinkerInfoFileMap = Record<string, ILinkerFileInfo>;
-
-export interface ILinkerFileInfo {
-  labels: Record<string, ILabelInfo>;
-  size: number;
-  startOffset: number;
-  lineAddressMap: Record<
-    number,
-    {
-      start: number;
-      size: number;
-    }
-  >;
-  filename: string;
-}
-
 class Assembler {
   private static _instance: Assembler;
 
@@ -78,7 +61,7 @@ class Assembler {
    * @param docs List of source documents excluding runtime. The first document must contain function main.
    * @returns Machine code
    */
-  assembleAndLink(shared: LangiumSharedServices, docs: LangiumDocument<AstNode>[]) {
+  assembleAndLink(docs: LangiumDocument<AstNode>[]) {
     if (!this.runtime) throw Error("Assembler has no runtime");
     if (!this.os) throw Error("Assembler has no os");
     if (!this.stdlib) throw Error("Assembler has no stdlib");
@@ -114,7 +97,7 @@ class Assembler {
 
     return {
       bytes: this.concatenateFiles(filenames),
-      linkerInfoFileMap: Object.values(this.files).reduce<ILinkerInfoFileMap>((accum, cur) => {
+      linkerInfo: Object.values(this.files).reduce<ILinkerInfo>((accum, cur) => {
         accum[cur.filename] = {
           filename: cur.filename,
           labels: cur.labels,

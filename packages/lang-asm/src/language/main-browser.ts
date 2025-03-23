@@ -1,4 +1,4 @@
-import { AstNode, DocumentState, EmptyFileSystem, LangiumDocument, URI } from "langium";
+import { AstNode, DocumentState, EmptyFileSystem, LangiumDocument } from "langium";
 import { startLanguageServer } from "langium/lsp";
 import {
   BrowserMessageReader,
@@ -8,9 +8,9 @@ import {
   NotificationType,
 } from "vscode-languageserver/browser.js";
 import { createAsmServices } from "./asm-module.js";
-import { assembler, ILinkerInfoFileMap } from "../assembler/asm-assembler.js";
+import { assembler } from "../assembler/asm-assembler.js";
+import { ILinkerInfo } from "../assembler/asm-linker.js";
 import { userPreferences } from "./asm-userpreferences.js";
-import { scCompiler } from "@dksap3/lang-sc";
 
 console.info("Starting asm main browser");
 
@@ -35,7 +35,7 @@ export type AsmDocumentChange = {
   uri: string;
   ast: string;
   machineCode: Uint8Array;
-  linkerInfoFileMap: ILinkerInfoFileMap;
+  linkerInfo: ILinkerInfo;
 };
 
 const debounce = (fn: Function, ms = 300) => {
@@ -47,8 +47,9 @@ const debounce = (fn: Function, ms = 300) => {
 };
 
 const sendAsmDocumentChange = (document: LangiumDocument<AstNode>) => {
-  const { bytes, linkerInfoFileMap } = assembler.assembleAndLink(shared, [document]);
-  console.log(linkerInfoFileMap);
+  // TODO: Don't recompile if debugging
+  const { bytes, linkerInfo } = assembler.assembleAndLink([document]);
+  console.log(linkerInfo);
 
   const json = Asm.serializer.JsonSerializer.serialize(document.parseResult.value, {
     sourceText: false,
@@ -61,7 +62,7 @@ const sendAsmDocumentChange = (document: LangiumDocument<AstNode>) => {
     uri: document.uri.toString(),
     ast: json,
     machineCode: bytes,
-    linkerInfoFileMap: linkerInfoFileMap,
+    linkerInfo: linkerInfo,
   });
 };
 

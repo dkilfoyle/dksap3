@@ -12,7 +12,7 @@ bdos(int c, int de)
   push d
   push b
   push h
-  call 5
+  call 6
   mov h, b
   mov l, a
 #endasm
