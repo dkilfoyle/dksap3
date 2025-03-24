@@ -81,7 +81,8 @@ export class Controller implements IClocked {
       switch (true) {
         case ir8 == "000":
           // NOP
-          if (regs.pc == bdosAddress) bdosCallback(regs);
+          // pc has already been advanced so test against +1
+          if (regs.pc == bdosAddress + 1) bdosCallback(regs);
           this.stage_max = 3;
           this.stage_rst = 1;
           break;

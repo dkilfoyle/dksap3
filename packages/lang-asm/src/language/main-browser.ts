@@ -37,7 +37,7 @@ connection.onDidChangeConfiguration((params: DidChangeConfigurationParams) => {
 
 connection.onNotification("statusChange", (n) => {
   if (n.isDebugging != undefined) status.isDebugging = n.isDebugging;
-  console.log("asmStatusChanged:", status);
+  // console.log("asmStatusChanged:", status);
 });
 
 export type AsmDocumentChange = {

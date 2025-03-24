@@ -85,7 +85,6 @@ export class AsmRuntime {
     if (!this.compiledAsm) throw Error("No source");
     this.runUntilReturnFrom = "";
     this.isDebugging = true;
-    debugger;
     asmLanguageClient?.sendNotification("statusChange", { isDebugging: true });
 
     MemoryWebviewPanel.sendLinkerInfo(this.compiledAsm.linkerInfo);
@@ -133,7 +132,7 @@ export class AsmRuntime {
       case "hlt":
         this._debugger!.sendEvent(new TerminatedEvent());
         this.isDebugging = false;
-        asmLanguageClient?.sendNotification("statusChange", { isDebugging: true });
+        asmLanguageClient?.sendNotification("statusChange", { isDebugging: false });
         break;
       case "breakpoint":
         this._debugger!.sendEvent(new StoppedEvent("breakpoint", AsmDebugSession.THREAD_ID));
@@ -205,7 +204,7 @@ export class AsmRuntime {
       case 0xd8: // rc
         if (emulator.ctrl.returnResult == "pass") {
           const name = this.frames.shift()!.name;
-          console.log("returning from ", name, " until ", this.runUntilReturnFrom);
+          // console.log("returning from ", name, " until ", this.runUntilReturnFrom);
           this.setCurrentLine();
           if (mode != "stepInto" && this.runUntilReturnFrom == name) {
             this.runUntilReturnFrom = "";

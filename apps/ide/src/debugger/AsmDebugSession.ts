@@ -28,7 +28,7 @@ export class AsmDebugSession extends DebugSession {
 
   private _configurationDone = new Subject();
   constructor() {
-    super(true);
+    super(false); // true for logging of request/response
     this.setDebuggerLinesStartAt1(false);
     this.setDebuggerColumnsStartAt1(false);
     asmRuntime.setDebugSession(this);
@@ -358,8 +358,8 @@ export class AsmDebugSession extends DebugSession {
             emulator.regs.hl
           }\n@hl: 0x${emulator.mem.ram.at(emulator.regs.hl)?.toString(16)}, ${emulator.mem.ram.at(emulator.regs.hl)}`;
           break;
-        default: // could be a label
-        {
+        default: {
+          // could be a label
           const label = getLabelInfo(this.linkerInfo, args.expression);
           if (label) {
             result = ` ${args.expression}: 0x${label.globalAddress.toString(16)}, ${label.globalAddress}}\n@${
