@@ -162,7 +162,7 @@ export class AsmGenerator {
       if (reg & CompilerRegs.DE_REG) {
         lines.push(`xchg`);
       }
-      this.gen_call("ccgchar");
+      lines.push(...this.gen_call("ccgchar"));
     } else if (typeobj == SymbolType.UCHAR) {
       if (reg & CompilerRegs.DE_REG) {
         lines.push(`xchg`);

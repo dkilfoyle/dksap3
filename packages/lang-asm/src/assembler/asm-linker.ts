@@ -4,8 +4,8 @@ import { ILabelInfo } from "./asm-assembler";
 const usedLines: Set<number> = new Set();
 const alreadyImported: Set<string> = new Set();
 
-const BRANCH_OPS = ["CALL", "JP", "JM", "JNZ", "JZ", "JPO", "JPE", "JNC", "JC", "CP", "CM", "CNZ", "CZ", "CPO", "CPE", "CNC", "CC"];
-const END_OPS = ["RET", "JMP"];
+const BRANCH_OPS = ["CALL", "JP", "JM", "JNZ", "JZ", "JPO", "JPE", "JNC", "JC", "CP", "CM", "CNZ", "CZ", "CPO", "CPE", "CNC", "CC", "JMP"];
+const END_OPS = ["RET"];
 
 const getExternal = (program: Program, externalName: string, start = 0, adding = false) => {
   const addLine = (line: Line) => {

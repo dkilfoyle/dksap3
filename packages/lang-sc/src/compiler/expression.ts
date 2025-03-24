@@ -23,7 +23,17 @@ import {
 import { ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./SymbolTable";
 import { AsmGenerator } from "./Generator";
 import { CompilerRegs, ILValue } from "./interface";
-import { CompositeGeneratorNode, expandTracedToNode, JoinOptions, joinToNode, NewLineNode } from "langium/generate";
+import {
+  CompositeGeneratorNode,
+  expandToNode,
+  expandTracedToNode,
+  expandTracedToNodeIf,
+  JoinOptions,
+  joinToNode,
+  joinTracedToNode,
+  joinTracedToNodeIf,
+  NewLineNode,
+} from "langium/generate";
 import { ScCompiler } from "./sc-compiler";
 
 const FETCH = 1;
@@ -283,44 +293,85 @@ function compileSymbolExpression(scc: ScCompiler, symbolExpression: SymbolExpres
 function compileFunctionCall(scc: ScCompiler, symbolRes: ExpressionResult, symbolExpression: SymbolExpression): ExpressionResult {
   let ptr = symbolRes.lval.symbol;
   let k = symbolRes.reg;
-  const node = symbolRes.node;
+  // const node = symbolRes.node;
   const functionCall = symbolExpression.functionCall!;
 
-  node.append(`; ${symbolExpression.$cstNode?.text}`).appendNewLine();
+  // node.append(`; ${symbolExpression.$cstNode?.text}`).appendNewLine();
 
-  if (ptr != 0 && ptr.identity != SymbolIdentity.FUNCTION) {
-    const { reg, lines } = rvalue(scc, symbolRes);
-    k = reg;
-    ptr = 0;
-    lines.unshift("; function symbol is a pointer to a function ");
-    node.append(joinToNode(lines, { appendNewLineIfNotEmpty: true }));
-  }
+  // if (ptr != 0 && ptr.identity != SymbolIdentity.FUNCTION) {
+  //   const { reg, lines } = rvalue(scc, symbolRes);
+  //   k = reg;
+  //   ptr = 0;
+  //   lines.unshift("; function symbol is a pointer to a function ");
+  //   node.append(joinToNode(lines, { appendNewLineIfNotEmpty: true }));
+  // }
 
-  if (ptr == 0) {
-    node.append(...scc.generator.gen_push(CompilerRegs.HL_REG));
-  }
+  // if (ptr == 0) {
+  //   node.append(...scc.generator.gen_push(CompilerRegs.HL_REG));
+  // }
 
-  node.appendTraced(
-    functionCall,
-    "arguments"
-  )(
-    ...functionCall.arguments.map((arg) =>
-      compileExpression(scc, arg)
-        .node.appendIf(ptr == 0, "xthl")
-        .appendNewLineIfNotEmpty()
-        .append(joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG), NL))
-    )
-  );
+  // node.appendTracedTemplate(functionCall, "arguments")`${joinToNode(
+  //   functionCall.arguments.map((arg) => {
+  //     const compiledArg1 = compileExpression(scc, arg);
+  //     const compiledArg2 = compiledArg1.node.appendIf(ptr == 0, "xthl").appendNewLineIfNotEmpty();
+  //     const compiledArg3 = compiledArg2.append(joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG), NL));
+  //     return compiledArg3;
+  //   })
+  // )}`;
 
-  if (ptr != 0) {
-    node.append(joinToNode(scc.generator.gen_call((symbolRes.lval.symbol as ISymbol).name), NL));
-  } else {
-    node.append(joinToNode(["; callstk", ...scc.generator.callstk()], { appendNewLineIfNotEmpty: true }));
-  }
+  // if (ptr != 0) {
+  //   node.append(joinToNode(scc.generator.gen_call((symbolRes.lval.symbol as ISymbol).name), NL));
+  // } else {
+  //   node.append(joinToNode(["; callstk", ...scc.generator.callstk()], { appendNewLineIfNotEmpty: true }));
+  // }
 
-  const { newstkp, lines } = scc.generator.gen_modify_stack(scc.generator.stkp + functionCall.arguments.length * AsmGenerator.INTSIZE);
-  scc.generator.stkp = newstkp;
-  node.append(joinToNode(lines, NL));
+  // const { newstkp, lines } = scc.generator.gen_modify_stack(scc.generator.stkp + functionCall.arguments.length * AsmGenerator.INTSIZE);
+  // scc.generator.stkp = newstkp;
+  // node.append(joinToNode(lines, NL));
+
+  const node = expandToNode`
+    ; ${symbolExpression.$cstNode?.text}
+    ${symbolRes.node}
+    ${
+      ptr != 0 && ptr.identity != SymbolIdentity.FUNCTION
+        ? joinToNode(
+            (() => {
+              const { reg, lines } = rvalue(scc, symbolRes);
+              k = reg;
+              ptr = 0;
+              lines.unshift("; function symbol is a pointer to a function ");
+              return lines;
+            })(),
+            NL
+          )
+        : undefined
+    }
+    ${ptr == 0 ? joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG), NL) : undefined}
+    ${joinTracedToNode(
+      functionCall,
+      "arguments"
+    )(
+      functionCall.arguments.map((arg) =>
+        compileExpression(scc, arg)
+          .node.appendIf(ptr == 0, "xthl")
+          .appendNewLineIfNotEmpty()
+          .append(joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG), NL))
+      )
+    )}
+    ${
+      ptr != 0
+        ? joinToNode(scc.generator.gen_call((symbolRes.lval.symbol as ISymbol).name), NL)
+        : joinToNode(["; callstk", ...scc.generator.callstk()], NL)
+    }
+    ${joinToNode(
+      (() => {
+        const { newstkp, lines } = scc.generator.gen_modify_stack(scc.generator.stkp + functionCall.arguments.length * AsmGenerator.INTSIZE);
+        scc.generator.stkp = newstkp;
+        return lines;
+      })(),
+      NL
+    )}
+    `;
 
   return { reg: 0, lval: { ...symbolRes.lval, symbol: 0 }, node };
 }
