@@ -12,6 +12,10 @@ import { assembler } from "../assembler/asm-assembler.js";
 import { ILinkerInfo } from "../assembler/asm-linker.js";
 import { userPreferences } from "./asm-userpreferences.js";
 
+const status = {
+  isDebugging: false,
+};
+
 console.info("Starting asm main browser");
 
 declare const self: DedicatedWorkerGlobalScope;
@@ -31,6 +35,11 @@ connection.onDidChangeConfiguration((params: DidChangeConfigurationParams) => {
   userPreferences.syntax.maxLabelSize = params.settings.asm.syntax.maxLabelSize ?? userPreferences.syntax.maxLabelSize;
 });
 
+connection.onNotification("statusChange", (n) => {
+  if (n.isDebugging != undefined) status.isDebugging = n.isDebugging;
+  console.log("asmStatusChanged:", status);
+});
+
 export type AsmDocumentChange = {
   uri: string;
   ast: string;
@@ -47,9 +56,9 @@ const debounce = (fn: Function, ms = 300) => {
 };
 
 const sendAsmDocumentChange = (document: LangiumDocument<AstNode>) => {
-  // TODO: Don't recompile if debugging
+  if (status.isDebugging) return;
   const { bytes, linkerInfo } = assembler.assembleAndLink([document]);
-  console.log(linkerInfo);
+  console.log("LinkerInfo:", linkerInfo);
 
   const json = Asm.serializer.JsonSerializer.serialize(document.parseResult.value, {
     sourceText: false,

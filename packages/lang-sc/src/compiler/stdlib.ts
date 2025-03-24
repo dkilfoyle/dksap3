@@ -25,6 +25,5 @@ bdos(int c, int de)
 
 extern putchar(char c) {
   bdos(2, c);
-  return c;
 }
 `;

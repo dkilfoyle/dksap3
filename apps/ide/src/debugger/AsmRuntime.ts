@@ -6,6 +6,7 @@ import { EmulatorWebviewPanel } from "../components/EmulatorWebviewPanel.ts";
 import { MemoryWebviewPanel } from "../components/MemoryWebviewPanel.ts";
 import { printOutputChannel } from "./debugger.ts";
 import { getLabelForAddress, getSourceLocationForAddress } from "@dksap3/lang-asm";
+import { asmLanguageClient } from "../config.ts";
 
 interface IAsmBreakpoint {
   id: number;
@@ -84,6 +85,8 @@ export class AsmRuntime {
     if (!this.compiledAsm) throw Error("No source");
     this.runUntilReturnFrom = "";
     this.isDebugging = true;
+    debugger;
+    asmLanguageClient?.sendNotification("statusChange", { isDebugging: true });
 
     MemoryWebviewPanel.sendLinkerInfo(this.compiledAsm.linkerInfo);
 
@@ -130,6 +133,7 @@ export class AsmRuntime {
       case "hlt":
         this._debugger!.sendEvent(new TerminatedEvent());
         this.isDebugging = false;
+        asmLanguageClient?.sendNotification("statusChange", { isDebugging: true });
         break;
       case "breakpoint":
         this._debugger!.sendEvent(new StoppedEvent("breakpoint", AsmDebugSession.THREAD_ID));

@@ -29,10 +29,10 @@ interface IStackFrame {
 // };
 
 const oldState = {
-  memory: new Array(255).fill(0),
+  memory: new Array(320).fill(0),
   pointers: { sp: 0, sb: 0, pc: 0, hl: 0 },
   start: 0,
-  end: 255,
+  end: 319,
   selection: "0",
   stack: [],
 };

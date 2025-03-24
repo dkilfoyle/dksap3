@@ -1,10 +1,8 @@
 // my comment
 
-bdos(int c, int de)
+main()
 {
-}
-
-putchar(char c)
-{
-  bdos(2, c);
+  int i;
+  i = 78;
+  putchar(i);
 }

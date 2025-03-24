@@ -37,10 +37,11 @@ import { ScDocumentChange, getScLanguageClientConfig, getScLanguageExtension } f
 import { AsmDocumentChange, getAsmLanguageClientConfig, getAsmLanguageExtension } from "@dksap3/lang-asm";
 import { EmulatorWebviewPanel } from "./components/EmulatorWebviewPanel.ts";
 import { MemoryWebviewPanel } from "./components/MemoryWebviewPanel.ts";
-import { asmRuntime, compiledDocs } from "./debugger/AsmRuntime.ts";
+import { compiledDocs } from "./debugger/AsmRuntime.ts";
 import { TraceRegion } from "langium/generate";
 import { AstNode } from "langium";
 import { DslLibraryFileSystemProvider } from "./DslFileSystemProvider.ts";
+import { MonacoLanguageClient } from "monaco-languageclient";
 
 export const HOME_DIR = "";
 export const WORKSPACE_PATH = `${HOME_DIR}/dk8085`;
@@ -156,10 +157,16 @@ export const configure = (htmlContainer?: HTMLElement): ConfigResult => {
   };
 };
 
+export let asmLanguageClient: MonacoLanguageClient | undefined;
+export let scLanguageClient: MonacoLanguageClient | undefined;
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrapper, _configResult: ConfigResult) => {
   const result = wrapper.getExtensionRegisterResult("sc-language-extension") as RegisterLocalProcessExtensionResult;
   result.setAsDefaultApi();
+
+  asmLanguageClient = wrapper.getLanguageClient("asm");
+  scLanguageClient = wrapper.getLanguageClient("sc");
 
   vscode.workspace.registerFileSystemProvider("builtin", new DslLibraryFileSystemProvider(), {
     isReadonly: true,
@@ -181,11 +188,9 @@ export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrap
   wrapper.getLanguageClient("asm")?.onNotification("browser/AsmDocumentChange", async (data: AsmDocumentChange) => {
     // console.log("App.tsx onNotification(browser/asmDocumentChange)", data.uri, data.machineCode.length);
     // console.log(JSON.parse(data.content));
-    if (!asmRuntime.isDebugging) {
-      compiledDocs[data.uri] = data;
-      MemoryWebviewPanel.sendMemory(Array.from(data.machineCode));
-      MemoryWebviewPanel.sendLinkerInfo(data.linkerInfo);
-    }
+    compiledDocs[data.uri] = data;
+    MemoryWebviewPanel.sendMemory(Array.from(data.machineCode));
+    MemoryWebviewPanel.sendLinkerInfo(data.linkerInfo);
   });
 
   wrapper.getLanguageClient("sc")?.onNotification("browser/ScDocumentChange", async (data: ScDocumentChange) => {
