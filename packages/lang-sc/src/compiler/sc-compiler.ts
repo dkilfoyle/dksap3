@@ -15,27 +15,16 @@ export function createError(description: string, range?: IRange) {
   };
 }
 
-export var stdlib: LangiumDocument<AstNode> | null = null;
-export const setSmallCStdLib = (lib: LangiumDocument<AstNode>) => {
-  stdlib = lib;
-};
-
 export class ScCompiler {
   private static _instance: ScCompiler;
   generator = new AsmGenerator();
   symbol_table = new SymbolTable(this.generator);
   tag_table = new TagTable();
-  stdlib: LangiumDocument<AstNode> | undefined;
 
   private constructor() {}
 
   public static get Instance() {
     return this._instance || (this._instance = new this());
-  }
-
-  setStdLib(stdlibdoc: LangiumDocument<AstNode>) {
-    const asm = this.compile(stdlibdoc.parseResult.value);
-    assembler.setStdLib(asm.text);
   }
 
   compile(root: AstNode) {

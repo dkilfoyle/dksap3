@@ -37,7 +37,7 @@ ParameterDeclaration:
     type=TypeReference pointer?="*"? name=ID array?="[]"?;
 
 FunctionDeclaration:
-    (returnType?=TypeReference)? name=ID '(' (parameters+=ParameterDeclaration (',' parameters+=ParameterDeclaration)*)? ')' body=Block;
+    extern?="extern"? (returnType?=TypeReference)? name=ID '(' (parameters+=ParameterDeclaration (',' parameters+=ParameterDeclaration)*)? ')' body=Block;
 
 // ########### Statements
 

@@ -1,24 +1,30 @@
 export const stdlibsrc = `// stdio.c
+
+// To make a bdos call
+// ld de, parameter
+// ld c, function
+// call 5
+
 bdos(int c, int de)
 {
-#asm
-  ; CP / M support routine;
-  ; bdos(C, DE);
-  ; char *DE; int C;
-  ; returns H = B, L = A per CPM standard
-  pop h; hold return address
-  pop d; get DE register argument
-  pop b; get bdos function number(C reg)
-  push d
-  push b
-  push h
-  call 6
-  mov h, b
-  mov l, a
-#endasm
+  #asm
+    ; bdos(C, DE);
+    ; stack will be retaddr, de, c
+    ; char *DE; int C;
+    ; returns H = B, L = A per CPM standard
+    pop h       ; hold return address
+    pop d       ; equivalent ld de, parameter
+    pop b       ; equivalent ld c, function
+    push b      ; restore stack
+    push d
+    push h
+    call DK_OS  ; defined in os
+    mov h, b    ; returns hl = b, a
+    mov l, a
+  #endasm
 }
 
-putchar(char c) {
+extern putchar(char c) {
   bdos(2, c);
   return c;
 }

@@ -18,8 +18,8 @@ stack     equ 0140h
     call main
     hlt
     
-DKOS::
-    nop ; pc=6
+DK_OS::
+    nop ; pc=7
     ret
 
 `;

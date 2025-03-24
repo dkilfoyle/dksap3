@@ -198,7 +198,7 @@
     "labels": {
       "patterns": [
         {
-          "match": "^\\@?((\\$(?!\\.))?[\\w\\.]+):?(?=\\s)",
+          "match": "^\\@?((\\$(?!\\.))?[\\w\\.]+)::?(?=\\s)",
           "captures": {
             "1": {
               "name": "entity.name.function.i8080asm"

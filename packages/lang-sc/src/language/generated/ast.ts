@@ -44,6 +44,7 @@ export type ScKeywordNames =
     | "auto"
     | "char"
     | "else"
+    | "extern"
     | "for"
     | "if"
     | "int"
@@ -157,6 +158,7 @@ export interface FunctionDeclaration extends AstNode {
     readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | Program;
     readonly $type: 'FunctionDeclaration';
     body: Block;
+    extern: boolean;
     name: string;
     parameters: Array<ParameterDeclaration>;
     returnType: boolean;
@@ -539,6 +541,7 @@ export class ScAstReflection extends AbstractAstReflection {
                     name: FunctionDeclaration,
                     properties: [
                         { name: 'body' },
+                        { name: 'extern', defaultValue: false },
                         { name: 'name' },
                         { name: 'parameters', defaultValue: [] },
                         { name: 'returnType', defaultValue: false }

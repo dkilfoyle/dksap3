@@ -636,6 +636,16 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
         "elements": [
           {
             "$type": "Assignment",
+            "feature": "extern",
+            "operator": "?=",
+            "terminal": {
+              "$type": "Keyword",
+              "value": "extern"
+            },
+            "cardinality": "?"
+          },
+          {
+            "$type": "Assignment",
             "feature": "returnType",
             "operator": "?=",
             "terminal": {

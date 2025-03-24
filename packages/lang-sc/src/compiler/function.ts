@@ -67,7 +67,7 @@ export const compileFunctionDeclaration = (scc: ScCompiler, fun: FunctionDeclara
   // compiler.generator.output_line("ret");
 
   const res = expandTracedToNode(fun)`
-    ${fun.name}:
+    ${fun.name}:${fun.extern ? ":" : ""}
       ${compileBlock(scc, fun.body)}
     $${scc.generator.fexitlab}:
       ${joinToNode(scc.generator.gen_modify_stack(0).lines, { appendNewLineIfNotEmpty: true })}

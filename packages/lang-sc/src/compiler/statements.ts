@@ -58,8 +58,9 @@ export const compileStatement = (scc: ScCompiler, statement: Statement): Composi
 
 const compileAssembly = (scc: ScCompiler, asm: InlineAssembly) => {
   return expandTracedToNode(asm)`
-    ${asm.asm.slice(6, -7).trimStart()}
-  `;
+    ; inline asm start
+      ${asm.asm.slice(6, -7).trimStart().trimEnd()}
+    ; inline asm end`;
 };
 
 const compileLocalDeclaration = (scc: ScCompiler, decl: LocalVariableDeclaration) => {
