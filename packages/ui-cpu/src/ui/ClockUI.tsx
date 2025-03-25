@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { CpuComponent } from "../components/CpuComponent";
-import { ComputerState } from "../emulator/Computer";
+import { ComputerState } from "@dksap3/cpusim";
 import _ from "lodash";
 import { Play, StepForward, Rewind } from "lucide-react";
 import { Button } from "@/components/ui/button";

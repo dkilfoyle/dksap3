@@ -1,8 +1,7 @@
 import { getBit, getBits, isOn, setBits } from "./Bits";
 import { IClocked } from "./Clock";
-import { REGEXT, Registers, REGSEL } from "./Registers";
+import { REGEXT, REGSEL } from "./Registers";
 import { Computer } from "./Computer";
-import { Memory } from "./Memory";
 import { ALUOP } from "./Alu";
 
 export enum CTRL {
@@ -62,10 +61,10 @@ export class Controller implements IClocked {
     this.stage = this.stage_rst == 1 ? 0 : this.stage + 1;
   }
 
-  always({ alu, ir, mem, regs, bdosCallback, bdosAddress }: Computer) {
+  always(comp: Computer) {
     this.ctrl_word = 0;
     this.stage_rst = 0;
-    const ir8 = ir.out.toString(8).padStart(3, "0");
+    const ir8 = comp.ir.out.toString(8).padStart(3, "0");
 
     // fetch TState 0
     if (this.stage == 0) {
@@ -82,7 +81,7 @@ export class Controller implements IClocked {
         case ir8 == "000":
           // NOP
           // pc has already been advanced so test against +1
-          if (regs.pc == bdosAddress + 1) bdosCallback(regs);
+          if (comp.regs.pc == comp.bdosAddress + 1) comp.bdos();
           this.stage_max = 3;
           this.stage_rst = 1;
           break;
@@ -90,68 +89,68 @@ export class Controller implements IClocked {
           this.HLT();
           break;
         case ir8.match(/1[0-7]+6/) != null:
-          this.MOV_Rd_M(ir.out);
+          this.MOV_Rd_M(comp.ir.out);
           break;
         case ir8.match(/16[0-7]+/) != null:
-          this.MOV_M_Rs(ir.out);
+          this.MOV_M_Rs(comp.ir.out);
           break;
         case ir8.match(/1[0-7]+[0-7]+/) != null:
-          this.MOV_Rd_Rs(ir.out);
+          this.MOV_Rd_Rs(comp.ir.out);
           break;
         case ir8 == "066":
           this.MVI_M_d8();
           break;
         case ir8.match(/0[0-7]+6/) != null:
-          this.MVI_Rd_d8(ir.out);
+          this.MVI_Rd_d8(comp.ir.out);
           break;
         case ir8 == "064":
-          this.INRDCR_M(ir.out);
+          this.INRDCR_M(comp.ir.out);
           break;
         case ir8.match(/0[0-7]+4/) != null || ir8.match(/0[0-7]+5/) != null:
-          this.INRDCR_Rs(ir.out);
+          this.INRDCR_Rs(comp.ir.out);
           break;
         case ir8.match(/0[0-7]+3/) != null:
-          this.INXDCX(ir.out);
+          this.INXDCX(comp.ir.out);
           break;
 
         case ir8 == "001":
         case ir8 == "021":
         case ir8 == "041":
         case ir8 == "061":
-          this.LXI_Rd_d16(ir.out);
+          this.LXI_Rd_d16(comp.ir.out);
           break;
         case ir8.match(/2[0-7]+6/) != null:
-          this.ALU_M(ir.out);
+          this.ALU_M(comp.ir.out);
           break;
         case ir8.match(/2[0-7]+7/) != null:
-          this.ALU_A(ir.out);
+          this.ALU_A(comp.ir.out);
           break;
         case ir8.match(/2[0-7]+[0-5]+/) != null:
-          this.ALU_Rs(ir.out);
+          this.ALU_Rs(comp.ir.out);
           break;
         case ir8.match(/0[0-7]+7/) != null:
-          this.ALU2(ir.out);
+          this.ALU2(comp.ir.out);
           break;
         case ir8.match(/3[0-7]+6/) != null:
-          this.ALU_d8(ir.out);
+          this.ALU_d8(comp.ir.out);
           break;
         case ir8.match(/3[0-7]+2/) != null:
-          this.JMP(ir.out, alu.flags);
+          this.JMP(comp.ir.out, comp.alu.flags);
           break;
         case ir8 == "303":
-          this.JMP(ir.out);
+          this.JMP(comp.ir.out);
           break;
         case ir8.match(/3[0-7]+4/) != null:
-          this.CALL(ir.out, mem, regs, alu.flags);
+          this.CALL(comp.ir.out, comp.alu.flags);
           break;
         case ir8 == "315":
-          this.CALL(ir.out, mem, regs);
+          this.CALL(comp.ir.out);
           break;
         case ir8.match(/3[0-7]+0/) != null:
-          this.RET(ir.out, alu.flags);
+          this.RET(comp.ir.out, comp.alu.flags);
           break;
         case ir8 == "311":
-          this.RET(ir.out);
+          this.RET(comp.ir.out);
           break;
         case ir8 == "323":
           this.OUT();
@@ -167,22 +166,22 @@ export class Controller implements IClocked {
           break;
         case ir8 == "062":
         case ir8 == "072":
-          this.STALDA_a16(ir.out);
+          this.STALDA_a16(comp.ir.out);
           break;
         case ir8.match(/3[0-7]+5/) != null:
-          this.PUSH(ir.out);
+          this.PUSH(comp.ir.out);
           break;
         case ir8 == "301":
         case ir8 == "321":
         case ir8 == "341":
         case ir8 == "361":
-          this.POP(ir.out);
+          this.POP(comp.ir.out);
           break;
         case ir8 == "011":
         case ir8 == "031":
         case ir8 == "051":
         case ir8 == "071":
-          this.DAD(ir.out);
+          this.DAD(comp.ir.out);
           break;
 
         case ir8 == "002":
@@ -190,11 +189,11 @@ export class Controller implements IClocked {
         case ir8 == "022":
         case ir8 == "032":
           // 8'o002, 8'o012, 8'o022, 8'o032: begin
-          this.STAX_LDAX(ir.out);
+          this.STAX_LDAX(comp.ir.out);
           break;
 
         default:
-          console.error(`opcode 0o${ir8} / 0x${ir.out.toString(16)} not implemented`);
+          console.error(`opcode 0o${ir8} / 0x${comp.ir.out.toString(16)} not implemented`);
           this.setControl(CTRL.HLT);
           this.setControl(CTRL.REG_EXT0, 0);
           this.stage_max = 3;
@@ -774,7 +773,7 @@ export class Controller implements IClocked {
     }
   }
 
-  CALL(irout: number, mem: Memory, regs: Registers, flags?: number) {
+  CALL(irout: number, flags?: number) {
     // 0xcd / 205
     // pass irout if conditional call
     // console.log("call", this.stage, this.stage_rst, regs.pc);

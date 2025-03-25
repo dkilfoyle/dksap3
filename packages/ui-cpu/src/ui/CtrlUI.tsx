@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { getBit } from "../emulator/Bits";
-import { ComputerState } from "../emulator/Computer";
+import { ComputerState } from "../../../cpusim";
 import clsx from "clsx";
 
 const names = [

@@ -1,22 +1,25 @@
-export interface ComputerState {
-  clkCount: number;
-  clkState: string;
-  ctrl_word: number;
-  regs: number[];
-  ir: number;
-  alu_acc: number;
-  alu_carry: number;
-  alu_act: number;
-  alu_tmp: number;
-  alu_flg: number;
-  bus: number;
-  mem: number[];
-  mar: number;
-  stage: number;
-  stage_max: number;
-  stage_rst: number;
-  out: number;
-}
+// export interface ComputerState {
+//   clkCount: number;
+//   clkState: string;
+//   ctrl_word: number;
+//   regs: number[];
+//   ir: number;
+//   alu_acc: number;
+//   alu_carry: number;
+//   alu_act: number;
+//   alu_tmp: number;
+//   alu_flg: number;
+//   bus: number;
+//   mem: number[];
+//   mar: number;
+//   stage: number;
+//   stage_max: number;
+//   stage_rst: number;
+//   out: number;
+//   stdout: string;
+// }
+
+import { ComputerState } from "../../../cpusim";
 
 export const getZeroState = () => {
   const x: ComputerState = {
@@ -37,6 +40,7 @@ export const getZeroState = () => {
     stage_max: 0,
     stage_rst: 0,
     out: 0,
+    stdout: "",
   };
   return x;
 };

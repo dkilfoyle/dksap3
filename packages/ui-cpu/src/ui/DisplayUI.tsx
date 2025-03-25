@@ -1,5 +1,5 @@
 import { CpuComponent } from "../components/CpuComponent";
-import { ComputerState } from "../emulator/Computer";
+import { ComputerState } from "../../../cpusim";
 import { fprint } from "./utils";
 import { useState } from "react";
 

@@ -1,7 +1,7 @@
 import { AsmDocumentChange } from "@dksap3/lang-asm";
 import { AsmDebugSession } from "./AsmDebugSession.ts";
 import { BreakpointEvent, OutputEvent, StoppedEvent, TerminatedEvent } from "./dap/events.ts";
-import { emulator, Registers } from "@dksap3/cpusim";
+import { emulator } from "@dksap3/cpusim";
 import { EmulatorWebviewPanel } from "../components/EmulatorWebviewPanel.ts";
 import { MemoryWebviewPanel } from "../components/MemoryWebviewPanel.ts";
 import { printOutputChannel } from "./debugger.ts";
@@ -40,9 +40,6 @@ export class AsmRuntime {
 
   constructor(public logLevel = 1) {
     console.log("AsmRuntime constructed");
-    emulator.bdosCallback = (regs: Registers) => {
-      console.log("OSCALL", regs);
-    };
     emulator.bdosAddress = 7;
   }
 

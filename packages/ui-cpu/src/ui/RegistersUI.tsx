@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { fprint } from "./utils";
 import { getBits, isOn } from "../emulator/Bits";
-import { ComputerState } from "../emulator/Computer";
+import { ComputerState } from "../../../cpusim";
 import { CTRL } from "../emulator/Controller";
 import { CpuComponent, CpuSignal, CpuValue } from "../components/CpuComponent";
 

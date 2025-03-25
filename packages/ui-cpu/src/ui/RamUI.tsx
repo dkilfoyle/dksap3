@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import _ from "lodash";
 import { fprint } from "./utils";
-import { ComputerState } from "../emulator/Computer";
+import { ComputerState } from "../../../cpusim";
 import clsx from "clsx";
 import { CpuComponent } from "../components/CpuComponent";
 

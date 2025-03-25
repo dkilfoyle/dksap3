@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { fprint, getNextFormat } from "./utils";
-import { ComputerState } from "../emulator/Computer";
+import { ComputerState } from "../../../cpusim";
 import { isOn } from "../emulator/Bits";
 import { CTRL } from "../emulator/Controller";
 import { CpuComponent, CpuSignal, CpuValue } from "../components/CpuComponent";

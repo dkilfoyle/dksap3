@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { fprint } from "./utils";
 import { isOn } from "../emulator/Bits";
 import { CTRL } from "../emulator/Controller";
-import { ComputerState } from "../emulator/Computer";
+import { ComputerState } from "@dksap3/cpusim";
 import { CpuComponent, CpuSignal, CpuValue } from "../components/CpuComponent";
 
 export const BusUI = ({ compState }: { compState: ComputerState }) => {

@@ -8,7 +8,8 @@ import { IrUI } from "./IrUI";
 import { MemUI } from "./MemUI";
 // import { RamUI } from "./RamUI";
 import { RegistersUI } from "./RegistersUI";
-import { ComputerState } from "../emulator/Computer";
+import { ComputerState } from "../../../cpusim";
+import { StdoutUI } from "./StdoutUI";
 
 // const pt = { root: { style: { padding: "0.3em 0.6em" } } };
 
@@ -87,6 +88,7 @@ export function ComputerUI({ computerState }: { computerState: ComputerState[] }
         </div>
         <div className="flex flex-1 flex-col gap-3 justify-between">
           <BusUI compState={curState}></BusUI>
+          <StdoutUI compState={curState}></StdoutUI>
           <DisplayUI compState={curState}></DisplayUI>
         </div>
         <div className="flex flex-1 flex-col gap-3 justify-between">

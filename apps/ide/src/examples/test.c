@@ -3,6 +3,6 @@
 main()
 {
   int i;
-  i = 78;
-  putchar(i);
+  i = 90;
+  putchar(i); // z
 }

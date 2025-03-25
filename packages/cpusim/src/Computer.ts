@@ -24,6 +24,7 @@ export interface ComputerState {
   stage_max: number;
   stage_rst: number;
   out: number;
+  stdout: string;
 }
 
 export class Computer {
@@ -37,14 +38,25 @@ export class Computer {
   rst = 0;
   out = 0;
   states: ComputerState[] = [];
-  bdosCallback: (regs: Registers) => void = () => {};
   bdosAddress: number = -1;
+  stdout = "";
 
   constructor(program?: number[]) {
     this.reset(program);
     // if (program) this.mem.load(program);
     // this.ctrl.always(this); // decode ir => controls
     // this.saveState();
+  }
+
+  bdos() {
+    switch (this.regs.c) {
+      case 2:
+        // putchar
+        this.stdout += String.fromCharCode(this.regs.de);
+        break;
+      default:
+        console.error(`Unimplemented bdos func ${this.regs.c}`);
+    }
   }
 
   reset(program?: number[]) {
@@ -57,6 +69,7 @@ export class Computer {
     this.mem = new Memory();
     this.rst = 0;
     this.out = 0;
+    this.stdout = "";
     this.states = [];
     if (program) this.mem.load(program);
     // this.ctrl.always(this); // decode ir => controls
@@ -144,6 +157,7 @@ export class Computer {
       stage_max: this.ctrl.stage_max,
       stage_rst: this.ctrl.stage_rst,
       out: this.out,
+      stdout: this.stdout,
     });
   }
 

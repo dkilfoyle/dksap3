@@ -9,13 +9,13 @@ bdos(int c, int de)
 {
   #asm
     ; bdos(C, DE);
-    ; stack will be retaddr, c, de
+    ; stack will be retaddr, de, c
     ; returns H = B, L = A per CPM standard
     pop h       ; hold return address
-    pop b       ; equivalent ld c, function
     pop d       ; equivalent ld de, parameter
-    push d      ; restore stack
-    push b      
+    pop b       ; equivalent ld c, function
+    push b      ; restore stack
+    push d      
     push h
     call DK_OS  ; defined in os
     mov h, b    ; returns hl = b, a

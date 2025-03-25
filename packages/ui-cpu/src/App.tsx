@@ -1,6 +1,7 @@
 import { ComputerUI } from "./ui/ComputerUI";
 import { useEffect, useState } from "react";
-import { ComputerState, getZeroState } from "./emulator/Computer";
+import { getZeroState } from "./emulator/Computer";
+import { ComputerState } from "../../cpusim";
 
 import "./App.css";
 
@@ -12,7 +13,7 @@ function App() {
       const message = event.data; // The json data that the extension sent
       switch (message.command) {
         case "setComputerState":
-          if (!message.data || message.data.length == 0) debugger;
+          // if (!message.data || message.data.length == 0) debugger;
           setComputerState(message.data);
           break;
       }
