@@ -1,4 +1,4 @@
-import { AstNode, LangiumDocument, Reference } from "langium";
+import { AstNode, LangiumDocument } from "langium";
 import {
   isProgram,
   isAddrArgument,
@@ -7,7 +7,6 @@ import {
   Line,
   Instr,
   Directive,
-  Identifier,
   isLocationDirective,
   isLinkageDirective,
   isDataDirective,
@@ -139,7 +138,6 @@ class Assembler {
   }
 
   relocateFiles(filenames: string[], start = 0) {
-    debugger;
     filenames.forEach((filename, i) => {
       if (i == 0) {
         this.files[filename].startOffset = start;
@@ -249,7 +247,6 @@ class Assembler {
 
     switch (true) {
       case isAddrArgument(node.arg1):
-        debugger;
         if (node.arg1.labelexpr) addr = this.assembleLabelExpression(file, node.arg1.labelexpr, addr);
         else if (node.arg1.number != undefined) addr = this.assembleAddrNumberArgument(file, node.arg1.number, addr);
         break;

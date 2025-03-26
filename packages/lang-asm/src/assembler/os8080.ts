@@ -1,5 +1,7 @@
 export const os8080 = `; DKOS
 
+entry:
+
 ; OS call list
 PRINT_B   equ 1
 PRINT_MEM equ 2

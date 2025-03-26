@@ -107,14 +107,16 @@ export function getNearestPreceedingLabelForAddress(linkerInfo: ILinkerInfo, add
   let nearestFile: string = "";
 
   for (const f of Object.values(linkerInfo)) {
-    Object.values(f.labels).forEach((l) => {
-      const distance = addr - (l.localAddress + f.startOffset);
-      if (distance >= 0 && distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestLabel = l;
-        nearestFile = f.filename;
-      }
-    });
+    if (f.size > 0) {
+      Object.values(f.labels).forEach((l) => {
+        const distance = addr - (l.localAddress + f.startOffset);
+        if (distance >= 0 && distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestLabel = l;
+          nearestFile = f.filename;
+        }
+      });
+    }
   }
 
   return { file: nearestFile, distance: nearestDistance, labelInfo: nearestLabel };
@@ -123,8 +125,10 @@ export function getNearestPreceedingLabelForAddress(linkerInfo: ILinkerInfo, add
 export function getFileForAddress(linkerInfo: ILinkerInfo, addr: number) {
   let i = 0;
   for (const f of Object.values(linkerInfo)) {
-    if (addr >= f.startOffset && addr < f.startOffset + f.size) return { file: f, num: i };
-    i++;
+    if (f.size > 0) {
+      if (addr >= f.startOffset && addr < f.startOffset + f.size) return { file: f, num: i };
+      i++;
+    }
   }
   return { file: undefined, num: -1 };
 }
