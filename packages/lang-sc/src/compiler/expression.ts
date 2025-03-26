@@ -12,11 +12,13 @@ import {
   isLocalVarName,
   isNumberExpression,
   isParameterDeclaration,
+  isStringExpression,
   isSymbolExpression,
   isUnaryExpression,
   LocalVarName,
   NumberExpression,
   ParameterDeclaration,
+  StringExpression,
   SymbolExpression,
   UnaryExpression,
 } from "../language/generated/ast";
@@ -109,6 +111,8 @@ function compileSubExpression(scc: ScCompiler, expression: Expression): Expressi
       return compileUnaryExpression(scc, expression);
     case isNumberExpression(expression):
       return compileNumberExpression(scc, expression);
+    case isStringExpression(expression):
+      return compileStringExpression(scc, expression);
     default:
       throw new AstNodeError(expression, "Unknown expression type found ");
   }
@@ -124,6 +128,16 @@ function compileNumberExpression(scc: ScCompiler, numexp: NumberExpression): Exp
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
   const lines = scc.generator.gen_immediate(numexp.value);
   return { reg: 0, lval, node: leafNode(numexp, lines) };
+}
+
+function compileStringExpression(scc: ScCompiler, strexp: StringExpression): ExpressionResult {
+  const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
+  const pos = scc.litq.length;
+  scc.litq.push(...strexp.value.split("").map((x) => x.charCodeAt(0)));
+  scc.litq.push(0); // 0 terminated
+  // load h with the address of str[0]
+  const lines = [`lxi h, $${scc.litlab}+${pos}`];
+  return { reg: 0, lval, node: leafNode(strexp, lines) };
 }
 
 function compileUnaryExpression(scc: ScCompiler, unary: UnaryExpression): ExpressionResult {

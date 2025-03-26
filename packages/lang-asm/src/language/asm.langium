@@ -67,7 +67,7 @@ NoArgOperation infers Operation:
     opname=("rlc"|"ral"|"rar"|"rrc"|"cma"|"stc"|"cmc"|"ret"|"rp"|"rm"|"rnz"|"rz"|"rpo"|"rpe"|"rnc"|"rc"|"nop"|"hlt"|"xchg"|"pchl"|"xthl");
 
 AddrArgument:
-    number=NUMBER | identifier=[Identifier:ID];
+    number=NUMBER | labelexpr=LabelExpression;
 
 type Identifier = Label | SymbolDirective | LinkageDirective;
 
@@ -79,7 +79,10 @@ Reg16:
 Imm8:
     number=NUMBER | char=CHARACTER;
 Imm16:
-    number=NUMBER | identifier=[Identifier:ID];
+    number=NUMBER | labelexpr=LabelExpression;
+
+LabelExpression:
+    identifier=[Identifier:ID] (offsetop=("+"|"-") offsetval=NUMBER)?;
 
 Directive:
     SymbolDirective | DataDirective | LocationDirective | LinkageDirective | MemoryDirective;
@@ -100,7 +103,7 @@ LinkageDirective:
     dirname="extern" name=ID;
 
 DirectiveArgument:
-    number=NUMBER | identifier=[Identifier:ID] | string=STRING;
+    number=NUMBER | labelexpr=LabelExpression | string=STRING;
 
 terminal EOL: /[\r\n]+/;
 terminal COMMENT: /;[^\n\r]*/;

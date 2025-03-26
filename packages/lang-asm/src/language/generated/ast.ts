@@ -20,7 +20,9 @@ export const AsmTerminals = {
 export type AsmTerminalNames = keyof typeof AsmTerminals;
 
 export type AsmKeywordNames = 
+    | "+"
     | ","
+    | "-"
     | ":"
     | "a"
     | "aci"
@@ -140,7 +142,7 @@ export function isInstruction(item: unknown): item is Instruction {
 export interface AddrArgument extends AstNode {
     readonly $container: Instr;
     readonly $type: 'AddrArgument';
-    identifier?: Reference<Identifier>;
+    labelexpr?: LabelExpression;
     number?: number;
 }
 
@@ -178,7 +180,7 @@ export function isDataDirective(item: unknown): item is DataDirective {
 export interface DirectiveArgument extends AstNode {
     readonly $container: DataDirective;
     readonly $type: 'DirectiveArgument';
-    identifier?: Reference<Identifier>;
+    labelexpr?: LabelExpression;
     number?: number;
     string?: string;
 }
@@ -192,7 +194,7 @@ export function isDirectiveArgument(item: unknown): item is DirectiveArgument {
 export interface Imm16 extends AstNode {
     readonly $container: Instr;
     readonly $type: 'Imm16';
-    identifier?: Reference<Identifier>;
+    labelexpr?: LabelExpression;
     number?: number;
 }
 
@@ -240,6 +242,20 @@ export const Label = 'Label';
 
 export function isLabel(item: unknown): item is Label {
     return reflection.isInstance(item, Label);
+}
+
+export interface LabelExpression extends AstNode {
+    readonly $container: AddrArgument | DirectiveArgument | Imm16;
+    readonly $type: 'LabelExpression';
+    identifier: Reference<Identifier>;
+    offsetop?: '+' | '-';
+    offsetval?: number;
+}
+
+export const LabelExpression = 'LabelExpression';
+
+export function isLabelExpression(item: unknown): item is LabelExpression {
+    return reflection.isInstance(item, LabelExpression);
 }
 
 export interface Line extends AstNode {
@@ -369,6 +385,7 @@ export type AsmAstType = {
     Instr: Instr
     Instruction: Instruction
     Label: Label
+    LabelExpression: LabelExpression
     Line: Line
     LinkageDirective: LinkageDirective
     LocationDirective: LocationDirective
@@ -383,7 +400,7 @@ export type AsmAstType = {
 export class AsmAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [AddrArgument, Comment, DataDirective, Directive, DirectiveArgument, Identifier, Imm16, Imm8, Instr, Instruction, Label, Line, LinkageDirective, LocationDirective, MemoryDirective, Operation, Program, Reg16, Reg8, SymbolDirective];
+        return [AddrArgument, Comment, DataDirective, Directive, DirectiveArgument, Identifier, Imm16, Imm8, Instr, Instruction, Label, LabelExpression, Line, LinkageDirective, LocationDirective, MemoryDirective, Operation, Program, Reg16, Reg8, SymbolDirective];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
@@ -412,9 +429,7 @@ export class AsmAstReflection extends AbstractAstReflection {
     getReferenceType(refInfo: ReferenceInfo): string {
         const referenceId = `${refInfo.container.$type}:${refInfo.property}`;
         switch (referenceId) {
-            case 'AddrArgument:identifier':
-            case 'DirectiveArgument:identifier':
-            case 'Imm16:identifier': {
+            case 'LabelExpression:identifier': {
                 return Identifier;
             }
             default: {
@@ -429,7 +444,7 @@ export class AsmAstReflection extends AbstractAstReflection {
                 return {
                     name: AddrArgument,
                     properties: [
-                        { name: 'identifier' },
+                        { name: 'labelexpr' },
                         { name: 'number' }
                     ]
                 };
@@ -455,7 +470,7 @@ export class AsmAstReflection extends AbstractAstReflection {
                 return {
                     name: DirectiveArgument,
                     properties: [
-                        { name: 'identifier' },
+                        { name: 'labelexpr' },
                         { name: 'number' },
                         { name: 'string' }
                     ]
@@ -465,7 +480,7 @@ export class AsmAstReflection extends AbstractAstReflection {
                 return {
                     name: Imm16,
                     properties: [
-                        { name: 'identifier' },
+                        { name: 'labelexpr' },
                         { name: 'number' }
                     ]
                 };
@@ -495,6 +510,16 @@ export class AsmAstReflection extends AbstractAstReflection {
                     properties: [
                         { name: 'glob', defaultValue: false },
                         { name: 'name' }
+                    ]
+                };
+            }
+            case LabelExpression: {
+                return {
+                    name: LabelExpression,
+                    properties: [
+                        { name: 'identifier' },
+                        { name: 'offsetop' },
+                        { name: 'offsetval' }
                     ]
                 };
             }

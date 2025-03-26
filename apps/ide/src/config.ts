@@ -60,12 +60,12 @@ const fileSystemProvider = new RegisteredFileSystemProvider(false);
 
 fileSystemProvider.registerFile(createDefaultWorkspaceFile(workspaceFile, "/dk8085"));
 
-const examplesAsm = import.meta.glob<string>("./examples/*.asm", { eager: true, query: "?raw", import: "default" });
+const examplesAsm = import.meta.glob<string>("./examples/asm/*.asm", { eager: true, query: "?raw", import: "default" });
 Object.entries(examplesAsm).forEach(([key, value]) => {
   fileSystemProvider.registerFile(new RegisteredMemoryFile(vscode.Uri.file(`dk8085/${key.replace("./examples/", "")}`), value));
 });
 
-const examplesC = import.meta.glob<string>("./examples/*.c", { eager: true, query: "?raw", import: "default" });
+const examplesC = import.meta.glob<string>("./examples/c/*.c", { eager: true, query: "?raw", import: "default" });
 Object.entries(examplesC).forEach(([key, value]) => {
   fileSystemProvider.registerFile(new RegisteredMemoryFile(vscode.Uri.file(`dk8085/${key.replace("./examples/", "")}`), value));
 });

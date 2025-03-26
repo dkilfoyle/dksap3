@@ -14,6 +14,7 @@ import {
   isMemoryDirective,
   isSymbolDirective,
   isLabel,
+  LabelExpression,
 } from "../language/generated/ast.js";
 import { getInstructionInfo } from "./utils.js";
 import { getImportedLines, ILinkerInfo } from "./asm-linker.js";
@@ -130,14 +131,15 @@ class Assembler {
     Object.values(this.files).forEach((f) => {
       Object.values(f.labels).forEach((l) => {
         l.references.forEach((r) => {
-          this.files[r.filename].machineCode[r.offset] = (l.localAddress + f.startOffset) & 0xff;
-          this.files[r.filename].machineCode[r.offset + 1] = ((l.localAddress + f.startOffset) >> 8) & 0xff;
+          this.files[r.filename].machineCode[r.offset] += (l.localAddress + f.startOffset) & 0xff;
+          this.files[r.filename].machineCode[r.offset + 1] += ((l.localAddress + f.startOffset) >> 8) & 0xff;
         });
       });
     });
   }
 
   relocateFiles(filenames: string[], start = 0) {
+    debugger;
     filenames.forEach((filename, i) => {
       if (i == 0) {
         this.files[filename].startOffset = start;
@@ -196,10 +198,11 @@ class Assembler {
       if (line.label) {
         this.files[filename].labels[line.label.name.toUpperCase()] = { name: line.label.name, localAddress: 0, references: [] };
       }
-      if (line.instr && isAddrArgument(line.instr.arg1)) {
-        const target = line.instr.arg1.identifier?.$refText.toUpperCase() || line.instr.arg1.number?.toString();
-        if (!target) throw Error("assemble - invalid addr argument");
-        references.add(target);
+      if (line.instr && isAddrArgument(line.instr.arg1) && line.instr.arg1.labelexpr) {
+        references.add(line.instr.arg1.labelexpr.identifier.$refText.toUpperCase());
+      }
+      if (line.instr && isImm16(line.instr.arg2) && line.instr.arg2.labelexpr) {
+        references.add(line.instr.arg2.labelexpr.identifier.$refText.toUpperCase());
       }
     });
 
@@ -213,19 +216,22 @@ class Assembler {
     });
   }
 
-  assembleAddrIdentifierArgument = (file: IAssembledFile, arg: Reference<Identifier>, addr: number) => {
-    const id = arg.$refText.toUpperCase();
-    if (isLabel(arg.ref) || isLinkageDirective(arg.ref)) {
+  assembleLabelExpression = (file: IAssembledFile, arg: LabelExpression, addr: number) => {
+    const id = arg.identifier.$refText.toUpperCase();
+    if (isLabel(arg.identifier.ref) || isLinkageDirective(arg.identifier.ref)) {
       const sourceFile = file.labels[id] ? file : this.findFileForGlobal(id);
-      if (!sourceFile) throw Error(`Unable to find source file for global ${arg.$refText}`);
+      if (!sourceFile) throw Error(`Unable to find source file for global ${arg.identifier.$refText}`);
       sourceFile.labels[id].references.push({ filename: file.filename, offset: addr });
-      file.machineCode[addr++] = 0; //x & 0xff;
-      file.machineCode[addr++] = 0; //(x >> 8) & 0xff;
+      const offset = arg.offsetval ?? 0;
+      if (arg.offsetop == "-") throw Error("label minus expressions not implemented yet");
+      file.machineCode[addr++] = offset & 0xff;
+      file.machineCode[addr++] = (offset >> 8) & 0xff;
       return addr;
-    } else if (isSymbolDirective(arg.ref)) {
+    } else if (isSymbolDirective(arg.identifier.ref)) {
       const x = file.constants[id];
-      file.machineCode[addr++] = x & 0xff;
-      file.machineCode[addr++] = (x >> 8) & 0xff;
+      const offset = arg.offsetval ? arg.offsetval * (arg.offsetop == "+" ? 1 : -1) : 0;
+      file.machineCode[addr++] = (x + offset) & 0xff;
+      file.machineCode[addr++] = ((x + offset) >> 8) & 0xff;
       return addr;
     } else throw Error();
   };
@@ -243,7 +249,8 @@ class Assembler {
 
     switch (true) {
       case isAddrArgument(node.arg1):
-        if (node.arg1.identifier) addr = this.assembleAddrIdentifierArgument(file, node.arg1.identifier, addr);
+        debugger;
+        if (node.arg1.labelexpr) addr = this.assembleLabelExpression(file, node.arg1.labelexpr, addr);
         else if (node.arg1.number != undefined) addr = this.assembleAddrNumberArgument(file, node.arg1.number, addr);
         break;
       case isImm8(node.arg1):
@@ -261,8 +268,8 @@ class Assembler {
         else throw Error();
         break;
       case isImm16(node.arg2):
-        if (node.arg2.identifier) {
-          addr = this.assembleAddrIdentifierArgument(file, node.arg2.identifier, addr);
+        if (node.arg2.labelexpr) {
+          addr = this.assembleLabelExpression(file, node.arg2.labelexpr, addr);
         } else if (node.arg2.number != undefined) {
           file.machineCode[addr++] = node.arg2.number & 0xff;
           file.machineCode[addr++] = (node.arg2.number >> 8) & 0xff;
@@ -294,8 +301,8 @@ class Assembler {
             if (arg.number != undefined) {
               file.machineCode[addr++] = arg.number & 0xff; // least significant byte
               file.machineCode[addr++] = (arg.number >> 8) & 0xff; // most significant byte
-            } else if (arg.identifier != undefined) {
-              addr = this.assembleAddrIdentifierArgument(file, arg.identifier, addr);
+            } else if (arg.labelexpr != undefined) {
+              addr = this.assembleLabelExpression(file, arg.labelexpr, addr);
             } else throw Error();
           });
         }

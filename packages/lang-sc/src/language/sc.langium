@@ -94,22 +94,29 @@ Primary infers Expression:
     '(' Expression ')' |
     UnaryExpression |
     NumberExpression |
+    StringExpression |
     SymbolExpression;
 
 SymbolExpression:
     element=[NamedElement:ID]
-    (("." structMember=[StructMember:ID])?)?
-    functionCall=FunctionCall?
-    ("[" indexExpression=Expression "]")?;
+    (
+        ("." structMember=[StructMember:ID]) |
+        functionCall=FunctionCall |
+        ("[" indexExpression=Expression "]") |
+        postfix=("++"|"--")
+    )?;
 
 FunctionCall:
     "(" (arguments+=Expression (',' arguments+=Expression)*)? ")";
 
 UnaryExpression:
-    operator=('!' | '-' | "*" | "%") value=Expression;
+    prefix=('!' | '-' | "*" | "%" | "++" | "--") value=Expression;
 
 NumberExpression:
     value=NUMBER;
+
+StringExpression:
+    value=STRING;
 
 // ########### Types
 
@@ -127,9 +134,9 @@ type NamedElement = ParameterDeclaration | FunctionDeclaration | LocalVarName | 
 // ########## Terminals
 
 hidden terminal WS: /\s+/;
+terminal STRING: /"[^"]*"/;
 terminal ID: /[_a-zA-Z][\w_]*/;
 terminal NUMBER returns number: /[0-9]+/;
-terminal STRING: /"[^"]*"/;
 terminal ASM: /#asm[\s\S]*?#endasm/;
 
 hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;

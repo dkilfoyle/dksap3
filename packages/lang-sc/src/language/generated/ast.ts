@@ -9,6 +9,7 @@ import { AbstractAstReflection } from 'langium';
 
 export const ScTerminals = {
     WS: /\s+/,
+    STRING: /"[^"]*"/,
     ID: /[_a-zA-Z][\w_]*/,
     NUMBER: /[0-9]+/,
     ASM: /#asm[\s\S]*?#endasm/,
@@ -26,8 +27,10 @@ export type ScKeywordNames =
     | ")"
     | "*"
     | "+"
+    | "++"
     | ","
     | "-"
+    | "--"
     | "."
     | "/"
     | ";"
@@ -69,7 +72,7 @@ export function isDefinition(item: unknown): item is Definition {
     return reflection.isInstance(item, Definition);
 }
 
-export type Expression = BinaryExpression | NumberExpression | SymbolExpression | UnaryExpression;
+export type Expression = BinaryExpression | NumberExpression | StringExpression | SymbolExpression | UnaryExpression;
 
 export const Expression = 'Expression';
 
@@ -305,6 +308,18 @@ export function isReturnStatement(item: unknown): item is ReturnStatement {
     return reflection.isInstance(item, ReturnStatement);
 }
 
+export interface StringExpression extends AstNode {
+    readonly $container: BinaryExpression | Block | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
+    readonly $type: 'StringExpression';
+    value: string;
+}
+
+export const StringExpression = 'StringExpression';
+
+export function isStringExpression(item: unknown): item is StringExpression {
+    return reflection.isInstance(item, StringExpression);
+}
+
 export interface StructDeclaration extends AstNode {
     readonly $container: Block | GlobalVariableDeclaration | LocalVariableDeclaration;
     readonly $type: 'StructDeclaration';
@@ -351,6 +366,7 @@ export interface SymbolExpression extends AstNode {
     element: Reference<NamedElement>;
     functionCall?: FunctionCall;
     indexExpression?: Expression;
+    postfix?: '++' | '--';
     structMember?: Reference<StructMember>;
 }
 
@@ -363,7 +379,7 @@ export function isSymbolExpression(item: unknown): item is SymbolExpression {
 export interface UnaryExpression extends AstNode {
     readonly $container: BinaryExpression | Block | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'UnaryExpression';
-    operator: '!' | '%' | '*' | '-';
+    prefix: '!' | '%' | '*' | '++' | '-' | '--';
     value: Expression;
 }
 
@@ -421,6 +437,7 @@ export type ScAstType = {
     Program: Program
     ReturnStatement: ReturnStatement
     Statement: Statement
+    StringExpression: StringExpression
     StructDeclaration: StructDeclaration
     StructMember: StructMember
     StructTypeReference: StructTypeReference
@@ -433,13 +450,14 @@ export type ScAstType = {
 export class ScAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [BinaryExpression, Block, Definition, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, Statement, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
+        return [BinaryExpression, Block, Definition, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, Statement, StringExpression, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
         switch (subtype) {
             case BinaryExpression:
             case NumberExpression:
+            case StringExpression:
             case SymbolExpression:
             case UnaryExpression: {
                 return this.isSubtype(Expression, supertype);
@@ -644,6 +662,14 @@ export class ScAstReflection extends AbstractAstReflection {
                     ]
                 };
             }
+            case StringExpression: {
+                return {
+                    name: StringExpression,
+                    properties: [
+                        { name: 'value' }
+                    ]
+                };
+            }
             case StructDeclaration: {
                 return {
                     name: StructDeclaration,
@@ -679,6 +705,7 @@ export class ScAstReflection extends AbstractAstReflection {
                         { name: 'element' },
                         { name: 'functionCall' },
                         { name: 'indexExpression' },
+                        { name: 'postfix' },
                         { name: 'structMember' }
                     ]
                 };
@@ -687,7 +714,7 @@ export class ScAstReflection extends AbstractAstReflection {
                 return {
                     name: UnaryExpression,
                     properties: [
-                        { name: 'operator' },
+                        { name: 'prefix' },
                         { name: 'value' }
                     ]
                 };

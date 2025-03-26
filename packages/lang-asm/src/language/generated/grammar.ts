@@ -22,7 +22,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@34"
+              "$ref": "#/rules@35"
             },
             "arguments": [],
             "cardinality": "*"
@@ -91,7 +91,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
                     "terminal": {
                       "$type": "RuleCall",
                       "rule": {
-                        "$ref": "#/rules@27"
+                        "$ref": "#/rules@28"
                       },
                       "arguments": []
                     }
@@ -115,7 +115,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
               {
                 "$type": "RuleCall",
                 "rule": {
-                  "$ref": "#/rules@34"
+                  "$ref": "#/rules@35"
                 },
                 "arguments": [],
                 "cardinality": "?"
@@ -147,7 +147,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
                     "terminal": {
                       "$type": "RuleCall",
                       "rule": {
-                        "$ref": "#/rules@27"
+                        "$ref": "#/rules@28"
                       },
                       "arguments": []
                     }
@@ -170,7 +170,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
               {
                 "$type": "RuleCall",
                 "rule": {
-                  "$ref": "#/rules@34"
+                  "$ref": "#/rules@35"
                 },
                 "arguments": [],
                 "cardinality": "?"
@@ -195,7 +195,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
               {
                 "$type": "RuleCall",
                 "rule": {
-                  "$ref": "#/rules@34"
+                  "$ref": "#/rules@35"
                 },
                 "arguments": [],
                 "cardinality": "?"
@@ -205,7 +205,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@34"
+              "$ref": "#/rules@35"
             },
             "arguments": []
           }
@@ -269,7 +269,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
         "terminal": {
           "$type": "RuleCall",
           "rule": {
-            "$ref": "#/rules@35"
+            "$ref": "#/rules@36"
           },
           "arguments": []
         }
@@ -1205,28 +1205,21 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@36"
+                "$ref": "#/rules@37"
               },
               "arguments": []
             }
           },
           {
             "$type": "Assignment",
-            "feature": "identifier",
+            "feature": "labelexpr",
             "operator": "=",
             "terminal": {
-              "$type": "CrossReference",
-              "type": {
-                "$ref": "#/types@0"
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@27"
               },
-              "terminal": {
-                "$type": "RuleCall",
-                "rule": {
-                  "$ref": "#/rules@22"
-                },
-                "arguments": []
-              },
-              "deprecatedSyntax": false
+              "arguments": []
             }
           }
         ]
@@ -1353,7 +1346,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@36"
+                "$ref": "#/rules@37"
               },
               "arguments": []
             }
@@ -1365,7 +1358,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@37"
+                "$ref": "#/rules@38"
               },
               "arguments": []
             }
@@ -1392,11 +1385,38 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@36"
+                "$ref": "#/rules@37"
               },
               "arguments": []
             }
           },
+          {
+            "$type": "Assignment",
+            "feature": "labelexpr",
+            "operator": "=",
+            "terminal": {
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@27"
+              },
+              "arguments": []
+            }
+          }
+        ]
+      },
+      "definesHiddenTokens": false,
+      "entry": false,
+      "fragment": false,
+      "hiddenTokens": [],
+      "parameters": [],
+      "wildcard": false
+    },
+    {
+      "$type": "ParserRule",
+      "name": "LabelExpression",
+      "definition": {
+        "$type": "Group",
+        "elements": [
           {
             "$type": "Assignment",
             "feature": "identifier",
@@ -1415,6 +1435,42 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
               },
               "deprecatedSyntax": false
             }
+          },
+          {
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "Assignment",
+                "feature": "offsetop",
+                "operator": "=",
+                "terminal": {
+                  "$type": "Alternatives",
+                  "elements": [
+                    {
+                      "$type": "Keyword",
+                      "value": "+"
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": "-"
+                    }
+                  ]
+                }
+              },
+              {
+                "$type": "Assignment",
+                "feature": "offsetval",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@37"
+                  },
+                  "arguments": []
+                }
+              }
+            ],
+            "cardinality": "?"
           }
         ]
       },
@@ -1434,13 +1490,6 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@28"
-            },
-            "arguments": []
-          },
-          {
-            "$type": "RuleCall",
-            "rule": {
               "$ref": "#/rules@29"
             },
             "arguments": []
@@ -1448,7 +1497,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@31"
+              "$ref": "#/rules@30"
             },
             "arguments": []
           },
@@ -1462,7 +1511,14 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@30"
+              "$ref": "#/rules@33"
+            },
+            "arguments": []
+          },
+          {
+            "$type": "RuleCall",
+            "rule": {
+              "$ref": "#/rules@31"
             },
             "arguments": []
           }
@@ -1509,7 +1565,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@36"
+                "$ref": "#/rules@37"
               },
               "arguments": []
             }
@@ -1554,7 +1610,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@33"
+                "$ref": "#/rules@34"
               },
               "arguments": []
             }
@@ -1573,7 +1629,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@33"
+                    "$ref": "#/rules@34"
                   },
                   "arguments": []
                 }
@@ -1612,7 +1668,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@36"
+                "$ref": "#/rules@37"
               },
               "arguments": []
             }
@@ -1648,7 +1704,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@36"
+                "$ref": "#/rules@37"
               },
               "arguments": []
             }
@@ -1711,28 +1767,21 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@36"
+                "$ref": "#/rules@37"
               },
               "arguments": []
             }
           },
           {
             "$type": "Assignment",
-            "feature": "identifier",
+            "feature": "labelexpr",
             "operator": "=",
             "terminal": {
-              "$type": "CrossReference",
-              "type": {
-                "$ref": "#/types@0"
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@27"
               },
-              "terminal": {
-                "$type": "RuleCall",
-                "rule": {
-                  "$ref": "#/rules@22"
-                },
-                "arguments": []
-              },
-              "deprecatedSyntax": false
+              "arguments": []
             }
           },
           {
@@ -1742,7 +1791,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@38"
+                "$ref": "#/rules@39"
               },
               "arguments": []
             }
@@ -1837,13 +1886,13 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
           {
             "$type": "SimpleType",
             "typeRef": {
-              "$ref": "#/rules@28"
+              "$ref": "#/rules@29"
             }
           },
           {
             "$type": "SimpleType",
             "typeRef": {
-              "$ref": "#/rules@32"
+              "$ref": "#/rules@33"
             }
           }
         ]
