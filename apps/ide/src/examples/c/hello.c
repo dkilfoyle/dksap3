@@ -20,8 +20,8 @@ main()
  */
 print(char *str)
 {
-  // while (*str)
-  // {
-  //   putchar(*str++);
-  // }
+  while (*str)
+  {
+    putchar(*str++);
+  }
 }

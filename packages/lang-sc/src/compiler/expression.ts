@@ -2,13 +2,10 @@ import { AstNode, interruptAndCheck } from "langium";
 import {
   BinaryExpression,
   Expression,
-  FunctionDeclaration,
-  GlobalVariableDeclaration,
   GlobalVarName,
   isBinaryExpression,
   isFunctionDeclaration,
   isGlobalVarName,
-  isLocalVariableDeclaration,
   isLocalVarName,
   isNumberExpression,
   isParameterDeclaration,
@@ -22,20 +19,9 @@ import {
   SymbolExpression,
   UnaryExpression,
 } from "../language/generated/ast";
-import { ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./SymbolTable";
 import { AsmGenerator } from "./Generator";
-import { CompilerRegs, ILValue } from "./interface";
-import {
-  CompositeGeneratorNode,
-  expandToNode,
-  expandTracedToNode,
-  expandTracedToNodeIf,
-  JoinOptions,
-  joinToNode,
-  joinTracedToNode,
-  joinTracedToNodeIf,
-  NewLineNode,
-} from "langium/generate";
+import { CompilerRegs, ILValue, ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
+import { CompositeGeneratorNode, expandToNode, expandTracedToNode, JoinOptions, joinToNode, joinTracedToNode } from "langium/generate";
 import { ScCompiler } from "./sc-compiler";
 
 const FETCH = 1;
@@ -61,12 +47,16 @@ export interface ExpressionResult {
 
 /**
  * Retrieve a static or indirect symbol value and store in HL
+ * HL=ram[symbol] if lval.indirect==0
+ * HL=ram[reg] if lval.indirect > 0, ie reg=&symbol
  */
-function rvalue(scc: ScCompiler, { reg, lval }: ExpressionResult) {
+export function rvalue(scc: ScCompiler, { reg, lval }: ExpressionResult) {
   let lines: string[];
   if (lval.symbol != 0 && lval.indirect == 0) {
     // lval is a static memory cell
     lines = scc.generator.gen_get_memory(lval.symbol);
+    // lines will be
+    //
   } else {
     // HL contains &int
     // call ccgint
@@ -81,14 +71,18 @@ function store(scc: ScCompiler, lval: ILValue) {
   else return scc.generator.gen_put_indirect(lval.indirect);
 }
 
-export function compileExpression(scc: ScCompiler, expression: Expression): ExpressionResult {
-  const res = compileSubExpression(scc, expression);
+function check_rvalue(scc: ScCompiler, res: ExpressionResult) {
   if (res.reg & 1) {
     const { reg, lines } = rvalue(scc, res);
     res.node = res.node.append(joinToNode(lines, NL));
     res.reg = reg;
   }
   return res;
+}
+
+export function compileExpression(scc: ScCompiler, expression: Expression): ExpressionResult {
+  const res = compileSubExpression(scc, expression);
+  return check_rvalue(scc, res);
 }
 
 function compileSubExpression(scc: ScCompiler, expression: Expression): ExpressionResult {
@@ -141,22 +135,12 @@ function compileStringExpression(scc: ScCompiler, strexp: StringExpression): Exp
 }
 
 function compileUnaryExpression(scc: ScCompiler, unary: UnaryExpression): ExpressionResult {
-  throw Error("unary expressions not yet implemented");
-  // const { operator, value } = expression;
-  // const actualValue = compileExpression(value);
-  // if (operator === "-") {
-  //   if (typeof actualValue === "number") {
-  //     return -actualValue;
-  //   } else {
-  //     throw new AstNodeError(expression, `Cannot apply operator '${operator}' to value of type '${typeof actualValue}'`);
-  //   }
-  // } else if (operator === "!") {
-  //   if (typeof actualValue === "boolean") {
-  //     return !actualValue;
-  //   } else {
-  //     throw new AstNodeError(expression, `Cannot apply operator '${operator}' to value of type '${typeof actualValue}'`);
-  //   }
-  // }
+  const symbolRes = compileExpression(scc, unary.value);
+  if (unary.prefix == "*") {
+    symbolRes.lval.indirect = symbolRes.lval.symbol ? symbolRes.lval.ptr_type : SymbolType.CINT;
+    symbolRes.lval.ptr_type = 0;
+    return { ...symbolRes, reg: FETCH | symbolRes.reg };
+  } else throw Error(`unary operator ${unary.prefix} not implemented yet`);
 }
 
 function applyAssignment(scc: ScCompiler, binary: BinaryExpression): ExpressionResult {
@@ -168,18 +152,13 @@ function applyAssignment(scc: ScCompiler, binary: BinaryExpression): ExpressionR
     ; ${binary.$cstNode!.text}
     ${(leftResult = compileSubExpression(scc, binary.left)).node}
     ${(leftResult.reg & FETCH) == 0 ? "ERROR: Need lval" : undefined}
-    ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg) : [])}
+    ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg) : [], NL)}
     ${(rightResult = compileSubExpression(scc, binary.right)).node}
-    ${joinToNode(rightResult.reg & 1 ? rvalue(scc, rightResult).lines : [])}
+    ${joinToNode(rightResult.reg & 1 ? rvalue(scc, rightResult).lines : [], NL)}
     ${joinToNode(store(scc, leftResult.lval), NL)}
   `;
   return { reg: 0, lval, node };
 }
-
-const execute = (f: () => void) => {
-  f();
-  return "";
-};
 
 function applyAddition(scc: ScCompiler, binary: BinaryExpression): ExpressionResult {
   const leftResult = compileSubExpression(scc, binary.left);
@@ -288,9 +267,11 @@ function compileSymbolExpression(scc: ScCompiler, symbolExpression: SymbolExpres
     case isLocalVarName(ref):
     case isParameterDeclaration(ref):
       res = compileLocalVariableReference(scc, ref);
+      if (symbolExpression.postfix) res = compilePostfix(scc, res, symbolExpression);
       break;
     case isGlobalVarName(ref):
       res = compileGlobalVariableReference(scc, ref);
+      if (symbolExpression.postfix) res = compilePostfix(scc, res, symbolExpression);
       break;
     // case isStructReference(symbolExpression):
     //   return compileStructReference(symbolExpression);
@@ -302,6 +283,29 @@ function compileSymbolExpression(scc: ScCompiler, symbolExpression: SymbolExpres
   if (symbolExpression.indexExpression) throw new AstNodeError(symbolExpression, "Array indexing not implemented");
   if (symbolExpression.functionCall) return compileFunctionCall(scc, res, symbolExpression);
   return res;
+}
+
+function compilePostfix(scc: ScCompiler, symbolRes: ExpressionResult, symbolExpression: SymbolExpression): ExpressionResult {
+  const node = expandToNode`
+    ${symbolRes.node}
+    ; ${symbolExpression.postfix}
+    ${symbolRes.lval.indirect ? joinToNode(scc.generator.gen_push(symbolRes.reg), NL) : undefined}
+    ${joinToNode(rvalue(scc, symbolRes).lines, NL)}
+    ${joinToNode(
+      symbolExpression.postfix == "++"
+        ? scc.generator.gen_increment_primary_reg(symbolRes.lval)
+        : scc.generator.gen_decrement_primary_reg(symbolRes.lval),
+      NL
+    )}
+    ${joinToNode(store(scc, symbolRes.lval), NL)}
+    ${joinToNode(
+      symbolExpression.postfix == "++"
+        ? scc.generator.gen_decrement_primary_reg(symbolRes.lval)
+        : scc.generator.gen_increment_primary_reg(symbolRes.lval),
+      NL
+    )}
+  `;
+  return { lval: symbolRes.lval, reg: CompilerRegs.HL_REG, node };
 }
 
 function compileFunctionCall(scc: ScCompiler, symbolRes: ExpressionResult, symbolExpression: SymbolExpression): ExpressionResult {
@@ -377,15 +381,8 @@ function compileFunctionCall(scc: ScCompiler, symbolRes: ExpressionResult, symbo
         ? joinToNode(scc.generator.gen_call((symbolRes.lval.symbol as ISymbol).name), NL)
         : joinToNode(["; callstk", ...scc.generator.callstk()], NL)
     }
-    ${joinToNode(
-      (() => {
-        const { newstkp, lines } = scc.generator.gen_modify_stack(scc.generator.stkp + functionCall.arguments.length * AsmGenerator.INTSIZE);
-        scc.generator.stkp = newstkp;
-        return lines;
-      })(),
-      NL
-    )}
-    `;
+    ${joinToNode(scc.generator.gen_modify_stack(scc.generator.stkp + functionCall.arguments.length * AsmGenerator.INTSIZE), NL)}
+  `;
 
   return { reg: 0, lval: { ...symbolRes.lval, symbol: 0 }, node };
 }

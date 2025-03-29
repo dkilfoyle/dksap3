@@ -1,7 +1,6 @@
 // Adapted from SmallC code8080.c: 2.2 (84/08/31,10:05:09) */
 
-import { CompilerRegs, ILValue } from "./interface";
-import { ISymbol, SymbolIdentity, SymbolType, SymbolStorage } from "./SymbolTable";
+import { CompilerRegs, ILValue, ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
 import { ITagSymbol } from "./TagTable";
 
 /*      Define ASNM and LDNM to the names of the assembler and linker
@@ -77,7 +76,8 @@ export class AsmGenerator {
   }
 
   /**
-   * fetch a static memory cell into the primary register
+   * hl=ram[symbol]
+   * code: lhld symbol
    */
   gen_get_memory(sym: ISymbol) {
     const lines = [];
@@ -89,7 +89,7 @@ export class AsmGenerator {
       lines.push(`mov l,a`);
       lines.push(`mvi h, 0`);
     } else {
-      lines.push(`lhld ${sym.name}`); // hl = sym
+      lines.push(`lhld ${sym.name}`); // hl = (sym)
     }
     return lines;
   }
@@ -153,17 +153,17 @@ export class AsmGenerator {
   }
 
   /**
-   * fetch the specified object type indirect through the primary
-   * register into the primary register
+   * hl=ram[hl|de]  where hl|de=&symbol
+   * code: call ccgint
    */
-  gen_get_indirect(typeobj: number, reg: number) {
+  gen_get_indirect(indirect: number, reg: number) {
     const lines = [];
-    if (typeobj == SymbolType.CCHAR) {
+    if (indirect == SymbolType.CCHAR) {
       if (reg & CompilerRegs.DE_REG) {
         lines.push(`xchg`);
       }
       lines.push(...this.gen_call("ccgchar"));
-    } else if (typeobj == SymbolType.UCHAR) {
+    } else if (indirect == SymbolType.UCHAR) {
       if (reg & CompilerRegs.DE_REG) {
         lines.push(`xchg`);
       }
@@ -237,7 +237,10 @@ export class AsmGenerator {
   gen_modify_stack(newstkp: number) {
     const lines: string[] = [];
     let k = newstkp - this.stkp;
-    if (k == 0) return { newstkp, lines };
+    if (k == 0) {
+      this.stkp = newstkp;
+      return lines;
+    }
     if (k > 0) {
       if (k < 7) {
         if (k & 1) {
@@ -248,7 +251,8 @@ export class AsmGenerator {
           lines.push(`pop b`);
           k = k - AsmGenerator.INTSIZE;
         }
-        return { newstkp, lines };
+        this.stkp = newstkp;
+        return lines;
       }
     } else {
       if (k > -7) {
@@ -260,7 +264,8 @@ export class AsmGenerator {
           lines.push(`push b`);
           k = k + AsmGenerator.INTSIZE;
         }
-        return { newstkp, lines };
+        this.stkp = newstkp;
+        return lines;
       }
     }
     lines.push(`xchg`);
@@ -268,7 +273,8 @@ export class AsmGenerator {
     lines.push(`dad sp`);
     lines.push(`sphl`);
     lines.push(`xchg`);
-    return { newstkp, lines };
+    this.stkp = newstkp;
+    return lines;
   }
 
   /**

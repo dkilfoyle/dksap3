@@ -7,6 +7,7 @@ import { TagTable } from "./TagTable";
 import { expandToNode, expandTracedToNode, joinToNode, joinTracedToNode, NL, toStringAndTrace } from "langium/generate";
 import { IRange } from "monaco-editor";
 import { assembler } from "@dksap3/lang-asm";
+import { WhileTable } from "./while";
 
 export function createError(description: string, range?: IRange) {
   return {
@@ -22,6 +23,7 @@ export class ScCompiler {
   tag_table = new TagTable();
   litq: number[] = [];
   litlab = this.generator.get_label();
+  while_table = new WhileTable(this);
 
   private constructor() {}
 
@@ -33,6 +35,7 @@ export class ScCompiler {
     this.generator.init();
     this.symbol_table.init();
     this.tag_table.init();
+    this.while_table.init();
     this.litq = [];
     this.litlab = this.generator.get_label();
 

@@ -379,7 +379,7 @@ export function isSymbolExpression(item: unknown): item is SymbolExpression {
 export interface UnaryExpression extends AstNode {
     readonly $container: BinaryExpression | Block | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'UnaryExpression';
-    prefix: '!' | '%' | '*' | '++' | '-' | '--';
+    prefix: '!' | '%' | '*' | '-';
     value: Expression;
 }
 

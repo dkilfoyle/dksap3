@@ -1,9 +1,10 @@
 import { expandTracedToNode, joinToNode } from "langium/generate";
 import { FunctionDeclaration, isStructTypeReference, ParameterDeclaration } from "../language/generated/ast";
 import { compileBlock } from "./statements";
-import { SymbolIdentity, SymbolStorage, SymbolTable, SymbolType } from "./SymbolTable";
+import { SymbolTable } from "./SymbolTable";
 import { ScCompiler } from "./sc-compiler";
 import { AsmGenerator } from "./Generator";
+import { SymbolType, SymbolIdentity, SymbolStorage } from "./interface";
 
 const getParameterType = (param: ParameterDeclaration) => {
   if (isStructTypeReference(param.type)) {
@@ -70,7 +71,7 @@ export const compileFunctionDeclaration = (scc: ScCompiler, fun: FunctionDeclara
     ${fun.name}:${fun.extern ? ":" : ""}
       ${compileBlock(scc, fun.body)}
     $${scc.generator.fexitlab}:
-      ${joinToNode(scc.generator.gen_modify_stack(0).lines, { appendNewLineIfNotEmpty: true })}
+      ${joinToNode(scc.generator.gen_modify_stack(0), { appendNewLineIfNotEmpty: true })}
       ret
   `;
 

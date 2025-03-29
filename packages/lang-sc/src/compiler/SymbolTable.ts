@@ -1,39 +1,5 @@
 import { AsmGenerator } from "./Generator";
-
-export interface ISymbol {
-  name: string;
-  identity: SymbolIdentity;
-  type: SymbolType;
-  storage: SymbolStorage;
-  offset: number;
-  tagidx?: number;
-}
-
-export enum SymbolType {
-  UNSIGNED = 1,
-  STRUCT = 2,
-  CCHAR = 1 << 2,
-  UCHAR = (1 << 2) + 1,
-  CINT = 2 << 2,
-  UINT = (2 << 2) + 1,
-}
-
-export enum SymbolIdentity {
-  NONE = 0,
-  VARIABLE,
-  ARRAY,
-  POINTER,
-  FUNCTION,
-}
-
-export enum SymbolStorage {
-  PUBLIC = 1,
-  AUTO,
-  EXTERN,
-  STATIC,
-  LSTATIC,
-  DEFAUTO,
-}
+import { ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
 
 export class SymbolTable {
   public static NUMBER_OF_GLOBALS = 100;

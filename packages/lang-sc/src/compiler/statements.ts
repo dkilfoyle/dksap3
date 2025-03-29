@@ -6,17 +6,20 @@ import {
   isLocalVariableDeclaration,
   isReturnStatement,
   isStructTypeReference,
+  isWhileStatement,
   LocalVariableDeclaration,
   LocalVarName,
   ReturnStatement,
   Statement,
+  WhileStatement,
 } from "../language/generated/ast";
-import { SymbolIdentity, SymbolStorage, SymbolType } from "./SymbolTable";
 import { AsmGenerator } from "./Generator";
 import { compileExpression, ExpressionResult } from "./expression";
 import { CompositeGeneratorNode, expandTracedToNode, joinToNode, joinTracedToNode } from "langium/generate";
 import { userPreferences } from "../language/sc-userpreferences";
 import { ScCompiler } from "./sc-compiler";
+import { compileWhile } from "./while";
+import { SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
 
 const getVariableType = (v: LocalVariableDeclaration) => {
   if (v.type.type == "struct") {
@@ -50,6 +53,8 @@ export const compileStatement = (scc: ScCompiler, statement: Statement): Composi
       return compileReturn(scc, statement);
     case isInlineAssembly(statement):
       return compileAssembly(scc, statement);
+    case isWhileStatement(statement):
+      return compileWhile(scc, statement);
     default:
       console.error("Unimplemented statement ", statement);
   }
@@ -120,10 +125,9 @@ const compileLocalVarName = (scc: ScCompiler, localVar: LocalVarName, decl: Loca
   let lines: string[];
 
   if (decl.type.storage != "static") {
-    const { newstkp, lines: nonstaticLines } = scc.generator.gen_modify_stack(scc.generator.stkp - k);
+    const nonstaticLines = scc.generator.gen_modify_stack(scc.generator.stkp - k);
     lines = nonstaticLines;
     // lines[0] += `\t\t\t\t${decl.type.type} ${localVar.name}`;
-    scc.generator.stkp = newstkp;
     const { index: current_symbol_table_idx } = scc.symbol_table.add_local(localVar.name, j, typ, scc.generator.stkp, SymbolStorage.AUTO);
     if (typ == SymbolType.STRUCT) {
       scc.symbol_table.symbols[current_symbol_table_idx].tagidx = otag;
