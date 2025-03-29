@@ -142,7 +142,8 @@ export class AsmDebugSession extends DebugSession {
         new Scope("8bit Registers2", this._variableHandles.create("Registers8b"), false),
         new Scope("16bit Registers", this._variableHandles.create("Registers16"), false),
         new Scope("Pointers", this._variableHandles.create("Pointers"), false),
-        new Scope("Labels", this._variableHandles.create("Labels"), true),
+        new Scope("Labels (file)", this._variableHandles.create("LabelsFile"), true),
+        new Scope("Labels (all)", this._variableHandles.create("LabelsAll"), true),
       ],
     };
     this.sendResponse(response);
@@ -274,7 +275,19 @@ export class AsmDebugSession extends DebugSession {
         value: `0x${emulator.regs.wz.toString(16)}, ${emulator.regs.wz}`,
         variablesReference: 0,
       });
-    } else if (id == "Labels") {
+    } else if (id == "LabelsFile") {
+      const f = Object.values(this.linkerInfo).find((fileinfo) => fileinfo.filename == asmRuntime.stack()[0].file);
+      if (f) {
+        Object.values(f.labels).forEach((labelinfo) => {
+          variables.push({
+            name: labelinfo.name,
+            type: "integer",
+            value: "0x" + (f.startOffset + labelinfo.localAddress).toString(16),
+            variablesReference: 0,
+          });
+        });
+      }
+    } else if (id == "LabelsAll") {
       Object.entries(this.linkerInfo).forEach(([filename, fileinfo]) => {
         Object.entries(fileinfo.labels).forEach(([labelname, labelinfo]) => {
           variables.push({
@@ -360,9 +373,9 @@ export class AsmDebugSession extends DebugSession {
           break;
         default: {
           // could be a label
-          const label = getLabelInfo(this.linkerInfo, args.expression);
+          const label = getLabelInfo(this.linkerInfo, args.expression, asmRuntime.stack()[0].file);
           if (label) {
-            result = ` ${args.expression}: 0x${label.globalAddress.toString(16)}, ${label.globalAddress}}\n@${
+            result = ` ${args.expression}: 0x${label.globalAddress.toString(16)}, ${label.globalAddress}\n@${
               args.expression
             }: 0x${emulator.mem.ram.at(label.globalAddress)?.toString(16)}, ${emulator.mem.ram.at(label.globalAddress)}`;
           } else {
