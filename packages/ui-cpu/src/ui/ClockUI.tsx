@@ -55,10 +55,10 @@ export const ClockUI = ({
           {_.range(0, maxStages + 1).map((i) => (
             <span
               className={clsx(
-                i == curStage && "bg-gray-200 text-black",
-                i == curStage && compState.clkState == "tock" && "tock",
-                i == curStage && compState.clkState == "tick" && "tick",
-                i > curStage ? "border border-gray-700 text-gray-800" : "border border-gray-200",
+                "border rounded-xs",
+                i == curStage && "bg-gray-400 text-black",
+                i == curStage && compState.clkState,
+                i > curStage ? "border-gray-700 text-gray-800" : "border border-gray-400",
                 "flex-1 h-4"
               )}
               key={`t-${i}`}></span>

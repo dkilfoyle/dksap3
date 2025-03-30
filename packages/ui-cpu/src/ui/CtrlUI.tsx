@@ -75,7 +75,7 @@ export const CtrlUI = ({ compState }: { compState: ComputerState }) => {
           </div>
         ))}
       </div>
-      <div className="flex gap-1">
+      <div className="flex gap-2">
         <span className="w-3rem text-right mr-1 text-white">MEM</span>
         {_.range(3, -1, -1).map((i) => (
           <div

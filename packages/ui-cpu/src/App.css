@@ -39,12 +39,19 @@
   /* background-color: #e5e7eb;
   clip-path: polygon(0 0, 100% 0, 100% 100%); */
   background: rgb(0, 0, 0);
-  background: linear-gradient(270deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0) 50%, rgba(118, 219, 155, 1) 50%);
+  background: linear-gradient(270deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0) 50%, rgba(38, 118, 68, 1) 50%);
 }
 
 .tick {
   /* background-color: #e5e7eb;
   clip-path: polygon(0 0, 100% 0, 100% 100% 0 0); */
   background: rgb(0, 0, 0);
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0) 50%, rgba(118, 219, 155, 1) 50%);
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0) 50%, rgba(38, 118, 68, 1) 50%);
+}
+
+.stdout {
+  height: 50px;
+  resize: none;
+  font-family: monospace;
+  color: #00ff66;
 }

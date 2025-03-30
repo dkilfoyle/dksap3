@@ -68,7 +68,7 @@ export const RegistersUI = ({ compState }: { compState: ComputerState }) => {
   return (
     <CpuComponent label="Registers" onFormatToggle={() => setFormat(format == 16 ? 10 : 16)} status={componentStatus} direction={direction}>
       <div className="flex gap-3">
-        <div className="grid grid-cols-[2rem_2rem_2rem] grid-rows-6 grid-flow-col gap-x-4 align-top">
+        <div className="grid grid-cols-[1.5rem_2rem_2rem] grid-rows-6 grid-flow-col gap-x-3 gap-y-1 align-top">
           <span>BC</span>
           <span>DE</span>
           <span>HL</span>

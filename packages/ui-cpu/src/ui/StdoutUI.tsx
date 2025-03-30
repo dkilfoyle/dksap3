@@ -6,7 +6,7 @@ export const StdoutUI = ({ compState }: { compState: ComputerState }) => {
   return (
     <CpuComponent label="Stdout" status={compState.regs[8] == 0 && compState.regs[9] == 7 ? "input" : "none"} direction={"none"}>
       <div className="flex">
-        <Textarea value={compState.stdout} style={{ height: "50px", resize: "none", fontFamily: "monospace" }}></Textarea>
+        <Textarea value={compState.stdout} className="stdout"></Textarea>
       </div>
     </CpuComponent>
   );
