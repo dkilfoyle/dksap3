@@ -10,6 +10,7 @@ import { MemUI } from "./MemUI";
 import { RegistersUI } from "./RegistersUI";
 import { ComputerState } from "../../../cpusim";
 import { StdoutUI } from "./StdoutUI";
+import { StackUI } from "./StackUI";
 
 // const pt = { root: { style: { padding: "0.3em 0.6em" } } };
 
@@ -97,6 +98,7 @@ export function ComputerUI({ computerState }: { computerState: ComputerState[] }
         </div>
       </div>
       <CtrlUI compState={curState}></CtrlUI>
+      <StackUI compState={curState}></StackUI>
     </div>
   );
 }
