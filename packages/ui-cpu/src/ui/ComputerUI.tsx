@@ -11,6 +11,7 @@ import { RegistersUI } from "./RegistersUI";
 import { ComputerState } from "../../../cpusim";
 import { StdoutUI } from "./StdoutUI";
 import { StackUI } from "./StackUI";
+import { IStackFrame } from "@/App";
 
 // const pt = { root: { style: { padding: "0.3em 0.6em" } } };
 
@@ -40,7 +41,7 @@ function useInterval(callback: () => void, delay: number | null) {
   }, [delay]);
 }
 
-export function ComputerUI({ computerState }: { computerState: ComputerState[] }) {
+export function ComputerUI({ computerState, stackFrames }: { computerState: ComputerState[]; stackFrames: IStackFrame[] }) {
   const [halfStage, setHalfStage] = useState(0);
   const [isRun, setIsRun] = useState(false);
   const [runSpeed] = useState(200);
@@ -98,7 +99,7 @@ export function ComputerUI({ computerState }: { computerState: ComputerState[] }
         </div>
       </div>
       <CtrlUI compState={curState}></CtrlUI>
-      <StackUI compState={curState}></StackUI>
+      <StackUI compState={curState} stackFrames={stackFrames}></StackUI>
     </div>
   );
 }

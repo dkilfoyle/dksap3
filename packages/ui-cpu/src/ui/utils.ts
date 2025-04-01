@@ -42,10 +42,10 @@ export const getNextFormat = (f: number) => {
 export const getRegister = (regs: number[], reg: "de" | "hl" | "sp") => {
   switch (reg) {
     case "de":
-      return ((regs[2] << 8) | regs[3]) & 0xff;
+      return ((regs[2] << 8) | regs[3]) & 0xffff;
     case "hl":
-      return ((regs[4] << 8) | regs[5]) & 0xff;
+      return ((regs[4] << 8) | regs[5]) & 0xffff;
     case "sp":
-      return ((regs[10] << 8) | regs[11]) & 0xff;
+      return ((regs[10] << 8) | regs[11]) & 0xffff;
   }
 };

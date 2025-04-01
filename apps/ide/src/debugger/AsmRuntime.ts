@@ -6,7 +6,10 @@ import { EmulatorWebviewPanel } from "../components/EmulatorWebviewPanel.ts";
 import { MemoryWebviewPanel } from "../components/MemoryWebviewPanel.ts";
 import { printOutputChannel } from "./debugger.ts";
 import { getLabelForAddress, getSourceLocationForAddress } from "@dksap3/lang-asm";
-import { asmLanguageClient } from "../config.ts";
+import { asmLanguageClient, sourceAsts, traceRegions } from "../config.ts";
+import { findFirstCodingLineAtOrAfter } from "../traceUtils.ts";
+import { isProgram } from "../../../../packages/lang-asm/src/language/generated/ast.ts";
+import { AstNodeWithTextRegion } from "langium";
 
 interface IAsmBreakpoint {
   id: number;
@@ -20,6 +23,7 @@ export interface IStackFrame {
   file: string;
   line: number;
   stackBase: number;
+  stackLabels: string[];
 }
 
 type IStepMode = "stepInto" | "stepOut" | "stepOver" | "continue";
@@ -91,8 +95,9 @@ export class AsmRuntime {
         index: 0,
         file: this.compiledAsm.uri,
         line: 0,
-        name: "__main__",
+        name: "entry",
         stackBase: 0x0140 - 1, // ugly hack, TODO: set to mem.size or config.initialStackBase
+        stackLabels: [],
       },
     ];
 
@@ -108,6 +113,15 @@ export class AsmRuntime {
   updateUI() {
     // if (emulator.states.length == 1) debugger;
     EmulatorWebviewPanel.sendComputerState(emulator.states);
+    EmulatorWebviewPanel.sendStackFrames(
+      this.frames.map((f) => ({
+        file: f.file,
+        name: f.name,
+        base: f.stackBase,
+        mem: Array.from(new Uint16Array(emulator.mem.ram.slice(emulator.regs.sp, f.stackBase + 1).buffer)),
+        labels: f.stackLabels,
+      }))
+    );
     MemoryWebviewPanel.sendMemory(Array.from(emulator.mem.ram));
     MemoryWebviewPanel.sendStackFrames(this.frames);
     MemoryWebviewPanel.sendPointers({
@@ -179,6 +193,7 @@ export class AsmRuntime {
             line: 0,
             index: this.frames.length - 1,
             stackBase: emulator.regs.sp - 1,
+            stackLabels: [],
           });
           this.setCurrentLine();
           if (mode != "stepInto") {
@@ -209,6 +224,32 @@ export class AsmRuntime {
           }
         } else this.setCurrentLine();
         break;
+      case 0xc5:
+      case 0xd5:
+      case 0xe5: // push reg
+        {
+          // TODO retrieve line label eg push d ; param1
+          const loc = getSourceLocationForAddress(this.compiledAsm!.linkerInfo, emulator.regs.pc);
+          if (loc) {
+            const ast = sourceAsts[loc.filename];
+            if (loc && isProgram(ast)) {
+              const line = ast.lines.find((l) => {
+                const lt = l as AstNodeWithTextRegion;
+                return lt.$textRegion?.range.start.line == loc.line - 1;
+              });
+              if (line && line.comment) {
+                this.frames[0].stackLabels.push(line.comment.comment);
+              }
+            }
+          }
+        }
+        this.setCurrentLine();
+        break;
+      case 0xf5:
+        this.frames[0].stackLabels.push("psw");
+        this.setCurrentLine();
+        break;
+
       case 0x76: // hlt
         this.setCurrentLine();
         return this.stop("hlt", `HLT at PC = ${emulator.regs.pc - 1}`);

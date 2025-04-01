@@ -55,6 +55,13 @@ export class EmulatorWebviewPanel {
     }
   }
 
+  static sendStackFrames(sf: { name: string; file: string; base: number; mem: number[]; labels: string[] }[]) {
+    console.log("Stack Frames", sf);
+    if (EmulatorWebviewPanel.currentPanel) {
+      EmulatorWebviewPanel.currentPanel?._panel.webview.postMessage({ command: "setStackFrames", data: sf });
+    }
+  }
+
   private _getWebviewContent() {
     const scriptUri = "/emulator.js";
     const stylesUri = "/emulator.css";
@@ -78,6 +85,7 @@ export class EmulatorWebviewPanel {
 
   private _setWebviewMessageListener(webview: Webview) {
     webview.onDidReceiveMessage(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (message: any) => {
         const command = message.command;
         const text = message.text;

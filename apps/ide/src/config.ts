@@ -39,7 +39,7 @@ import { EmulatorWebviewPanel } from "./components/EmulatorWebviewPanel.ts";
 import { MemoryWebviewPanel } from "./components/MemoryWebviewPanel.ts";
 import { compiledDocs } from "./debugger/AsmRuntime.ts";
 import { TraceRegion } from "langium/generate";
-import { AstNode } from "langium";
+import { AstNodeWithTextRegion } from "langium";
 import { DslLibraryFileSystemProvider } from "./DslFileSystemProvider.ts";
 import { MonacoLanguageClient } from "monaco-languageclient";
 
@@ -52,7 +52,7 @@ export type ConfigResult = {
 };
 
 export const traceRegions: Record<string, TraceRegion> = {};
-export const sourceAsts: Record<string, AstNode> = {};
+export const sourceAsts: Record<string, AstNodeWithTextRegion> = {};
 
 const workspaceFile = vscode.Uri.file("/workspace/.vscode/workspace.code-workspace");
 const fileSystemProvider = new RegisteredFileSystemProvider(false);
@@ -189,6 +189,7 @@ export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrap
     // console.log("App.tsx onNotification(browser/asmDocumentChange)", data.uri, data.machineCode.length);
     // console.log(JSON.parse(data.content));
     compiledDocs[data.uri] = data;
+    sourceAsts[data.uri] = JSON.parse(data.ast);
     MemoryWebviewPanel.sendMemory(Array.from(data.machineCode));
     MemoryWebviewPanel.sendLinkerInfo(data.linkerInfo);
   });
