@@ -2,6 +2,7 @@ import { AstNode, interruptAndCheck } from "langium";
 import {
   BinaryExpression,
   Expression,
+  FunctionDeclaration,
   GlobalVarName,
   isBinaryExpression,
   isFunctionDeclaration,
@@ -152,7 +153,7 @@ function applyAssignment(scc: ScCompiler, binary: BinaryExpression): ExpressionR
     ; ${binary.$cstNode!.text}
     ${(leftResult = compileSubExpression(scc, binary.left)).node}
     ${(leftResult.reg & FETCH) == 0 ? "ERROR: Need lval" : undefined}
-    ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg) : [], NL)}
+    ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg, leftResult.lval.symbol) : [], NL)}
     ${(rightResult = compileSubExpression(scc, binary.right)).node}
     ${joinToNode(rightResult.reg & 1 ? rvalue(scc, rightResult).lines : [], NL)}
     ${joinToNode(store(scc, leftResult.lval), NL)}
@@ -172,7 +173,7 @@ function applyAddition(scc: ScCompiler, binary: BinaryExpression): ExpressionRes
   }
   // HL = *left
   let pushLines: string[] = [];
-  if (leftResult.lval.indirect) pushLines = scc.generator.gen_push(k);
+  if (leftResult.lval.indirect) pushLines = scc.generator.gen_push(k, leftResult.lval.symbol);
   // top of stack now contains *left
 
   const rightResult = compileSubExpression(scc, binary.right);
@@ -224,7 +225,7 @@ function applyMultiplication(scc: ScCompiler, binary: BinaryExpression): Express
     rLeftLines = lines;
   }
   // HL = *left
-  const pushLines = scc.generator.gen_push(k);
+  const pushLines = scc.generator.gen_push(k, leftResult.lval.symbol);
   // top of stack now contains *left
 
   const rightResult = compileSubExpression(scc, binary.right);
@@ -289,7 +290,7 @@ function compilePostfix(scc: ScCompiler, symbolRes: ExpressionResult, symbolExpr
   const node = expandToNode`
     ${symbolRes.node}
     ; ${symbolExpression.postfix}
-    ${symbolRes.lval.indirect ? joinToNode(scc.generator.gen_push(symbolRes.reg), NL) : undefined}
+    ${symbolRes.lval.indirect ? joinToNode(scc.generator.gen_push(symbolRes.reg, symbolRes.lval.symbol), NL) : undefined}
     ${joinToNode(rvalue(scc, symbolRes).lines, NL)}
     ${joinToNode(
       symbolExpression.postfix == "++"
@@ -313,6 +314,8 @@ function compileFunctionCall(scc: ScCompiler, symbolRes: ExpressionResult, symbo
   let k = symbolRes.reg;
   // const node = symbolRes.node;
   const functionCall = symbolExpression.functionCall!;
+
+  if (!isFunctionDeclaration(symbolExpression.element.ref)) throw Error("function call expression element.ref is not function declaration");
 
   // node.append(`; ${symbolExpression.$cstNode?.text}`).appendNewLine();
 
@@ -364,17 +367,20 @@ function compileFunctionCall(scc: ScCompiler, symbolRes: ExpressionResult, symbo
           )
         : undefined
     }
-    ${ptr == 0 ? joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG), NL) : undefined}
+    ${ptr == 0 ? joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG, "retaddr"), NL) : undefined}
     ${joinTracedToNode(
       functionCall,
       "arguments"
     )(
-      functionCall.arguments.map((arg) =>
-        compileExpression(scc, arg)
-          .node.appendIf(ptr == 0, "xthl")
+      functionCall.arguments.map((arg, i) => {
+        const funcdecl = symbolExpression.element.ref as FunctionDeclaration;
+        const param = funcdecl.parameters[i].name;
+        const argexpr = compileExpression(scc, arg);
+        return argexpr.node
+          .appendIf(ptr == 0, "xthl")
           .appendNewLineIfNotEmpty()
-          .append(joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG), NL))
-      )
+          .append(joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG, `param ${param}`), NL));
+      })
     )}
     ${
       ptr != 0

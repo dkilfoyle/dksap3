@@ -187,14 +187,23 @@ export class AsmGenerator {
   /**
    * push the primary register onto the stack
    */
-  gen_push(reg: CompilerRegs) {
+  gen_push(reg: CompilerRegs, helper: ISymbol | string | 0) {
+    const isISymbol = (obj: any): obj is ISymbol => {
+      return "name" in obj && "identity" in obj;
+    };
     const lines = [];
+
+    let comment: string = "";
+    if (typeof helper == "string") comment = helper;
+    else if (typeof helper == "number") comment = helper.toString();
+    else if (isISymbol(helper)) comment = helper.name;
+
     if (reg & CompilerRegs.DE_REG) {
       this.stkp = this.stkp - AsmGenerator.INTSIZE;
-      lines.push(`push d`);
+      lines.push(`push d` + (comment.length ? ` ; ${comment}` : ""));
     } else {
       this.stkp = this.stkp - AsmGenerator.INTSIZE;
-      lines.push(`push h`);
+      lines.push(`push h` + (comment.length ? ` ; ${comment}` : ""));
     }
     return lines;
   }
@@ -248,7 +257,7 @@ export class AsmGenerator {
           k--;
         }
         while (k) {
-          lines.push(`pop b`);
+          lines.push(`pop b ; stk+=2`);
           k = k - AsmGenerator.INTSIZE;
         }
         this.stkp = newstkp;
@@ -261,7 +270,7 @@ export class AsmGenerator {
           k++;
         }
         while (k) {
-          lines.push(`push b`);
+          lines.push(`push b ; stk-=2`);
           k = k + AsmGenerator.INTSIZE;
         }
         this.stkp = newstkp;

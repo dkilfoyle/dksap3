@@ -11,7 +11,6 @@ import {
   LocalVarName,
   ReturnStatement,
   Statement,
-  WhileStatement,
 } from "../language/generated/ast";
 import { AsmGenerator } from "./Generator";
 import { compileExpression, ExpressionResult } from "./expression";
