@@ -115,7 +115,7 @@ export class AsmRuntime {
     emulator.ctrl.bdos = this.bdos;
 
     this.setCurrentLine();
-    this.verifyBreakpoints(program);
+    // this.verifyBreakpoints(program);
     this.stop("entry", `Runtime started: machine code ${this.compiledAsm.machineCode.length} bytes`);
   }
 
@@ -353,7 +353,7 @@ export class AsmRuntime {
   isBreakpoint() {
     if (!this.compiledAsm) throw Error("isBreakpoint no source");
     const curLine = this.frames[0].line;
-    const bps = this._breakPoints.get(this.compiledAsm.uri.replace("file:///", "\\").replace("/", "\\"));
+    const bps = this._breakPoints.get(this.compiledAsm.uri.replace("file:///", "\\").replaceAll("/", "\\"));
     return bps?.find((bp) => bp.line == curLine);
   }
 
@@ -392,11 +392,21 @@ export class AsmRuntime {
 
   verifyBreakpoints(path: string) {
     const bps = this._breakPoints.get(path);
+    let uri = path;
+    if (!path.startsWith("builtin")) {
+      if (!path.startsWith("file")) {
+        uri = "file://" + path.replaceAll("\\", "/");
+      }
+    }
+    console.log("Verify breakpoints", path, uri);
     if (!this.compiledAsm) throw Error("VerityBreakpoints no source");
+    const lineAddressMap = this.compiledAsm!.linkerInfo[uri]?.lineAddressMap;
+    if (!lineAddressMap) {
+      console.error(`No linkerinfo for ${path}`);
+      return;
+    }
     if (bps) {
       bps.forEach((bp) => {
-        const lineAddressMap = this.compiledAsm!.linkerInfo[path].lineAddressMap;
-        if (!lineAddressMap) throw Error(`No linkerinfo for ${path}`);
         if (lineAddressMap[bp.line]) {
           // only instruction lines appear in lineAddressMap
           bp.verified = true;
