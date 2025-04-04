@@ -65,6 +65,7 @@ class Assembler {
     if (!this.runtime) throw Error("Assembler has no runtime");
     if (!this.os) throw Error("Assembler has no os");
     if (!this.stdlib) throw Error("Assembler has no stdlib");
+    this.files = {};
 
     this.mainfile = docs[0].uri.toString();
 

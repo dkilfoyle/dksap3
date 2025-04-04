@@ -124,7 +124,7 @@ const compileLocalVarName = (scc: ScCompiler, localVar: LocalVarName, decl: Loca
   let lines: string[];
 
   if (decl.type.storage != "static") {
-    const nonstaticLines = scc.generator.gen_modify_stack(scc.generator.stkp - k);
+    const nonstaticLines = scc.generator.gen_modify_stack(scc.generator.stkp - k, `loc ${localVar.name}`);
     lines = nonstaticLines;
     // lines[0] += `\t\t\t\t${decl.type.type} ${localVar.name}`;
     const { index: current_symbol_table_idx } = scc.symbol_table.add_local(localVar.name, j, typ, scc.generator.stkp, SymbolStorage.AUTO);

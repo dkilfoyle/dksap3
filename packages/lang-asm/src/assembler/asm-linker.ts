@@ -94,10 +94,12 @@ export function getSourceLocationForAddress(linkerInfo: ILinkerInfo, addr: numbe
 
 export function getLabelForAddress(linkerInfo: ILinkerInfo, addr: number) {
   for (const f of Object.values(linkerInfo)) {
-    const res = Object.values(f.labels).find((labelInfo) => {
-      return labelInfo.localAddress + f.startOffset == addr;
-    });
-    if (res) return { file: f, labelInfo: res };
+    if (f.size > 0) {
+      const res = Object.values(f.labels).find((labelInfo) => {
+        return labelInfo.localAddress + f.startOffset == addr;
+      });
+      if (res) return { file: f, labelInfo: res };
+    }
   }
 }
 

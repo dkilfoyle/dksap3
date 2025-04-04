@@ -153,7 +153,7 @@ function applyAssignment(scc: ScCompiler, binary: BinaryExpression): ExpressionR
     ; ${binary.$cstNode!.text}
     ${(leftResult = compileSubExpression(scc, binary.left)).node}
     ${(leftResult.reg & FETCH) == 0 ? "ERROR: Need lval" : undefined}
-    ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg, leftResult.lval.symbol) : [], NL)}
+    ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg, leftResult.lval) : [], NL)}
     ${(rightResult = compileSubExpression(scc, binary.right)).node}
     ${joinToNode(rightResult.reg & 1 ? rvalue(scc, rightResult).lines : [], NL)}
     ${joinToNode(store(scc, leftResult.lval), NL)}
@@ -173,7 +173,7 @@ function applyAddition(scc: ScCompiler, binary: BinaryExpression): ExpressionRes
   }
   // HL = *left
   let pushLines: string[] = [];
-  if (leftResult.lval.indirect) pushLines = scc.generator.gen_push(k, leftResult.lval.symbol);
+  if (leftResult.lval.indirect) pushLines = scc.generator.gen_push(k, leftResult.lval);
   // top of stack now contains *left
 
   const rightResult = compileSubExpression(scc, binary.right);
@@ -225,7 +225,7 @@ function applyMultiplication(scc: ScCompiler, binary: BinaryExpression): Express
     rLeftLines = lines;
   }
   // HL = *left
-  const pushLines = scc.generator.gen_push(k, leftResult.lval.symbol);
+  const pushLines = scc.generator.gen_push(k, leftResult.lval);
   // top of stack now contains *left
 
   const rightResult = compileSubExpression(scc, binary.right);
@@ -290,7 +290,7 @@ function compilePostfix(scc: ScCompiler, symbolRes: ExpressionResult, symbolExpr
   const node = expandToNode`
     ${symbolRes.node}
     ; ${symbolExpression.postfix}
-    ${symbolRes.lval.indirect ? joinToNode(scc.generator.gen_push(symbolRes.reg, symbolRes.lval.symbol), NL) : undefined}
+    ${symbolRes.lval.indirect ? joinToNode(scc.generator.gen_push(symbolRes.reg, symbolRes.lval), NL) : undefined}
     ${joinToNode(rvalue(scc, symbolRes).lines, NL)}
     ${joinToNode(
       symbolExpression.postfix == "++"
@@ -316,39 +316,6 @@ function compileFunctionCall(scc: ScCompiler, symbolRes: ExpressionResult, symbo
   const functionCall = symbolExpression.functionCall!;
 
   if (!isFunctionDeclaration(symbolExpression.element.ref)) throw Error("function call expression element.ref is not function declaration");
-
-  // node.append(`; ${symbolExpression.$cstNode?.text}`).appendNewLine();
-
-  // if (ptr != 0 && ptr.identity != SymbolIdentity.FUNCTION) {
-  //   const { reg, lines } = rvalue(scc, symbolRes);
-  //   k = reg;
-  //   ptr = 0;
-  //   lines.unshift("; function symbol is a pointer to a function ");
-  //   node.append(joinToNode(lines, { appendNewLineIfNotEmpty: true }));
-  // }
-
-  // if (ptr == 0) {
-  //   node.append(...scc.generator.gen_push(CompilerRegs.HL_REG));
-  // }
-
-  // node.appendTracedTemplate(functionCall, "arguments")`${joinToNode(
-  //   functionCall.arguments.map((arg) => {
-  //     const compiledArg1 = compileExpression(scc, arg);
-  //     const compiledArg2 = compiledArg1.node.appendIf(ptr == 0, "xthl").appendNewLineIfNotEmpty();
-  //     const compiledArg3 = compiledArg2.append(joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG), NL));
-  //     return compiledArg3;
-  //   })
-  // )}`;
-
-  // if (ptr != 0) {
-  //   node.append(joinToNode(scc.generator.gen_call((symbolRes.lval.symbol as ISymbol).name), NL));
-  // } else {
-  //   node.append(joinToNode(["; callstk", ...scc.generator.callstk()], { appendNewLineIfNotEmpty: true }));
-  // }
-
-  // const { newstkp, lines } = scc.generator.gen_modify_stack(scc.generator.stkp + functionCall.arguments.length * AsmGenerator.INTSIZE);
-  // scc.generator.stkp = newstkp;
-  // node.append(joinToNode(lines, NL));
 
   const node = expandToNode`
     ; ${symbolExpression.$cstNode?.text}
@@ -379,7 +346,7 @@ function compileFunctionCall(scc: ScCompiler, symbolRes: ExpressionResult, symbo
         return argexpr.node
           .appendIf(ptr == 0, "xthl")
           .appendNewLineIfNotEmpty()
-          .append(joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG, `param ${param}`), NL));
+          .append(joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG, `par ${param}`), NL));
       })
     )}
     ${

@@ -10,12 +10,18 @@ export interface IStackFrame {
   file: string;
   base: number;
   mem: number[];
-  labels: string[];
+  labels: Record<string, string>;
+}
+
+export interface IRuntimeState {
+  frames: IStackFrame[];
+  hlLabel: string;
+  deLabel: string;
 }
 
 function App() {
   const [computerState, setComputerState] = useState<ComputerState[]>([getZeroState()]);
-  const [stackFrames, setStackFrames] = useState<IStackFrame[]>([]);
+  const [runtimeState, setRuntimeState] = useState<IRuntimeState>({ frames: [], hlLabel: "", deLabel: "" });
 
   useEffect(() => {
     window.addEventListener("message", (event) => {
@@ -25,9 +31,9 @@ function App() {
           // if (!message.data || message.data.length == 0) debugger;
           setComputerState(message.data);
           break;
-        case "setStackFrames":
+        case "setRuntimeState":
           // if (!message.data || message.data.length == 0) debugger;
-          setStackFrames(message.data);
+          setRuntimeState(message.data);
           break;
       }
     });
@@ -35,7 +41,7 @@ function App() {
 
   return (
     <div className="vscode-page p-3 flex justify-center text-sm">
-      <ComputerUI computerState={computerState} stackFrames={stackFrames}></ComputerUI>
+      <ComputerUI computerState={computerState} runtimeState={runtimeState}></ComputerUI>
     </div>
   );
 }

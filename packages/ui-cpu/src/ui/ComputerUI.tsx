@@ -10,8 +10,8 @@ import { MemUI } from "./MemUI";
 import { RegistersUI } from "./RegistersUI";
 import { ComputerState } from "../../../cpusim";
 import { StdoutUI } from "./StdoutUI";
-import { StackUI } from "./StackUI";
-import { IStackFrame } from "@/App";
+import { RuntimeUI } from "./RuntimeUI";
+import { IRuntimeState } from "../App";
 
 // const pt = { root: { style: { padding: "0.3em 0.6em" } } };
 
@@ -41,7 +41,7 @@ function useInterval(callback: () => void, delay: number | null) {
   }, [delay]);
 }
 
-export function ComputerUI({ computerState, stackFrames }: { computerState: ComputerState[]; stackFrames: IStackFrame[] }) {
+export function ComputerUI({ computerState, runtimeState }: { computerState: ComputerState[]; runtimeState: IRuntimeState }) {
   const [halfStage, setHalfStage] = useState(0);
   const [isRun, setIsRun] = useState(false);
   const [runSpeed] = useState(200);
@@ -99,7 +99,7 @@ export function ComputerUI({ computerState, stackFrames }: { computerState: Comp
         </div>
       </div>
       <CtrlUI compState={curState}></CtrlUI>
-      <StackUI compState={curState} stackFrames={stackFrames}></StackUI>
+      <RuntimeUI compState={curState} rtState={runtimeState}></RuntimeUI>
     </div>
   );
 }

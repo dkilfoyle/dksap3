@@ -1,5 +1,6 @@
 import { Disposable, Webview, WebviewPanel, window, ViewColumn } from "vscode";
 import { ComputerState } from "@dksap3/cpusim";
+import { IRuntimeState } from "src/debugger/AsmRuntime";
 
 function getNonce() {
   let text = "";
@@ -55,10 +56,10 @@ export class EmulatorWebviewPanel {
     }
   }
 
-  static sendStackFrames(sf: { name: string; file: string; base: number; mem: number[]; labels: string[] }[]) {
-    console.log("Stack Frames", sf);
+  static sendRuntimeState(rs: IRuntimeState) {
+    console.log("Runtime State", rs);
     if (EmulatorWebviewPanel.currentPanel) {
-      EmulatorWebviewPanel.currentPanel?._panel.webview.postMessage({ command: "setStackFrames", data: sf });
+      EmulatorWebviewPanel.currentPanel?._panel.webview.postMessage({ command: "setRuntimeState", data: rs });
     }
   }
 

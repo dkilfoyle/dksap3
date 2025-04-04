@@ -187,16 +187,22 @@ export class AsmGenerator {
   /**
    * push the primary register onto the stack
    */
-  gen_push(reg: CompilerRegs, helper: ISymbol | string | 0) {
-    const isISymbol = (obj: any): obj is ISymbol => {
-      return "name" in obj && "identity" in obj;
+  gen_push(reg: CompilerRegs, helper: ILValue | string) {
+    const isILValue = (obj: any): obj is ILValue => {
+      return "symbol" in obj && "indirect" in obj;
     };
     const lines = [];
 
     let comment: string = "";
     if (typeof helper == "string") comment = helper;
-    else if (typeof helper == "number") comment = helper.toString();
-    else if (isISymbol(helper)) comment = helper.name;
+    else if (isILValue(helper)) {
+      if (typeof helper.symbol == "number") {
+        comment = "0";
+      } else {
+        comment = helper.symbol.name;
+        if (helper.indirect) comment = "&" + comment;
+      }
+    }
 
     if (reg & CompilerRegs.DE_REG) {
       this.stkp = this.stkp - AsmGenerator.INTSIZE;
@@ -243,7 +249,7 @@ export class AsmGenerator {
    * modify the stack pointer to the new value indicated
    * @param newstkp new value
    */
-  gen_modify_stack(newstkp: number) {
+  gen_modify_stack(newstkp: number, comment = "stk-=2") {
     const lines: string[] = [];
     let k = newstkp - this.stkp;
     if (k == 0) {
@@ -270,7 +276,7 @@ export class AsmGenerator {
           k++;
         }
         while (k) {
-          lines.push(`push b ; stk-=2`);
+          lines.push(`push b ; ${comment}`);
           k = k + AsmGenerator.INTSIZE;
         }
         this.stkp = newstkp;
@@ -297,7 +303,7 @@ export class AsmGenerator {
    * divide the primary register by INTSIZE, never used
    */
   gen_divide_by_two() {
-    return [...this.gen_push(CompilerRegs.HL_REG), `lxi h, 1`, ...this.gen_arithm_shift_right()];
+    return [...this.gen_push(CompilerRegs.HL_REG, "div2"), `lxi h, 1`, ...this.gen_arithm_shift_right()];
   }
 
   /**

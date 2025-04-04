@@ -6,8 +6,7 @@ import { EmulatorWebviewPanel } from "../components/EmulatorWebviewPanel.ts";
 import { MemoryWebviewPanel } from "../components/MemoryWebviewPanel.ts";
 import { printOutputChannel } from "./debugger.ts";
 import { getLabelForAddress, getSourceLocationForAddress } from "@dksap3/lang-asm";
-import { asmLanguageClient, sourceAsts, traceRegions } from "../config.ts";
-import { findFirstCodingLineAtOrAfter } from "../traceUtils.ts";
+import { asmLanguageClient, sourceAsts } from "../config.ts";
 import { isProgram } from "../../../../packages/lang-asm/src/language/generated/ast.ts";
 import { AstNodeWithTextRegion } from "langium";
 
@@ -23,7 +22,13 @@ export interface IStackFrame {
   file: string;
   line: number;
   stackBase: number;
-  stackLabels: string[];
+  stackLabels: Record<string, string>;
+}
+
+export interface IRuntimeState {
+  frames: { name: string; file: string; base: number; mem: number[]; labels: Record<string, string> }[];
+  hlLabel: string;
+  deLabel: string;
 }
 
 type IStepMode = "stepInto" | "stepOut" | "stepOver" | "continue";
@@ -41,6 +46,8 @@ export class AsmRuntime {
   public animateRunning = false;
   public runUntilReturnFrom = "";
   public isDebugging = false;
+  public hlLabel = "";
+  public deLabel = "";
 
   constructor(public logLevel = 1) {
     console.log("AsmRuntime constructed");
@@ -85,6 +92,8 @@ export class AsmRuntime {
     if (!this._debugger) throw Error("No debug session set");
     if (!this.compiledAsm) throw Error("No source");
     this.runUntilReturnFrom = "";
+    this.hlLabel = "";
+    this.deLabel = "";
     this.isDebugging = true;
     asmLanguageClient?.sendNotification("statusChange", { isDebugging: true });
 
@@ -97,7 +106,7 @@ export class AsmRuntime {
         line: 0,
         name: "entry",
         stackBase: 0x0140 - 1, // ugly hack, TODO: set to mem.size or config.initialStackBase
-        stackLabels: [],
+        stackLabels: {},
       },
     ];
 
@@ -113,15 +122,17 @@ export class AsmRuntime {
   updateUI() {
     // if (emulator.states.length == 1) debugger;
     EmulatorWebviewPanel.sendComputerState(emulator.states);
-    EmulatorWebviewPanel.sendStackFrames(
-      this.frames.map((f) => ({
+    EmulatorWebviewPanel.sendRuntimeState({
+      frames: this.frames.map((f) => ({
         file: f.file,
         name: f.name,
         base: f.stackBase,
-        mem: Array.from(new Uint16Array(emulator.mem.ram.slice(emulator.regs.sp, f.stackBase + 1).buffer)),
+        mem: emulator.regs.sp == 0 ? [] : Array.from(new Uint16Array(emulator.mem.ram.slice(emulator.regs.sp, f.stackBase + 1).buffer)),
         labels: f.stackLabels,
-      }))
-    );
+      })),
+      hlLabel: this.hlLabel,
+      deLabel: this.deLabel,
+    });
     MemoryWebviewPanel.sendMemory(Array.from(emulator.mem.ram));
     MemoryWebviewPanel.sendStackFrames(this.frames);
     MemoryWebviewPanel.sendPointers({
@@ -162,6 +173,9 @@ export class AsmRuntime {
         emulator.regs.pc
       }, Instr=${emulator.mem.ram.at(emulator.regs.pc)} until ${this.runUntilReturnFrom}`
     );
+
+    const prevPC = emulator.regs.pc;
+    const prevStackLabel = this.frames[0]?.stackLabels[emulator.regs.sp.toString()];
     emulator.step();
 
     if (this.animateRunning) {
@@ -193,7 +207,7 @@ export class AsmRuntime {
             line: 0,
             index: this.frames.length - 1,
             stackBase: emulator.regs.sp - 1,
-            stackLabels: [],
+            stackLabels: {},
           });
           this.setCurrentLine();
           if (mode != "stepInto") {
@@ -229,24 +243,93 @@ export class AsmRuntime {
       case 0xe5: // push reg
         {
           // TODO retrieve line label eg push d ; param1
-          const loc = getSourceLocationForAddress(this.compiledAsm!.linkerInfo, emulator.regs.pc);
+          const loc = getSourceLocationForAddress(this.compiledAsm!.linkerInfo, prevPC);
           if (loc) {
             const ast = sourceAsts[loc.filename];
             if (loc && isProgram(ast)) {
               const line = ast.lines.find((l) => {
                 const lt = l as AstNodeWithTextRegion;
-                return lt.$textRegion?.range.start.line == loc.line - 1;
+                return lt.$textRegion?.range.start.line == loc.line;
               });
               if (line && line.comment) {
-                this.frames[0].stackLabels.push(line.comment.comment);
+                this.frames[0].stackLabels[emulator.regs.sp.toString()] = line.comment.comment;
               }
             }
           }
         }
         this.setCurrentLine();
         break;
-      case 0xf5:
-        this.frames[0].stackLabels.push("psw");
+      case 0xf5: // push psw
+        this.frames[0].stackLabels[emulator.regs.sp.toString()] = "psw";
+        this.setCurrentLine();
+        break;
+      case 0xd1: // pop d
+        this.deLabel = prevStackLabel || "pop d";
+        this.setCurrentLine();
+        break;
+      case 0xe1: // pop h
+        this.hlLabel = prevStackLabel || "pop h";
+        this.setCurrentLine();
+        break;
+      case 0x24: // inr h
+      case 0x2c: // inr l
+      case 0x25: // dcr h
+      case 0x2d: // dcr l
+      case 0x23: // inx h
+      case 0x2b: // dcx h
+      case 0x09: // dad b
+      case 0x19: // dad d
+      case 0x29: // dad h
+      case 0x39: // dad sp
+      case 0x21: // lxi h
+      case 0x2a: // lhld h
+      case 0x60: // mov h,reg
+      case 0x61:
+      case 0x62:
+      case 0x63:
+      case 0x64:
+      case 0x65:
+      case 0x66:
+      case 0x67:
+      case 0x68: // mov l,reg
+      case 0x69:
+      case 0x6a:
+      case 0x6b:
+      case 0x6c:
+      case 0x6d:
+      case 0x6e:
+      case 0x6f:
+      case 0x26: // mvi h/l
+      case 0x2e:
+        this.hlLabel = "";
+        this.setCurrentLine();
+        break;
+      case 0x14: // inr d
+      case 0x1c: // inr e
+      case 0x15: // dcr d
+      case 0x1d: // dcr e
+      case 0x13: // inx de
+      case 0x1b: // dcx de
+      case 0x11: // lxi de
+      case 0x50: // mov d,reg
+      case 0x51:
+      case 0x52:
+      case 0x53:
+      case 0x54:
+      case 0x55:
+      case 0x56:
+      case 0x57:
+      case 0x58: // mov e,reg
+      case 0x59:
+      case 0x5a:
+      case 0x5b:
+      case 0x5c:
+      case 0x5d:
+      case 0x5e:
+      case 0x5f:
+      case 0x16: // mvi h/l
+      case 0x1e:
+        this.deLabel = "";
         this.setCurrentLine();
         break;
 

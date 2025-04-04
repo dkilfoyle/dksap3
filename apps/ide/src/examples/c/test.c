@@ -2,7 +2,13 @@
 
 main()
 {
-  int i;
-  i = 90;
-  putchar(i); // z
+  int i, j;
+  i = 1;
+  j = 2;
+  bla(i, j);
+}
+
+bla(int a, int b)
+{
+  return a + b;
 }
