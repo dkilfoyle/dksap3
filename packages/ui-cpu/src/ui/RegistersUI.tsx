@@ -1,30 +1,10 @@
 import { useMemo, useState } from "react";
-import { fprint } from "./utils";
+import { fprint, regnames } from "./utils";
 import { getBits, isOn } from "../emulator/Bits";
 import { ComputerState } from "../../../cpusim";
 import { CTRL } from "../emulator/Controller";
 import { CpuComponent, CpuSignal, CpuValue } from "../components/CpuComponent";
 
-const regnames: Record<number, string> = {
-  0b00000: "B",
-  0b00001: "C",
-  0b00010: "D",
-  0b00011: "E",
-  0b00100: "H",
-  0b00101: "L",
-  0b00110: "W",
-  0b00111: "Z",
-  0b01000: "hi(PC)",
-  0b01001: "lo(PC)",
-  0b01010: "hi(SP)",
-  0b01011: "lo(SP)",
-  0b10000: "BC",
-  0b10010: "DE",
-  0b10100: "HL",
-  0b10110: "WZ",
-  0b11000: "PC",
-  0b11010: "SP",
-};
 const extnames = ["NA", "INC", "DEC", "INC2"];
 
 const getValueStatus = (ctrl: { rd: string; wr: string; ext: string; we: number; clk: string; oe: number }, x: string[]) => {

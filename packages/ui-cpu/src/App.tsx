@@ -21,7 +21,11 @@ export interface IRuntimeState {
 
 function App() {
   const [computerState, setComputerState] = useState<ComputerState[]>([getZeroState()]);
-  const [runtimeState, setRuntimeState] = useState<IRuntimeState>({ frames: [], hlLabel: "", deLabel: "" });
+  const [runtimeState, setRuntimeState] = useState<IRuntimeState>({
+    frames: [], //{ name: "main", file: "hello.asm", base: 10, mem: [3, 2, 1], labels: { "9": "x", "7": "y", "5": "z" } }
+    hlLabel: "",
+    deLabel: "",
+  });
 
   useEffect(() => {
     window.addEventListener("message", (event) => {

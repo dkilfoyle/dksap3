@@ -49,3 +49,24 @@ export const getRegister = (regs: number[], reg: "de" | "hl" | "sp") => {
       return ((regs[10] << 8) | regs[11]) & 0xffff;
   }
 };
+
+export const regnames: Record<number, string> = {
+  0b00000: "B",
+  0b00001: "C",
+  0b00010: "D",
+  0b00011: "E",
+  0b00100: "H",
+  0b00101: "L",
+  0b00110: "W",
+  0b00111: "Z",
+  0b01000: "hi(PC)",
+  0b01001: "lo(PC)",
+  0b01010: "hi(SP)",
+  0b01011: "lo(SP)",
+  0b10000: "BC",
+  0b10010: "DE",
+  0b10100: "HL",
+  0b10110: "WZ",
+  0b11000: "PC",
+  0b11010: "SP",
+};

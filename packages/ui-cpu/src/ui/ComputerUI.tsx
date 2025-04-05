@@ -99,7 +99,7 @@ export function ComputerUI({ computerState, runtimeState }: { computerState: Com
         </div>
       </div>
       <CtrlUI compState={curState}></CtrlUI>
-      <RuntimeUI compState={curState} rtState={runtimeState}></RuntimeUI>
+      <RuntimeUI compStates={computerState} halfStage={halfStage} rtState={runtimeState}></RuntimeUI>
     </div>
   );
 }
