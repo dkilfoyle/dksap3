@@ -132,9 +132,10 @@ export const RuntimeUI = ({ compStates, halfStage, rtState }: { compStates: Comp
                   return (
                     <motion.div
                       layout
+                      initial={{ scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.8, opacity: 0 }}
-                      transition={{ type: "spring" }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 900, damping: 40 }}
                       className="flex flex-row gap-4"
                       key={`frame${i}`}>
                       <span className="w-[40px] pr-2 text-right">{fprint16(f.base, sbformat, true)}</span>
@@ -170,9 +171,10 @@ export const RuntimeUI = ({ compStates, halfStage, rtState }: { compStates: Comp
                   return (
                     <motion.div
                       layout
+                      initial={{ scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.8, opacity: 0 }}
-                      transition={{ type: "spring" }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 900, damping: 40 }}
                       className="flex flex-row gap-4"
                       key={`stack${addr}`}>
                       <span className="w-[40px] pr-2 text-right">{fprint16(addr, spformat, true)}</span>

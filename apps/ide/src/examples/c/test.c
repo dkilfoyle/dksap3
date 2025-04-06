@@ -2,13 +2,14 @@
 
 main()
 {
-  int i, j;
-  i = 1;
-  j = 2;
-  bla(i, j);
-}
-
-bla(int a, int b)
-{
-  return a + b;
+  int i;
+  i = 5;
+  if (i == 5)
+  {
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
 }

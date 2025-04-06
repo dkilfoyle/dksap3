@@ -241,8 +241,8 @@ export class AsmGenerator {
    * @param label the label
    * @param ft if true jnz is generated, jz otherwise
    */
-  gen_test_jump(label: number, ft: number) {
-    return [`mov a, h`, `ora l`, ft ? `jnz $${label}` : `jz $${label}`];
+  gen_test_jump(label: string, ft: number) {
+    return [`mov a, h`, `ora l`, ft ? `jnz ${label}` : `jz ${label}`];
   }
 
   /**

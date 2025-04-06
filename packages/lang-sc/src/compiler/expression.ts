@@ -97,6 +97,8 @@ function compileSubExpression(scc: ScCompiler, expression: Expression): Expressi
         case "*":
         case "/":
           return applyMultiplication(scc, expression);
+        case "==":
+          return applyEqualityTest(scc, expression);
         default:
           throw new AstNodeError(expression, `Unimplemented binary expression operator ${expression.operator}`);
       }
@@ -157,6 +159,19 @@ function applyAssignment(scc: ScCompiler, binary: BinaryExpression): ExpressionR
     ${(rightResult = compileSubExpression(scc, binary.right)).node}
     ${joinToNode(rightResult.reg & 1 ? rvalue(scc, rightResult).lines : [], NL)}
     ${joinToNode(store(scc, leftResult.lval), NL)}
+  `;
+  return { reg: 0, lval, node };
+}
+
+function applyEqualityTest(scc: ScCompiler, binary: BinaryExpression): ExpressionResult {
+  const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
+  let leftResult, rightResult: ExpressionResult;
+  const node = expandTracedToNode(binary)`
+    ; ${binary.$cstNode!.text}
+    ${(leftResult = compileExpression(scc, binary.left)).node}
+    ${joinToNode(scc.generator.gen_push(leftResult.reg, "push k"))}
+    ${(rightResult = compileExpression(scc, binary.right)).node}
+    ${joinToNode(scc.generator.gen_equal(), NL)}
   `;
   return { reg: 0, lval, node };
 }

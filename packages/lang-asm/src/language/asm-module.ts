@@ -18,6 +18,7 @@ import { AsmCompletionProvider } from "./asm-completion.js";
 import { AsmFoldProvider } from "./asm-fold.js";
 import { AsmScopeComputation, AsmScopeProvider } from "./asm-scope.js";
 import { AsmWorkspaceManager } from "./asm-workspace.js";
+import { AsmCommentProvider } from "./asm-comment.js";
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -40,7 +41,10 @@ export type AsmServices = LangiumServices & AsmAddedServices;
  * selected services, while the custom services must be fully specified.
  */
 export const AsmModule: Module<AsmServices, PartialLangiumServices & AsmAddedServices> = {
-  documentation: { DocumentationProvider: () => new AsmDocumentationProvider() },
+  documentation: {
+    DocumentationProvider: (services) => new AsmDocumentationProvider(services),
+    CommentProvider: (services) => new AsmCommentProvider(services),
+  },
   validation: {
     AsmValidator: () => new AsmValidator(),
   },

@@ -1,7 +1,9 @@
 import {
   Block,
+  IfStatement,
   InlineAssembly,
   isExpression,
+  isIfStatement,
   isInlineAssembly,
   isLocalVariableDeclaration,
   isReturnStatement,
@@ -14,7 +16,7 @@ import {
 } from "../language/generated/ast";
 import { AsmGenerator } from "./Generator";
 import { compileExpression, ExpressionResult } from "./expression";
-import { CompositeGeneratorNode, expandTracedToNode, joinToNode, joinTracedToNode } from "langium/generate";
+import { CompositeGeneratorNode, expandTracedToNode, expandTracedToNodeIf, JoinOptions, joinToNode, joinTracedToNode } from "langium/generate";
 import { userPreferences } from "../language/sc-userpreferences";
 import { ScCompiler } from "./sc-compiler";
 import { compileWhile } from "./while";
@@ -29,6 +31,8 @@ const getVariableType = (v: LocalVariableDeclaration) => {
     } else return v.type.type == "char" ? SymbolType.CCHAR : SymbolType.CINT;
   }
 };
+
+const NL: JoinOptions<string> = { appendNewLineIfNotEmpty: true };
 
 export const compileBlock = (scc: ScCompiler, block: Block) => {
   // return expandTracedToNode(block)`
@@ -54,6 +58,8 @@ export const compileStatement = (scc: ScCompiler, statement: Statement): Composi
       return compileAssembly(scc, statement);
     case isWhileStatement(statement):
       return compileWhile(scc, statement);
+    case isIfStatement(statement):
+      return compileIf(scc, statement);
     default:
       console.error("Unimplemented statement ", statement);
   }
@@ -147,7 +153,52 @@ const compileLocalVarName = (scc: ScCompiler, localVar: LocalVarName, decl: Loca
 const compileReturn = (scc: ScCompiler, ret: ReturnStatement) => {
   const exprNode = ret.value ? compileExpression(scc, ret.value).node : null;
   return expandTracedToNode(ret)`
+    ; return ${ret.value?.$cstNode?.text}
     ${exprNode}
     jmp $${scc.generator.fexitlab}
   `;
+};
+
+const compileIf = (scc: ScCompiler, ifstat: IfStatement) => {
+  const fstkp = scc.generator.stkp;
+  const flex = scc.symbol_table.local_table_index;
+  const flab = scc.generator.get_label();
+
+  const block = (b: Block) => {
+    return expandTracedToNode(b)`
+      ${compileBlock(scc, b)}
+      ${joinToNode(scc.generator.gen_modify_stack(fstkp), NL)}
+      ${(function () {
+        scc.symbol_table.local_table_index = flex;
+        return undefined;
+      })()}
+    `;
+  };
+
+  if (!ifstat.elseBlock) {
+    // if only
+    return expandTracedToNode(ifstat)`
+      ; if_${flab} ${ifstat.condition.$cstNode?.text}
+      ${compileExpression(scc, ifstat.condition).node}
+      ; if false jump to end
+      ${joinToNode(scc.generator.gen_test_jump(`$${flab}_ifend`, 0), NL)}
+      ; if true block
+      ${block(ifstat.block)}
+      $${flab}_ifend:
+    `;
+  } else {
+    // if else
+    return expandTracedToNode(ifstat)`
+      ; ifelse_${flab} ${ifstat.condition.$cstNode?.text}
+      ${compileExpression(scc, ifstat.condition).node}
+      ; if false jump to else
+      ${joinToNode(scc.generator.gen_test_jump(`$${flab}_else`, 0), NL)}
+      ; if true block
+      ${block(ifstat.block)}
+      jmp $${flab}_ifend
+      $${flab}_else:
+      ${block(ifstat.elseBlock)}
+      $${flab}_ifend:
+  `;
+  }
 };
