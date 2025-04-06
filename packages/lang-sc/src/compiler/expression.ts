@@ -26,7 +26,6 @@ import { CompositeGeneratorNode, expandToNode, expandTracedToNode, JoinOptions, 
 import { ScCompiler } from "./sc-compiler";
 
 const FETCH = 1;
-
 const NL: JoinOptions<string> = { appendNewLineIfNotEmpty: true };
 
 class AstNodeError extends Error {
@@ -34,10 +33,6 @@ class AstNodeError extends Error {
     const position = node.$cstNode!.range.start;
     super(`${message} @${position.line + 1}:${position.character + 1}`);
   }
-}
-
-function isNumber(value: unknown): value is number {
-  return typeof value === "number";
 }
 
 export interface ExpressionResult {
@@ -81,6 +76,12 @@ function check_rvalue(scc: ScCompiler, res: ExpressionResult) {
   return res;
 }
 
+const leafNode = (node: AstNode, lines: string[]) => {
+  return expandTracedToNode(node)`
+    ${joinToNode(lines)}
+  `;
+};
+
 export function compileExpression(scc: ScCompiler, expression: Expression): ExpressionResult {
   const res = compileSubExpression(scc, expression);
   return check_rvalue(scc, res);
@@ -94,11 +95,19 @@ function compileSubExpression(scc: ScCompiler, expression: Expression): Expressi
           return applyAssignment(scc, expression);
         case "+":
           return applyAddition(scc, expression);
+        case "+":
+          return applySubtraction(scc, expression);
         case "*":
         case "/":
           return applyMultiplication(scc, expression);
         case "==":
-          return applyEqualityTest(scc, expression);
+        case "!=":
+        case "<":
+        case "<=":
+        case ">":
+        case ">=":
+        case "<":
+          return applyComparison(scc, expression.operator, expression);
         default:
           throw new AstNodeError(expression, `Unimplemented binary expression operator ${expression.operator}`);
       }
@@ -114,12 +123,6 @@ function compileSubExpression(scc: ScCompiler, expression: Expression): Expressi
       throw new AstNodeError(expression, "Unknown expression type found ");
   }
 }
-
-const leafNode = (node: AstNode, lines: string[]) => {
-  return expandTracedToNode(node)`
-    ${joinToNode(lines)}
-  `;
-};
 
 function compileNumberExpression(scc: ScCompiler, numexp: NumberExpression): ExpressionResult {
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
@@ -163,70 +166,91 @@ function applyAssignment(scc: ScCompiler, binary: BinaryExpression): ExpressionR
   return { reg: 0, lval, node };
 }
 
-function applyEqualityTest(scc: ScCompiler, binary: BinaryExpression): ExpressionResult {
+function applyComparison(scc: ScCompiler, op: ">" | "<" | ">=" | "<=" | "==" | "!=", binary: BinaryExpression): ExpressionResult {
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
   let leftResult, rightResult: ExpressionResult;
+
+  const gentest = (l: ILValue, r: ILValue) => {
+    const unsigned = nosign(l) && nosign(r);
+    switch (op) {
+      case "<":
+        return unsigned ? scc.generator.gen_unsigned_less_than() : scc.generator.gen_less_than();
+      case "<=":
+        return unsigned ? scc.generator.gen_unsigned_less_or_equal() : scc.generator.gen_less_or_equal();
+      case ">":
+        return unsigned ? scc.generator.gen_unsigned_greater_than() : scc.generator.gen_greater_than();
+      case ">=":
+        return unsigned ? scc.generator.gen_unsigned_greater_or_equal() : scc.generator.gen_greater_or_equal();
+      case "==":
+        return scc.generator.gen_equal();
+      case "!=":
+        return scc.generator.gen_not_equal();
+    }
+  };
+
   const node = expandTracedToNode(binary)`
     ; ${binary.$cstNode!.text}
     ${(leftResult = compileExpression(scc, binary.left)).node}
     ${joinToNode(scc.generator.gen_push(leftResult.reg, "push k"))}
     ${(rightResult = compileExpression(scc, binary.right)).node}
-    ${joinToNode(scc.generator.gen_equal(), NL)}
+    ${joinToNode(gentest(leftResult.lval, rightResult.lval), NL)}
   `;
   return { reg: 0, lval, node };
 }
 
-function applyAddition(scc: ScCompiler, binary: BinaryExpression): ExpressionResult {
-  const leftResult = compileSubExpression(scc, binary.left);
-  let k = leftResult.reg;
-  // HL = &left
-  let rLeftLines: string[] = [];
-  if (leftResult.reg & FETCH) {
-    const { reg, lines } = rvalue(scc, leftResult);
-    k = reg;
-    rLeftLines = lines;
-  }
-  // HL = *left
-  let pushLines: string[] = [];
-  if (leftResult.lval.indirect) pushLines = scc.generator.gen_push(k, leftResult.lval);
-  // top of stack now contains *left
+function applySubtraction(scc: ScCompiler, binary: BinaryExpression): ExpressionResult {
+  const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
+  let leftResult, rightResult: ExpressionResult;
 
-  const rightResult = compileSubExpression(scc, binary.right);
-  // HL = &right
-  let rRightLines: string[] = [];
-  if (rightResult.reg & 1) {
-    const { lines } = rvalue(scc, rightResult);
-    rRightLines = lines;
-  }
+  // if dbl can be pointer-int or pointer-pointer
+  // if pointer-int then multiple int by int size
+  // if pointer-pointer then divide result by two
 
-  // HL = *right
-
-  let mulLines: string[] = [];
-  if (dbltest(leftResult.lval, rightResult.lval)) {
-    // eg mypointer + myint
-    // eg myarray + myint
-    // if so then myint index *= pointertype size
-    mulLines = [
-      "; HL *= sizeof(left) if left is pointerffset by 2 or struct array index by size",
-      ...scc.generator.gen_multiply(leftResult.lval.ptr_type, leftResult.lval.tagsym ? leftResult.lval.tagsym.size : AsmGenerator.INTSIZE),
-    ];
-  }
-
-  const addLines = scc.generator.gen_add(leftResult.lval, rightResult.lval);
-  // pop d ; d = *left
-  // dad d; hl = hl + d ie right = right + left
-
-  result(leftResult.lval, rightResult.lval);
   const node = expandTracedToNode(binary)`
-    ${leftResult.node}
-    ${joinToNode(rLeftLines, NL)}
-    ${joinToNode(pushLines, NL)}
-    ${rightResult.node}
-    ${joinToNode(rRightLines, NL)}
-    ${joinToNode(mulLines, NL)}
-    ${joinToNode(addLines, NL)}
+    ; ${binary.$cstNode!.text}
+    ${(leftResult = compileExpression(scc, binary.left)).node}
+    ${joinToNode(scc.generator.gen_push(leftResult.reg, "push k"))}
+    ${(rightResult = compileExpression(scc, binary.right)).node}
+    ${
+      dbltest(leftResult.lval, rightResult.lval)
+        ? joinToNode(scc.generator.gen_multiply(leftResult.lval.ptr_type, leftResult.lval.tagsym ? leftResult.lval.tagsym.size : 2), NL)
+        : undefined
+    }
+    ${joinToNode(scc.generator.gen_sub(), NL)}
+    ${
+      leftResult.lval.ptr_type & SymbolType.CINT && rightResult.lval.ptr_type & SymbolType.CINT
+        ? joinToNode(scc.generator.gen_divide_by_two(), NL)
+        : undefined
+    }
   `;
-  return { reg: CompilerRegs.NONE, lval: leftResult.lval, node };
+  result(leftResult.lval, rightResult.lval);
+  return { reg: 0, lval: leftResult.lval, node };
+}
+
+function applyAddition(scc: ScCompiler, binary: BinaryExpression): ExpressionResult {
+  const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
+  let leftResult, rightResult: ExpressionResult;
+
+  // if left is pointer and right is int, scale right
+  // if left is int and right is pointer, scale left
+
+  const node = expandTracedToNode(binary)`
+    ; ${binary.$cstNode!.text}
+    ${(leftResult = compileExpression(scc, binary.left)).node}
+    ${joinToNode(scc.generator.gen_push(leftResult.reg, "push k"))}
+    ${(rightResult = compileExpression(scc, binary.right)).node}
+    ${
+      dbltest(leftResult.lval, rightResult.lval)
+        ? joinToNode(
+            scc.generator.gen_multiply(leftResult.lval.ptr_type, leftResult.lval.tagsym ? leftResult.lval.tagsym.size : AsmGenerator.INTSIZE),
+            NL
+          )
+        : undefined
+    }
+    ${joinToNode(scc.generator.gen_add(leftResult.lval, rightResult.lval), NL)}
+  `;
+  result(leftResult.lval, rightResult.lval);
+  return { reg: 0, lval: leftResult.lval, node };
 }
 
 function applyMultiplication(scc: ScCompiler, binary: BinaryExpression): ExpressionResult {

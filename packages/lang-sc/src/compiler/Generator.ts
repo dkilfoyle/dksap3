@@ -578,7 +578,7 @@ export class AsmGenerator {
   /**
    * greater than (unsigned)
    */
-  gen_usigned_greater_than() {
+  gen_unsigned_greater_than() {
     return [...this.gen_pop(), ...this.gen_call("ccugt")];
   }
 
