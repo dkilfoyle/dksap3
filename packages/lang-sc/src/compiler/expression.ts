@@ -506,8 +506,7 @@ function result(lval: ILValue, lval2: ILValue) {
   // lval unchanged
 }
 
-function nosign(x: ILValue) {
-  let ptr: ISymbol | 0;
-  if (x.ptr_type || ((ptr = x.symbol) && ptr.type & 1)) return 1;
+function nosign(lval: ILValue) {
+  if (lval.ptr_type || (lval.symbol && lval.symbol.type & SymbolType.UNSIGNED)) return 1;
   return 0;
 }

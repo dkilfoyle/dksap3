@@ -42,7 +42,8 @@ FunctionDeclaration:
 // ########### Statements
 
 Block:
-    '{' statements+=Statement* '}';
+    '{' statements+=Statement* '}' |
+    statements+=Statement;
 
 Statement:
     IfStatement |

@@ -3,6 +3,7 @@ import {
   IfStatement,
   InlineAssembly,
   isExpression,
+  isForStatement,
   isIfStatement,
   isInlineAssembly,
   isLocalVariableDeclaration,
@@ -19,7 +20,7 @@ import { compileExpression, ExpressionResult } from "./expression";
 import { CompositeGeneratorNode, expandTracedToNode, expandTracedToNodeIf, JoinOptions, joinToNode, joinTracedToNode } from "langium/generate";
 import { userPreferences } from "../language/sc-userpreferences";
 import { ScCompiler } from "./sc-compiler";
-import { compileWhile } from "./while";
+import { compileFor, compileWhile } from "./while";
 import { SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
 
 const getVariableType = (v: LocalVariableDeclaration) => {
@@ -58,6 +59,8 @@ export const compileStatement = (scc: ScCompiler, statement: Statement): Composi
       return compileAssembly(scc, statement);
     case isWhileStatement(statement):
       return compileWhile(scc, statement);
+    case isForStatement(statement):
+      return compileFor(scc, statement);
     case isIfStatement(statement):
       return compileIf(scc, statement);
     default:
@@ -74,13 +77,11 @@ const compileAssembly = (scc: ScCompiler, asm: InlineAssembly) => {
 };
 
 const compileLocalDeclaration = (scc: ScCompiler, decl: LocalVariableDeclaration) => {
-  return expandTracedToNode(decl)`
-    ${userPreferences.compiler.commentStatements ? `; ${decl.$cstNode!.text}` : undefined}
-    ${joinTracedToNode(decl, "varNames")(
-      decl.varNames.map((vn) => compileLocalVarName(scc, vn as LocalVarName, decl)),
-      { appendNewLineIfNotEmpty: true }
-    )}
-  `;
+  return expandTracedToNode(decl)`  ${userPreferences.compiler.commentStatements ? `; ${decl.$cstNode!.text}` : undefined}
+  ${joinTracedToNode(decl, "varNames")(
+    decl.varNames.map((vn) => compileLocalVarName(scc, vn as LocalVarName, decl)),
+    { appendNewLineIfNotEmpty: true }
+  )}`;
 };
 
 const compileLocalVarName = (scc: ScCompiler, localVar: LocalVarName, decl: LocalVariableDeclaration) => {

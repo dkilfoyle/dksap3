@@ -3,13 +3,12 @@
 main()
 {
   int i;
-  i = 5;
-  if (i == 5)
+  for (i = 0; i < 5; i++)
   {
-    return 1;
+    bla(i);
   }
-  else
-  {
-    return 0;
-  }
+}
+
+bla(int x)
+{
 }

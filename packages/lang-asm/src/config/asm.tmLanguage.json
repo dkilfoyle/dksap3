@@ -15,13 +15,13 @@
       "include": "#mnemonics"
     },
     {
+      "include": "#labels"
+    },
+    {
       "include": "#numbers"
     },
     {
       "include": "#includes"
-    },
-    {
-      "include": "#labels"
     }
   ],
   "repository": {
@@ -160,7 +160,7 @@
         },
         {
           "name": "constant.numeric.integer.hexadecimal.i8080asm",
-          "match": "\\$[0-9a-fA-F]+\\b"
+          "match": "\\$[0-9a-fA-F]+(?!:)\\b"
         },
         {
           "name": "constant.numeric.integer.hexadecimal.i8080asm",

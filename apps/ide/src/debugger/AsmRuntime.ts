@@ -335,7 +335,7 @@ export class AsmRuntime {
 
       case 0x76: // hlt
         this.setCurrentLine();
-        return this.stop("hlt", `HLT at PC = ${emulator.regs.pc - 1}`);
+        return this.stop("hlt", `HLT at PC = ${emulator.regs.pc - 1}, HL = ${emulator.regs.hl}`);
       default:
         this.setCurrentLine();
     }
