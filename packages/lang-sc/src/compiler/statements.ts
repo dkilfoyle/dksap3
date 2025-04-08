@@ -2,6 +2,7 @@ import {
   Block,
   IfStatement,
   InlineAssembly,
+  isDoStatement,
   isExpression,
   isForStatement,
   isIfStatement,
@@ -20,7 +21,7 @@ import { compileExpression, ExpressionResult } from "./expression";
 import { CompositeGeneratorNode, expandTracedToNode, expandTracedToNodeIf, JoinOptions, joinToNode, joinTracedToNode } from "langium/generate";
 import { userPreferences } from "../language/sc-userpreferences";
 import { ScCompiler } from "./sc-compiler";
-import { compileFor, compileWhile } from "./while";
+import { compileDo, compileFor, compileWhile } from "./while";
 import { SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
 
 const getVariableType = (v: LocalVariableDeclaration) => {
@@ -59,6 +60,8 @@ export const compileStatement = (scc: ScCompiler, statement: Statement): Composi
       return compileAssembly(scc, statement);
     case isWhileStatement(statement):
       return compileWhile(scc, statement);
+    case isDoStatement(statement):
+      return compileDo(scc, statement);
     case isForStatement(statement):
       return compileFor(scc, statement);
     case isIfStatement(statement):

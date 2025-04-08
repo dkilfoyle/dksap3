@@ -1,4 +1,4 @@
-import { Expression, ForStatement, WhileStatement } from "src/language/generated/ast";
+import { DoStatement, Expression, ForStatement, WhileStatement } from "src/language/generated/ast";
 import { ScCompiler } from "./sc-compiler";
 import { expandToNode, expandTracedToNode, JoinOptions, joinToNode } from "langium/generate";
 import { compileBlock } from "./statements";
@@ -46,6 +46,21 @@ export class WhileTable {
       exit_label: `$${lbl}_wex`,
       test_label: `$${lbl}_wif`,
       body_label: "",
+    };
+    this.addWhile(ws);
+    return ws;
+  }
+  createDo(scc: ScCompiler) {
+    const lbl = scc.generator.get_label();
+    const ws: IWhile = {
+      symbol_idx: scc.symbol_table.local_table_index,
+      stack_pointer: scc.generator.stkp,
+      type: WSType.WSDO,
+      case_test: 0, //scc.generator.get_label(),
+      label_num: lbl,
+      exit_label: `$${lbl}_dex`,
+      test_label: `$${lbl}_dif`,
+      body_label: `$${lbl}_dbl`,
     };
     this.addWhile(ws);
     return ws;
@@ -106,6 +121,26 @@ export const compileWhile = (scc: ScCompiler, whilestat: WhileStatement) => {
       ; while block
       ${compileBlock(scc, whilestat.block)}
       jmp ${wt.test_label}
+    ${wt.exit_label}:
+      ${joinToNode(scc.generator.gen_modify_stack(wt.stack_pointer), NL)}
+  `;
+
+  scc.symbol_table.local_table_index = wt.symbol_idx; // pop off any locals created in while body
+  scc.while_table.delWhile();
+  return node;
+};
+
+export const compileDo = (scc: ScCompiler, dostat: DoStatement) => {
+  const wt = scc.while_table.createDo(scc);
+  const node = expandTracedToNode(dostat)`
+    ; do (${dostat.condition.$cstNode?.text})
+    ${wt.body_label}:
+      ${compileBlock(scc, dostat.block)}
+    ${wt.test_label}:
+      ${compileExpression(scc, dostat.condition).node}
+      ; jmp to loop exit if a==0
+      ${joinToNode(scc.generator.gen_test_jump(`${wt.exit_label}`, 0), NL)}
+      jmp ${wt.body_label}
     ${wt.exit_label}:
       ${joinToNode(scc.generator.gen_modify_stack(wt.stack_pointer), NL)}
   `;

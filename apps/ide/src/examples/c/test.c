@@ -3,14 +3,15 @@
 main()
 {
   int i;
-  for (i = 0; i < 5; i++)
+  do
   {
     bla(i);
-  }
+    i++;
+  } while (i < 10);
 }
 
 bla(int x)
 {
-  putchar(itoa(x));
+  putchar(x + 48);
   putchar(10);
 }

@@ -47,6 +47,7 @@ export type ScKeywordNames =
     | "and"
     | "auto"
     | "char"
+    | "do"
     | "else"
     | "extern"
     | "for"
@@ -89,7 +90,7 @@ export function isNamedElement(item: unknown): item is NamedElement {
     return reflection.isInstance(item, NamedElement);
 }
 
-export type Statement = Expression | ForStatement | IfStatement | InlineAssembly | LocalVariableDeclaration | ReturnStatement | StructDeclaration | WhileStatement;
+export type Statement = DoStatement | Expression | ForStatement | IfStatement | InlineAssembly | LocalVariableDeclaration | ReturnStatement | StructDeclaration | WhileStatement;
 
 export const Statement = 'Statement';
 
@@ -106,7 +107,7 @@ export function isTypeReference(item: unknown): item is TypeReference {
 }
 
 export interface BinaryExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'BinaryExpression';
     left: Expression;
     operator: '!=' | '%' | '*' | '+' | '-' | '/' | '<' | '<=' | '=' | '==' | '>' | '>=' | 'and' | 'or';
@@ -120,7 +121,7 @@ export function isBinaryExpression(item: unknown): item is BinaryExpression {
 }
 
 export interface Block extends AstNode {
-    readonly $container: ForStatement | FunctionDeclaration | IfStatement | WhileStatement;
+    readonly $container: DoStatement | ForStatement | FunctionDeclaration | IfStatement | WhileStatement;
     readonly $type: 'Block';
     statements: Array<Statement>;
 }
@@ -132,7 +133,7 @@ export function isBlock(item: unknown): item is Block {
 }
 
 export interface CharExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'CharExpression';
     value: string;
 }
@@ -141,6 +142,19 @@ export const CharExpression = 'CharExpression';
 
 export function isCharExpression(item: unknown): item is CharExpression {
     return reflection.isInstance(item, CharExpression);
+}
+
+export interface DoStatement extends AstNode {
+    readonly $container: Block;
+    readonly $type: 'DoStatement';
+    block: Block;
+    condition: Expression;
+}
+
+export const DoStatement = 'DoStatement';
+
+export function isDoStatement(item: unknown): item is DoStatement {
+    return reflection.isInstance(item, DoStatement);
 }
 
 export interface ForStatement extends AstNode {
@@ -272,7 +286,7 @@ export function isLocalVarName(item: unknown): item is LocalVarName {
 }
 
 export interface NumberExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'NumberExpression';
     value: number;
 }
@@ -322,7 +336,7 @@ export function isReturnStatement(item: unknown): item is ReturnStatement {
 }
 
 export interface StringExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'StringExpression';
     value: string;
 }
@@ -374,7 +388,7 @@ export function isStructTypeReference(item: unknown): item is StructTypeReferenc
 }
 
 export interface SymbolExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'SymbolExpression';
     element: Reference<NamedElement>;
     functionCall?: FunctionCall;
@@ -390,7 +404,7 @@ export function isSymbolExpression(item: unknown): item is SymbolExpression {
 }
 
 export interface UnaryExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'UnaryExpression';
     prefix: '!' | '%' | '*' | '-';
     value: Expression;
@@ -434,6 +448,7 @@ export type ScAstType = {
     Block: Block
     CharExpression: CharExpression
     Definition: Definition
+    DoStatement: DoStatement
     Expression: Expression
     ForStatement: ForStatement
     FunctionCall: FunctionCall
@@ -464,7 +479,7 @@ export type ScAstType = {
 export class ScAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [BinaryExpression, Block, CharExpression, Definition, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, Statement, StringExpression, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
+        return [BinaryExpression, Block, CharExpression, Definition, DoStatement, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, Statement, StringExpression, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
@@ -477,6 +492,7 @@ export class ScAstReflection extends AbstractAstReflection {
             case UnaryExpression: {
                 return this.isSubtype(Expression, supertype);
             }
+            case DoStatement:
             case Expression:
             case ForStatement:
             case IfStatement:
@@ -555,6 +571,15 @@ export class ScAstReflection extends AbstractAstReflection {
                     name: CharExpression,
                     properties: [
                         { name: 'value' }
+                    ]
+                };
+            }
+            case DoStatement: {
+                return {
+                    name: DoStatement,
+                    properties: [
+                        { name: 'block' },
+                        { name: 'condition' }
                     ]
                 };
             }

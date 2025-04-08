@@ -48,6 +48,7 @@ Block:
 Statement:
     IfStatement |
     WhileStatement |
+    DoStatement ";"|
     ForStatement |
     LocalVariableDeclaration | 
     ReturnStatement ';' | 
@@ -67,6 +68,9 @@ WhileStatement:
 
 ForStatement:
     'for' '(' init=Expression? ';' condition=Expression? ';' execution=Expression? ')' block=Block;
+
+DoStatement:
+    'do' block=Block 'while' '(' condition=Expression ')';
 
 ReturnStatement:
     'return' value=Expression?;
