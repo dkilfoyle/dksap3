@@ -35,7 +35,7 @@ export class Controller implements IClocked {
   stage = 0;
   stage_rst = 1;
   stage_max = 2;
-  public bdos: (c: number, de: number) => void = () => {};
+  // public bdos: (c: number, de: number) => void = () => {};
 
   callResult = "unknown";
   returnResult = "unknown";

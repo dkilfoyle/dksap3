@@ -112,7 +112,7 @@ export class AsmRuntime {
 
     this.log(`Asm runtime start uri=${this.compiledAsm.uri}`);
     emulator.reset(Array.from(this.compiledAsm.machineCode));
-    emulator.ctrl.bdos = this.bdos;
+    // emulator.ctrl.bdos = this.bdos;
 
     this.setCurrentLine();
     // this.verifyBreakpoints(program);
@@ -332,10 +332,13 @@ export class AsmRuntime {
         this.deLabel = "";
         this.setCurrentLine();
         break;
-
       case 0x76: // hlt
         this.setCurrentLine();
         return this.stop("hlt", `HLT at PC = ${emulator.regs.pc - 1}, HL = ${emulator.regs.hl}`);
+      case 0xd3: // out
+        this._debugger!.sendEvent(new OutputEvent(`Out A=${emulator.alu.acc}, HL=${emulator.regs.hl}\n`));
+        this.setCurrentLine();
+        break;
       default:
         this.setCurrentLine();
     }

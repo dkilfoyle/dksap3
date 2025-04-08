@@ -1,10 +1,12 @@
 import { AstNode, interruptAndCheck } from "langium";
 import {
   BinaryExpression,
+  CharExpression,
   Expression,
   FunctionDeclaration,
   GlobalVarName,
   isBinaryExpression,
+  isCharExpression,
   isFunctionDeclaration,
   isGlobalVarName,
   isLocalVarName,
@@ -95,18 +97,19 @@ function compileSubExpression(scc: ScCompiler, expression: Expression): Expressi
           return applyAssignment(scc, expression);
         case "+":
           return applyAddition(scc, expression);
-        case "+":
+        case "-":
           return applySubtraction(scc, expression);
         case "*":
         case "/":
           return applyMultiplication(scc, expression);
+        case "%":
+          return applyModulus(scc, expression);
         case "==":
         case "!=":
         case "<":
         case "<=":
         case ">":
         case ">=":
-        case "<":
           return applyComparison(scc, expression.operator, expression);
         default:
           throw new AstNodeError(expression, `Unimplemented binary expression operator ${expression.operator}`);
@@ -119,6 +122,8 @@ function compileSubExpression(scc: ScCompiler, expression: Expression): Expressi
       return compileNumberExpression(scc, expression);
     case isStringExpression(expression):
       return compileStringExpression(scc, expression);
+    case isCharExpression(expression):
+      return compileCharExpression(scc, expression);
     default:
       throw new AstNodeError(expression, "Unknown expression type found ");
   }
@@ -138,6 +143,12 @@ function compileStringExpression(scc: ScCompiler, strexp: StringExpression): Exp
   // load h with the address of str[0]
   const lines = [`lxi h, $${scc.litlab}+${pos}`];
   return { reg: 0, lval, node: leafNode(strexp, lines) };
+}
+
+function compileCharExpression(scc: ScCompiler, charexp: CharExpression): ExpressionResult {
+  const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
+  const lines = [`lxi h, ${charexp.value.charCodeAt(1)}`];
+  return { reg: 0, lval, node: leafNode(charexp, lines) };
 }
 
 function compileUnaryExpression(scc: ScCompiler, unary: UnaryExpression): ExpressionResult {
@@ -250,6 +261,19 @@ function applyAddition(scc: ScCompiler, binary: BinaryExpression): ExpressionRes
     ${joinToNode(scc.generator.gen_add(leftResult.lval, rightResult.lval), NL)}
   `;
   result(leftResult.lval, rightResult.lval);
+  return { reg: 0, lval: leftResult.lval, node };
+}
+
+function applyModulus(scc: ScCompiler, binary: BinaryExpression): ExpressionResult {
+  const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
+  let leftResult, rightResult: ExpressionResult;
+  const node = expandTracedToNode(binary)`
+    ; ${binary.$cstNode!.text}
+    ${(leftResult = compileExpression(scc, binary.left)).node}
+    ${joinToNode(scc.generator.gen_push(leftResult.reg, "push k"))}
+    ${(rightResult = compileExpression(scc, binary.right)).node}
+    ${joinToNode(nosign(leftResult.lval) && nosign(rightResult.lval) ? scc.generator.gen_umod() : scc.generator.gen_mod(), NL)}
+  `;
   return { reg: 0, lval: leftResult.lval, node };
 }
 

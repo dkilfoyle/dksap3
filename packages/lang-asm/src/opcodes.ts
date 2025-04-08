@@ -293,7 +293,7 @@ export const opcodes: Record<string, IInstruction> = {
   "0xda": { instr: "JC", code: 0xda, arg1: "addr", arg2: "", bytes: 3, flags: "----", stages: 9, help: "Jump to addr if FlagC == 1" },
   "0x00": { instr: "NOP", code: 0x00, arg1: "", arg2: "", bytes: 1, flags: "----", stages: 4, help: "Do nothing" },
   "0x76": { instr: "HLT", code: 0x76, arg1: "", arg2: "", bytes: 1, flags: "----", stages: 4, help: "Halt execution" },
-  "0xd3": { instr: "OUT", code: 0xd3, arg1: "", arg2: "", bytes: 1, flags: "----", stages: 4, help: "Out" },
+  "0xd3": { instr: "OUT", code: 0xd3, arg1: "imm8", arg2: "", bytes: 2, flags: "----", stages: 4, help: "Copy A to 8 bit port" },
   "0xe9": { instr: "PCHL", code: 0xe9, arg1: "", arg2: "", bytes: 1, flags: "----", stages: 4, help: "set PC to HL" },
 };
 

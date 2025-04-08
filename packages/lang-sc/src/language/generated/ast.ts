@@ -13,6 +13,7 @@ export const ScTerminals = {
     ID: /[_a-zA-Z][\w_]*/,
     NUMBER: /[0-9]+/,
     ASM: /#asm[\s\S]*?#endasm/,
+    CHAR: /'.'/,
     ML_COMMENT: /\/\*[\s\S]*?\*\//,
     SL_COMMENT: /\/\/[^\n\r]*/,
 };
@@ -72,7 +73,7 @@ export function isDefinition(item: unknown): item is Definition {
     return reflection.isInstance(item, Definition);
 }
 
-export type Expression = BinaryExpression | NumberExpression | StringExpression | SymbolExpression | UnaryExpression;
+export type Expression = BinaryExpression | CharExpression | NumberExpression | StringExpression | SymbolExpression | UnaryExpression;
 
 export const Expression = 'Expression';
 
@@ -108,7 +109,7 @@ export interface BinaryExpression extends AstNode {
     readonly $container: BinaryExpression | Block | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'BinaryExpression';
     left: Expression;
-    operator: '!=' | '*' | '+' | '-' | '/' | '<' | '<=' | '=' | '==' | '>' | '>=' | 'and' | 'or';
+    operator: '!=' | '%' | '*' | '+' | '-' | '/' | '<' | '<=' | '=' | '==' | '>' | '>=' | 'and' | 'or';
     right: Expression;
 }
 
@@ -128,6 +129,18 @@ export const Block = 'Block';
 
 export function isBlock(item: unknown): item is Block {
     return reflection.isInstance(item, Block);
+}
+
+export interface CharExpression extends AstNode {
+    readonly $container: BinaryExpression | Block | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
+    readonly $type: 'CharExpression';
+    value: string;
+}
+
+export const CharExpression = 'CharExpression';
+
+export function isCharExpression(item: unknown): item is CharExpression {
+    return reflection.isInstance(item, CharExpression);
 }
 
 export interface ForStatement extends AstNode {
@@ -419,6 +432,7 @@ export function isPrimitiveTypeReference(item: unknown): item is PrimitiveTypeRe
 export type ScAstType = {
     BinaryExpression: BinaryExpression
     Block: Block
+    CharExpression: CharExpression
     Definition: Definition
     Expression: Expression
     ForStatement: ForStatement
@@ -450,12 +464,13 @@ export type ScAstType = {
 export class ScAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [BinaryExpression, Block, Definition, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, Statement, StringExpression, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
+        return [BinaryExpression, Block, CharExpression, Definition, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, Statement, StringExpression, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
         switch (subtype) {
             case BinaryExpression:
+            case CharExpression:
             case NumberExpression:
             case StringExpression:
             case SymbolExpression:
@@ -532,6 +547,14 @@ export class ScAstReflection extends AbstractAstReflection {
                     name: Block,
                     properties: [
                         { name: 'statements', defaultValue: [] }
+                    ]
+                };
+            }
+            case CharExpression: {
+                return {
+                    name: CharExpression,
+                    properties: [
+                        { name: 'value' }
                     ]
                 };
             }

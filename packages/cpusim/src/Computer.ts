@@ -53,6 +53,7 @@ export class Computer {
       case 2:
         // putchar
         this.stdout += String.fromCharCode(this.regs.de);
+        console.log(this.stdout);
         break;
       default:
         console.error(`Unimplemented bdos func ${this.regs.c}`);

@@ -83,7 +83,7 @@ Addition infers Expression:
     Multiplication ({infer BinaryExpression.left=current} operator=('+' | '-') right=Multiplication)*;
 
 Multiplication infers Expression:
-    Logical ({infer BinaryExpression.left=current} operator=('*' | '/') right=Logical)*;
+    Logical ({infer BinaryExpression.left=current} operator=('*' | '/' | '%') right=Logical)*;
 
 Logical infers Expression:
     Comparison ({infer BinaryExpression.left=current} operator=('and' | 'or') right=Comparison)*;
@@ -96,6 +96,7 @@ Primary infers Expression:
     UnaryExpression |
     NumberExpression |
     StringExpression |
+    CharExpression |
     SymbolExpression;
 
 SymbolExpression:
@@ -119,6 +120,9 @@ NumberExpression:
 StringExpression:
     value=STRING;
 
+CharExpression:
+    value=CHAR;
+
 // ########### Types
 
 TypeReference:
@@ -134,11 +138,15 @@ type NamedElement = ParameterDeclaration | FunctionDeclaration | LocalVarName | 
 
 // ########## Terminals
 
+
+
+
 hidden terminal WS: /\s+/;
 terminal STRING: /"[^"]*"/;
 terminal ID: /[_a-zA-Z][\w_]*/;
 terminal NUMBER returns number: /[0-9]+/;
 terminal ASM: /#asm[\s\S]*?#endasm/;
+terminal CHAR: /'.'/;
 
 hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;
 hidden terminal SL_COMMENT: /\/\/[^\n\r]*/;

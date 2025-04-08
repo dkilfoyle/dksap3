@@ -11,4 +11,6 @@ main()
 
 bla(int x)
 {
+  putchar(itoa(x));
+  putchar(10);
 }
