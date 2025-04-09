@@ -156,8 +156,7 @@ const compileLocalVarName = (scc: ScCompiler, localVar: LocalVarName, decl: Loca
 
 const compileReturn = (scc: ScCompiler, ret: ReturnStatement) => {
   const exprNode = ret.value ? compileExpression(scc, ret.value).node : null;
-  return expandTracedToNode(ret)`
-    ; return ${ret.value?.$cstNode?.text}
+  return expandTracedToNode(ret)` ; return ${ret.value?.$cstNode?.text}
     ${exprNode}
     jmp $${scc.generator.fexitlab}
   `;

@@ -24,6 +24,7 @@ export type ScKeywordNames =
     | "!"
     | "!="
     | "%"
+    | "&"
     | "("
     | ")"
     | "*"
@@ -62,7 +63,8 @@ export type ScKeywordNames =
     | "unsigned"
     | "while"
     | "{"
-    | "}";
+    | "}"
+    | "~";
 
 export type ScTokenNames = ScTerminalNames | ScKeywordNames;
 
@@ -406,7 +408,7 @@ export function isSymbolExpression(item: unknown): item is SymbolExpression {
 export interface UnaryExpression extends AstNode {
     readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'UnaryExpression';
-    prefix: '!' | '%' | '*' | '-';
+    prefix: '!' | '&' | '*' | '++' | '-' | '--' | '~';
     value: Expression;
 }
 

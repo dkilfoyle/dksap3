@@ -2,16 +2,9 @@
 
 main()
 {
-  int i;
-  do
-  {
-    bla(i);
-    i++;
-  } while (i < 10);
+  int a;
+  a = 5;
+  bla(++a);
 }
 
-bla(int x)
-{
-  putchar(x + 48);
-  putchar(10);
-}
+bla(int x) {}

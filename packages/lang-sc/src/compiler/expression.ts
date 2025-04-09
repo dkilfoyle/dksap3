@@ -69,15 +69,6 @@ function store(scc: ScCompiler, lval: ILValue) {
   else return scc.generator.gen_put_indirect(lval.indirect);
 }
 
-function check_rvalue(scc: ScCompiler, res: ExpressionResult) {
-  if (res.reg & 1) {
-    const { reg, lines } = rvalue(scc, res);
-    res.node = res.node.append(joinToNode(lines, NL));
-    res.reg = reg;
-  }
-  return res;
-}
-
 const leafNode = (node: AstNode, lines: string[]) => {
   return expandTracedToNode(node)`
     ${joinToNode(lines)}
@@ -86,7 +77,14 @@ const leafNode = (node: AstNode, lines: string[]) => {
 
 export function compileExpression(scc: ScCompiler, expression: Expression): ExpressionResult {
   const res = compileSubExpression(scc, expression);
-  return check_rvalue(scc, res);
+  if (res.reg & FETCH) {
+    // hl|de = &symbol so need to retrieve symbol value from ram
+    const { reg, lines } = rvalue(scc, res);
+    // hl = symbol value
+    res.node = res.node.append(joinToNode(lines, NL));
+    res.reg = reg;
+  }
+  return res;
 }
 
 function compileSubExpression(scc: ScCompiler, expression: Expression): ExpressionResult {
@@ -152,11 +150,57 @@ function compileCharExpression(scc: ScCompiler, charexp: CharExpression): Expres
 }
 
 function compileUnaryExpression(scc: ScCompiler, unary: UnaryExpression): ExpressionResult {
-  const symbolRes = compileExpression(scc, unary.value);
   if (unary.prefix == "*") {
+    // eg *str where str is declared as char *str;
+    const symbolRes = compileExpression(scc, unary.value);
+    // { reg = HL, lval: {indirect: CINT, ptr_type: CHAR, symbol: {name, identity:POINTER}}}
+    // ie HL = str where str is an address
     symbolRes.lval.indirect = symbolRes.lval.symbol ? symbolRes.lval.ptr_type : SymbolType.CINT;
     symbolRes.lval.ptr_type = 0;
+    // mark lval as being an address but no longer a pointer
     return { ...symbolRes, reg: FETCH | symbolRes.reg };
+  } else if (unary.prefix == "&") {
+    // eg &y
+    // so returning a pointer of type y.type
+    const symbolRes = compileSubExpression(scc, unary.value);
+    if (symbolRes.lval.symbol == 0) throw Error("Can only address a symbol");
+
+    if ((symbolRes.reg & FETCH) == 0) {
+      if (symbolRes.lval.symbol.type != SymbolType.STRUCT) throw Error("illegal address");
+      return { ...symbolRes, reg: 0 };
+    }
+    symbolRes.lval.ptr_type = symbolRes.lval.symbol.type;
+    if (symbolRes.lval.indirect) {
+      return symbolRes.reg & CompilerRegs.DE_REG
+        ? { reg: CompilerRegs.HL_REG, lval: symbolRes.lval, node: leafNode(unary, ["xchg"]) }
+        : symbolRes;
+    }
+
+    const node = expandTracedToNode(unary)`
+      ${symbolRes.node}
+      ${joinToNode(scc.generator.gen_immediate(symbolRes.lval.symbol.name), NL)}
+    `;
+
+    symbolRes.lval.indirect = symbolRes.lval.symbol.type;
+    return { reg: CompilerRegs.HL_REG, node, lval: symbolRes.lval };
+  } else if (unary.prefix == "++" || unary.prefix == "--") {
+    const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
+    const symbolRes = compileSubExpression(scc, unary.value);
+    if ((symbolRes.reg & FETCH) == 0) throw Error("Unary ++ Need lval");
+    const node = expandTracedToNode(unary)`
+      ; ${unary.$cstNode!.text}
+      ${symbolRes.node}
+      ${symbolRes.lval.indirect ? joinToNode(scc.generator.gen_push(symbolRes.reg, symbolRes.lval), NL) : undefined}
+      ${joinToNode(rvalue(scc, symbolRes).lines, NL)}
+      ${joinToNode(
+        unary.prefix == "++"
+          ? scc.generator.gen_increment_primary_reg(symbolRes.lval)
+          : scc.generator.gen_decrement_primary_reg(symbolRes.lval),
+        NL
+      )}
+      ${joinToNode(store(scc, symbolRes.lval), NL)}
+    `;
+    return { reg: CompilerRegs.HL_REG, lval, node };
   } else throw Error(`unary operator ${unary.prefix} not implemented yet`);
 }
 

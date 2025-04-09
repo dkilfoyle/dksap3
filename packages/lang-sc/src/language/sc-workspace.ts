@@ -3,8 +3,6 @@ import { LangiumSharedServices } from "langium/lsp";
 import { WorkspaceFolder } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { stdlibsrc } from "../compiler/stdlib";
-import { scCompiler, setSmallCStdLib } from "../compiler/sc-compiler";
-import { assembler } from "@dksap3/lang-asm";
 
 export class ScWorkspaceManager extends DefaultWorkspaceManager {
   private documentFactory: LangiumDocumentFactory;

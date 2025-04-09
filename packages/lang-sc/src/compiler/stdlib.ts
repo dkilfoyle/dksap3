@@ -52,7 +52,7 @@ reverse(char *s) {
  * @param s string buffer
  * @return 
  */
-// itoa(int n, char s[]) {
+// extern itoa(int n, char s[]) {
 //     int i, sign;
 
 //     if ((sign = n) < 0) {
@@ -73,7 +73,7 @@ reverse(char *s) {
  * return length of string, reference CPL p 36
  * @param s pointer to string
  */
-strlen(char *s) {
+extern strlen(char *s) {
     int i;
     i = 0;
     while (*s++) {
