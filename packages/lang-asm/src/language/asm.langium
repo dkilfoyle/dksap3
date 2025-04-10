@@ -64,7 +64,7 @@ Imm8Operation infers Operation:
 NoArgInstruction infers Instr:
     op=NoArgOperation;
 NoArgOperation infers Operation:
-    opname=("rlc"|"ral"|"rar"|"rrc"|"cma"|"stc"|"cmc"|"ret"|"rp"|"rm"|"rnz"|"rz"|"rpo"|"rpe"|"rnc"|"rc"|"nop"|"hlt"|"xchg"|"pchl"|"xthl");
+    opname=("rlc"|"ral"|"rar"|"rrc"|"cma"|"stc"|"cmc"|"ret"|"rp"|"rm"|"rnz"|"rz"|"rpo"|"rpe"|"rnc"|"rc"|"nop"|"hlt"|"xchg"|"pchl"|"xthl"|"sphl");
 
 AddrArgument:
     number=NUMBER | labelexpr=LabelExpression;

@@ -1181,6 +1181,10 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
             {
               "$type": "Keyword",
               "value": "xthl"
+            },
+            {
+              "$type": "Keyword",
+              "value": "sphl"
             }
           ]
         }

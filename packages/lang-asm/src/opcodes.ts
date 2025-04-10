@@ -295,6 +295,7 @@ export const opcodes: Record<string, IInstruction> = {
   "0x76": { instr: "HLT", code: 0x76, arg1: "", arg2: "", bytes: 1, flags: "----", stages: 4, help: "Halt execution" },
   "0xd3": { instr: "OUT", code: 0xd3, arg1: "imm8", arg2: "", bytes: 2, flags: "----", stages: 4, help: "Copy A to 8 bit port" },
   "0xe9": { instr: "PCHL", code: 0xe9, arg1: "", arg2: "", bytes: 1, flags: "----", stages: 4, help: "set PC to HL" },
+  "0xf9": { instr: "SPHL", code: 0xf9, arg1: "", arg2: "", bytes: 1, flags: "----", stages: 4, help: "set SP to HL" },
 };
 
 export const instructionInfo: Record<string, IInstruction> = Object.values(opcodes).reduce<Record<string, IInstruction>>((accum, cur) => {
@@ -731,6 +732,12 @@ export const operationInfo: Record<string, { arg1: string; arg2: string; bytes: 
     arg2: "",
     bytes: 1,
     help: "Out",
+  },
+  SPHL: {
+    arg1: "",
+    arg2: "",
+    bytes: 1,
+    help: "SP=HL",
   },
 };
 

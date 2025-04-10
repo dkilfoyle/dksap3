@@ -103,6 +103,7 @@ export type AsmKeywordNames =
     | "sbi"
     | "shld"
     | "sp"
+    | "sphl"
     | "sta"
     | "stax"
     | "stc"
@@ -315,7 +316,7 @@ export function isMemoryDirective(item: unknown): item is MemoryDirective {
 export interface Operation extends AstNode {
     readonly $container: Instr;
     readonly $type: 'Operation';
-    opname: 'aci' | 'adc' | 'add' | 'adi' | 'ana' | 'ani' | 'call' | 'cc' | 'cm' | 'cma' | 'cmc' | 'cmp' | 'cnc' | 'cnz' | 'cp' | 'cpe' | 'cpi' | 'cpo' | 'cz' | 'dad' | 'dcr' | 'dcx' | 'hlt' | 'inr' | 'inx' | 'jc' | 'jm' | 'jmp' | 'jnc' | 'jnz' | 'jp' | 'jpe' | 'jpo' | 'jz' | 'lda' | 'ldax' | 'lhld' | 'lxi' | 'mov' | 'mvi' | 'nop' | 'ora' | 'ori' | 'out' | 'pchl' | 'pop' | 'push' | 'ral' | 'rar' | 'rc' | 'ret' | 'rlc' | 'rm' | 'rnc' | 'rnz' | 'rp' | 'rpe' | 'rpo' | 'rrc' | 'rz' | 'sbb' | 'sbi' | 'shld' | 'sta' | 'stax' | 'stc' | 'sub' | 'sui' | 'xchg' | 'xra' | 'xri' | 'xthl';
+    opname: 'aci' | 'adc' | 'add' | 'adi' | 'ana' | 'ani' | 'call' | 'cc' | 'cm' | 'cma' | 'cmc' | 'cmp' | 'cnc' | 'cnz' | 'cp' | 'cpe' | 'cpi' | 'cpo' | 'cz' | 'dad' | 'dcr' | 'dcx' | 'hlt' | 'inr' | 'inx' | 'jc' | 'jm' | 'jmp' | 'jnc' | 'jnz' | 'jp' | 'jpe' | 'jpo' | 'jz' | 'lda' | 'ldax' | 'lhld' | 'lxi' | 'mov' | 'mvi' | 'nop' | 'ora' | 'ori' | 'out' | 'pchl' | 'pop' | 'push' | 'ral' | 'rar' | 'rc' | 'ret' | 'rlc' | 'rm' | 'rnc' | 'rnz' | 'rp' | 'rpe' | 'rpo' | 'rrc' | 'rz' | 'sbb' | 'sbi' | 'shld' | 'sphl' | 'sta' | 'stax' | 'stc' | 'sub' | 'sui' | 'xchg' | 'xra' | 'xri' | 'xthl';
 }
 
 export const Operation = 'Operation';

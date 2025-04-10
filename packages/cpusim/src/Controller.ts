@@ -164,6 +164,9 @@ export class Controller implements IClocked {
         case ir8 == "351":
           this.PCHL();
           break;
+        case ir8 == "371":
+          this.SPHL();
+          break;
         case ir8 == "062":
         case ir8 == "072":
           this.STALDA_a16(comp.ir.out);
@@ -550,6 +553,22 @@ export class Controller implements IClocked {
       case 3: // wz = de
         this.setControls("bus=reg3", REGSEL.HL);
         this.setControls("reg3=bus", REGSEL.PC);
+        this.stage_rst = 1;
+        break;
+      default:
+        throw Error();
+    }
+  }
+
+  SPHL() {
+    this.stage_max = 3;
+    // TODO: Does the 8080/5 use special hardware to do this without bus?
+    // could implement by extending REGEXT signal to 3 bits
+    // regext = 100 could be xchg
+    switch (this.stage) {
+      case 3: // wz = de
+        this.setControls("bus=reg3", REGSEL.HL);
+        this.setControls("reg3=bus", REGSEL.SP);
         this.stage_rst = 1;
         break;
       default:
