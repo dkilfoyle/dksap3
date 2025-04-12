@@ -175,6 +175,7 @@ export class AsmRuntime {
     );
 
     const prevPC = emulator.regs.pc;
+    const prevSP = emulator.regs.sp;
     const prevStackLabel = this.frames[0]?.stackLabels[emulator.regs.sp.toString()];
     emulator.step();
 
@@ -241,6 +242,7 @@ export class AsmRuntime {
       case 0xc5:
       case 0xd5:
       case 0xe5: // push reg
+      case 0xf9: // sphl
         {
           // TODO retrieve line label eg push d ; param1
           const loc = getSourceLocationForAddress(this.compiledAsm!.linkerInfo, prevPC);
@@ -252,7 +254,12 @@ export class AsmRuntime {
                 return lt.$textRegion?.range.start.line == loc.line;
               });
               if (line && line.comment) {
-                this.frames[0].stackLabels[emulator.regs.sp.toString()] = line.comment.comment;
+                if (emulator.ir.out == 0xf9) {
+                  // sphl
+                  for (let i = emulator.regs.sp; i < prevSP; i += 2) {
+                    this.frames[0].stackLabels[i.toString()] = line.comment.comment + `[${(i - emulator.regs.sp) / 2}]`;
+                  }
+                } else this.frames[0].stackLabels[emulator.regs.sp.toString()] = line.comment.comment;
               }
             }
           }

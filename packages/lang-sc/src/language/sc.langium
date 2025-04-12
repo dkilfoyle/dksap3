@@ -100,6 +100,7 @@ Primary infers Expression:
     UnaryExpression |
     NumberExpression |
     StringExpression |
+    SizeofExpression |
     CharExpression |
     SymbolExpression;
 
@@ -108,15 +109,22 @@ SymbolExpression:
     (
         ("." structMember=[StructMember:ID]) |
         functionCall=FunctionCall |
-        ("[" indexExpression=Expression "]") |
-        postfix=("++"|"--")
-    )?;
+        ("[" indexExpression=Expression "]") 
+    )?
+    postfix=("++"|"--")?;
+
+SizeofExpression:
+    "sizeof" "(" arg=(SizeofSymbol|SizeofTypeReference) ")";
+
+SizeofSymbol:
+    ParameterDeclaration | LocalVarName | GlobalVarName;
 
 FunctionCall:
     "(" (arguments+=Expression (',' arguments+=Expression)*)? ")";
 
 UnaryExpression:
     prefix=('!' | '-' | "*" | "&" | "~" | "++" | "--") value=Expression;
+
 
 NumberExpression:
     value=NUMBER;
@@ -132,6 +140,9 @@ CharExpression:
 TypeReference:
     PrimitiveTypeReference | StructTypeReference;
 
+SizeofTypeReference:
+    TypeReference pointer?="*";
+
 PrimitiveTypeReference:
     storage=("static"|"register"|"auto")? signed=("signed"|"unsigned")? type=("int" | "char");
 
@@ -141,9 +152,6 @@ StructTypeReference:
 type NamedElement = ParameterDeclaration | FunctionDeclaration | LocalVarName | StructDeclaration | GlobalVarName;
 
 // ########## Terminals
-
-
-
 
 hidden terminal WS: /\s+/;
 terminal STRING: /"[^"]*"/;

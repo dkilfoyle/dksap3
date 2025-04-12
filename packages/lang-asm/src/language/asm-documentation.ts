@@ -21,6 +21,7 @@ export class AsmDocumentationProvider implements DocumentationProvider {
       if (info.arg2) help += ", " + info.arg2;
       help += "\n\n";
       help += info.help;
+      if (info.code) help += `\n\n${info.code}`;
       return help;
     } else if (isOperation(node)) {
       const info = operationInfo[node.opname.toUpperCase()];
@@ -31,6 +32,7 @@ export class AsmDocumentationProvider implements DocumentationProvider {
       if (info.arg2) help += ", " + info.arg2;
       help += "\n\n";
       help += info.help;
+      if (info.code) help += `\n\n${info.code}`;
       return help;
     }
     return "";

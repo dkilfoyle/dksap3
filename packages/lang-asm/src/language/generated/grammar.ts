@@ -1838,7 +1838,7 @@ export const AsmGrammar = (): Grammar => loadedAsmGrammar ?? (loadedAsmGrammar =
       },
       "definition": {
         "$type": "RegexToken",
-        "regex": "/[0-9][0-9a-fA-F]*[h]?/"
+        "regex": "/[\\\\\\\\-]?[0-9][0-9a-fA-F]*[h]?/"
       },
       "fragment": false,
       "hidden": false

@@ -286,7 +286,7 @@ export class AsmGenerator {
     lines.push(`xchg`);
     lines.push(`lxi h, ${k}`);
     lines.push(`dad sp`);
-    lines.push(`sphl`);
+    lines.push(`sphl ; ${comment}`);
     lines.push(`xchg`);
     this.stkp = newstkp;
     return lines;
@@ -296,7 +296,7 @@ export class AsmGenerator {
    * multiply the primary register by INTSIZE
    */
   gen_multiply_by_two() {
-    return [`dad h`];
+    return [`dad h ; multiply by 2`];
   }
 
   /**
@@ -319,12 +319,12 @@ export class AsmGenerator {
    * @param lval
    * @param lval2
    */
-  gen_add(lval: ILValue, lval2: ILValue) {
+  gen_add(lval?: ILValue, lval2?: ILValue) {
     const lines = [];
     lines.push(...this.gen_pop());
-    if (this.dbltest(lval2, lval)) {
+    if (lval && lval2 && this.dbltest(lval2, lval)) {
       lines.push(`xchg`);
-      this.gen_multiply_by_two();
+      lines.push(...this.gen_multiply_by_two());
       lines.push(`xchg`);
     }
     lines.push(`dad d`);
@@ -619,7 +619,7 @@ export class AsmGenerator {
     switch (type) {
       case SymbolType.CINT:
       case SymbolType.UINT:
-        this.gen_multiply_by_two();
+        lines.push(...this.gen_multiply_by_two());
         break;
       case SymbolType.STRUCT:
         lines.push(`lxi d, ${size}`);

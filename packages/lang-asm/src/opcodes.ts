@@ -306,14 +306,16 @@ export const instructionInfo: Record<string, IInstruction> = Object.values(opcod
   return accum;
 }, {});
 
-export const operationInfo: Record<string, { arg1: string; arg2: string; bytes: number; help: string }> = {
+export const operationInfo: Record<string, { code?: string; arg1: string; arg2: string; bytes: number; help: string }> = {
   XCHG: {
+    code: "0xeb",
     arg1: "",
     arg2: "",
     bytes: 1,
     help: "Swap DE and HL",
   },
   PCHL: {
+    code: "0xe9",
     arg1: "",
     arg2: "",
     bytes: 1,
@@ -542,18 +544,21 @@ export const operationInfo: Record<string, { arg1: string; arg2: string; bytes: 
     help: "r8 = byte",
   },
   PUSH: {
+    code: "0x(cdef)5",
     arg1: "reg16",
     arg2: "",
     bytes: 1,
     help: "Push value in r16 onto the stack",
   },
   POP: {
+    code: "0x(cdef)1",
     arg1: "reg16",
     arg2: "",
     bytes: 1,
     help: "Pop value on stack into r16",
   },
   CALL: {
+    code: "0xcd",
     arg1: "addr",
     arg2: "",
     bytes: 3,
@@ -608,6 +613,7 @@ export const operationInfo: Record<string, { arg1: string; arg2: string; bytes: 
     help: "Call function at addr if FlagC == 1",
   },
   RET: {
+    code: "0xc9",
     arg1: "",
     arg2: "",
     bytes: 1,
@@ -662,6 +668,7 @@ export const operationInfo: Record<string, { arg1: string; arg2: string; bytes: 
     help: "Return from function if FlagC == 1",
   },
   JMP: {
+    code: "0xc3",
     arg1: "addr",
     arg2: "",
     bytes: 3,
@@ -680,60 +687,70 @@ export const operationInfo: Record<string, { arg1: string; arg2: string; bytes: 
     help: "Jump to addr if FlagS == 1",
   },
   JNZ: {
+    code: "0xc2",
     arg1: "addr",
     arg2: "",
     bytes: 3,
     help: "Jump to addr if FlagZ == 0",
   },
   JZ: {
+    code: "0xca",
     arg1: "addr",
     arg2: "",
     bytes: 3,
     help: "Jump to addr if FlagZ == 1",
   },
   JPO: {
+    code: "0xe2",
     arg1: "addr",
     arg2: "",
     bytes: 3,
     help: "Jump to addr if FlagP == 0",
   },
   JPE: {
+    code: "0xea",
     arg1: "addr",
     arg2: "",
     bytes: 3,
     help: "Jump to addr if FlagP == 1",
   },
   JNC: {
+    code: "0xd2",
     arg1: "addr",
     arg2: "",
     bytes: 3,
     help: "Jump to addr if FlagC == 0",
   },
   JC: {
+    code: "0xda",
     arg1: "addr",
     arg2: "",
     bytes: 3,
     help: "Jump to addr if FlagC == 1",
   },
   NOP: {
+    code: "0x00",
     arg1: "",
     arg2: "",
     bytes: 1,
     help: "Do nothing",
   },
   HLT: {
+    code: "0x76",
     arg1: "",
     arg2: "",
     bytes: 1,
     help: "Halt execution",
   },
   OUT: {
+    code: "0xd3",
     arg1: "",
     arg2: "",
     bytes: 1,
     help: "Out",
   },
   SPHL: {
+    code: "0xf9",
     arg1: "",
     arg2: "",
     bytes: 1,

@@ -11,8 +11,7 @@ PRINT_STR equ 5
 READ_STR  equ 6
 GET_RND   equ 7
 
-stack     equ 0140h
-
+stack     equ 2015
     extern main
 
     org 000h

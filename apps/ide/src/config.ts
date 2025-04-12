@@ -70,6 +70,11 @@ Object.entries(examplesC).forEach(([key, value]) => {
   fileSystemProvider.registerFile(new RegisteredMemoryFile(vscode.Uri.file(`dk8085/${key.replace("./examples/", "")}`), value));
 });
 
+const testC = import.meta.glob<string>("./examples/test/*.c", { eager: true, query: "?raw", import: "default" });
+Object.entries(testC).forEach(([key, value]) => {
+  fileSystemProvider.registerFile(new RegisteredMemoryFile(vscode.Uri.file(`dk8085/${key.replace("./examples/", "")}`), value));
+});
+
 registerFileSystemOverlay(1, fileSystemProvider);
 
 export const configure = (htmlContainer?: HTMLElement): ConfigResult => {

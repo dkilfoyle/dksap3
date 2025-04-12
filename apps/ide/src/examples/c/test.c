@@ -2,9 +2,5 @@
 
 main()
 {
-  int a;
-  a = 5;
-  bla(++a);
+  int z[8];
 }
-
-bla(int x) {}

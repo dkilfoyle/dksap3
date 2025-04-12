@@ -58,6 +58,7 @@ export type ScKeywordNames =
     | "register"
     | "return"
     | "signed"
+    | "sizeof"
     | "static"
     | "struct"
     | "unsigned"
@@ -76,7 +77,7 @@ export function isDefinition(item: unknown): item is Definition {
     return reflection.isInstance(item, Definition);
 }
 
-export type Expression = BinaryExpression | CharExpression | NumberExpression | StringExpression | SymbolExpression | UnaryExpression;
+export type Expression = BinaryExpression | CharExpression | NumberExpression | SizeofExpression | StringExpression | SymbolExpression | UnaryExpression;
 
 export const Expression = 'Expression';
 
@@ -90,6 +91,14 @@ export const NamedElement = 'NamedElement';
 
 export function isNamedElement(item: unknown): item is NamedElement {
     return reflection.isInstance(item, NamedElement);
+}
+
+export type SizeofSymbol = NamedElement | ParameterDeclaration;
+
+export const SizeofSymbol = 'SizeofSymbol';
+
+export function isSizeofSymbol(item: unknown): item is SizeofSymbol {
+    return reflection.isInstance(item, SizeofSymbol);
 }
 
 export type Statement = DoStatement | Expression | ForStatement | IfStatement | InlineAssembly | LocalVariableDeclaration | ReturnStatement | StructDeclaration | WhileStatement;
@@ -187,7 +196,7 @@ export function isFunctionCall(item: unknown): item is FunctionCall {
 }
 
 export interface FunctionDeclaration extends AstNode {
-    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | Program;
+    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | Program | SizeofExpression;
     readonly $type: 'FunctionDeclaration';
     body: Block;
     extern: boolean;
@@ -216,7 +225,7 @@ export function isGlobalVariableDeclaration(item: unknown): item is GlobalVariab
 }
 
 export interface GlobalVarName extends AstNode {
-    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration;
+    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | SizeofExpression;
     readonly $type: 'GlobalVarName';
     array: boolean;
     assignment: boolean;
@@ -273,7 +282,7 @@ export function isLocalVariableDeclaration(item: unknown): item is LocalVariable
 }
 
 export interface LocalVarName extends AstNode {
-    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration;
+    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | SizeofExpression;
     readonly $type: 'LocalVarName';
     array: boolean;
     dim?: number;
@@ -300,7 +309,7 @@ export function isNumberExpression(item: unknown): item is NumberExpression {
 }
 
 export interface ParameterDeclaration extends AstNode {
-    readonly $container: FunctionDeclaration | GlobalVariableDeclaration | LocalVariableDeclaration;
+    readonly $container: FunctionDeclaration | GlobalVariableDeclaration | LocalVariableDeclaration | SizeofExpression;
     readonly $type: 'ParameterDeclaration';
     array: boolean;
     name: string;
@@ -337,6 +346,30 @@ export function isReturnStatement(item: unknown): item is ReturnStatement {
     return reflection.isInstance(item, ReturnStatement);
 }
 
+export interface SizeofExpression extends AstNode {
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
+    readonly $type: 'SizeofExpression';
+    arg: SizeofSymbol | SizeofTypeReference;
+}
+
+export const SizeofExpression = 'SizeofExpression';
+
+export function isSizeofExpression(item: unknown): item is SizeofExpression {
+    return reflection.isInstance(item, SizeofExpression);
+}
+
+export interface SizeofTypeReference extends AstNode {
+    readonly $container: SizeofExpression;
+    readonly $type: 'PrimitiveTypeReference' | 'SizeofTypeReference' | 'StructTypeReference' | 'TypeReference';
+    pointer: boolean;
+}
+
+export const SizeofTypeReference = 'SizeofTypeReference';
+
+export function isSizeofTypeReference(item: unknown): item is SizeofTypeReference {
+    return reflection.isInstance(item, SizeofTypeReference);
+}
+
 export interface StringExpression extends AstNode {
     readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'StringExpression';
@@ -350,7 +383,7 @@ export function isStringExpression(item: unknown): item is StringExpression {
 }
 
 export interface StructDeclaration extends AstNode {
-    readonly $container: Block | GlobalVariableDeclaration | LocalVariableDeclaration;
+    readonly $container: Block | GlobalVariableDeclaration | LocalVariableDeclaration | SizeofExpression;
     readonly $type: 'StructDeclaration';
     members: Array<StructMember>;
     name: string;
@@ -467,6 +500,9 @@ export type ScAstType = {
     PrimitiveTypeReference: PrimitiveTypeReference
     Program: Program
     ReturnStatement: ReturnStatement
+    SizeofExpression: SizeofExpression
+    SizeofSymbol: SizeofSymbol
+    SizeofTypeReference: SizeofTypeReference
     Statement: Statement
     StringExpression: StringExpression
     StructDeclaration: StructDeclaration
@@ -481,7 +517,7 @@ export type ScAstType = {
 export class ScAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [BinaryExpression, Block, CharExpression, Definition, DoStatement, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, Statement, StringExpression, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
+        return [BinaryExpression, Block, CharExpression, Definition, DoStatement, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, SizeofExpression, SizeofSymbol, SizeofTypeReference, Statement, StringExpression, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
@@ -489,6 +525,7 @@ export class ScAstReflection extends AbstractAstReflection {
             case BinaryExpression:
             case CharExpression:
             case NumberExpression:
+            case SizeofExpression:
             case StringExpression:
             case SymbolExpression:
             case UnaryExpression: {
@@ -511,9 +548,14 @@ export class ScAstReflection extends AbstractAstReflection {
                 return this.isSubtype(Definition, supertype);
             }
             case GlobalVarName:
-            case LocalVarName:
-            case ParameterDeclaration: {
+            case LocalVarName: {
                 return this.isSubtype(NamedElement, supertype);
+            }
+            case NamedElement: {
+                return this.isSubtype(SizeofSymbol, supertype);
+            }
+            case ParameterDeclaration: {
+                return this.isSubtype(NamedElement, supertype) || this.isSubtype(SizeofSymbol, supertype);
             }
             case PrimitiveTypeReference: {
                 return this.isSubtype(StructMember, supertype) || this.isSubtype(TypeReference, supertype);
@@ -523,6 +565,9 @@ export class ScAstReflection extends AbstractAstReflection {
             }
             case StructTypeReference: {
                 return this.isSubtype(TypeReference, supertype);
+            }
+            case TypeReference: {
+                return this.isSubtype(SizeofTypeReference, supertype);
             }
             default: {
                 return false;
@@ -709,6 +754,22 @@ export class ScAstReflection extends AbstractAstReflection {
                     name: ReturnStatement,
                     properties: [
                         { name: 'value' }
+                    ]
+                };
+            }
+            case SizeofExpression: {
+                return {
+                    name: SizeofExpression,
+                    properties: [
+                        { name: 'arg' }
+                    ]
+                };
+            }
+            case SizeofTypeReference: {
+                return {
+                    name: SizeofTypeReference,
+                    properties: [
+                        { name: 'pointer', defaultValue: false }
                     ]
                 };
             }

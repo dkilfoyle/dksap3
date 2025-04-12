@@ -107,7 +107,7 @@ DirectiveArgument:
 
 terminal EOL: /[\r\n]+/;
 terminal COMMENT: /;[^\n\r]*/;
-terminal NUMBER returns number: /[0-9][0-9a-fA-F]*[h]?/;
+terminal NUMBER returns number: /[\\-]?[0-9][0-9a-fA-F]*[h]?/;
 terminal CHARACTER: /'[ -~]'/;
 terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
 hidden terminal WS: /[ \t]/;

@@ -168,6 +168,7 @@ export const RuntimeUI = ({ compStates, halfStage, rtState }: { compStates: Comp
                   const frm = rtState.frames[0];
                   const startAddr = frm.base - frm.mem.length * 2 + 1;
                   const addr = startAddr + i * 2;
+                  // const mr = (m >> 8) | ((m & 0xff) << 8); // byte swap
                   return (
                     <motion.div
                       layout
