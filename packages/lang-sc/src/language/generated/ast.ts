@@ -30,6 +30,7 @@ export type ScKeywordNames =
     | "*"
     | "+"
     | "++"
+    | "+="
     | ","
     | "-"
     | "--"
@@ -121,7 +122,7 @@ export interface BinaryExpression extends AstNode {
     readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | WhileStatement;
     readonly $type: 'BinaryExpression';
     left: Expression;
-    operator: '!=' | '%' | '*' | '+' | '-' | '/' | '<' | '<=' | '=' | '==' | '>' | '>=' | 'and' | 'or';
+    operator: '!=' | '%' | '*' | '+' | '+=' | '-' | '/' | '<' | '<=' | '=' | '==' | '>' | '>=' | 'and' | 'or';
     right: Expression;
 }
 

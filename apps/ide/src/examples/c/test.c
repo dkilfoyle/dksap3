@@ -2,5 +2,8 @@
 
 main()
 {
-  int z[8];
+  int x;
+  x = 5;
+  x += 10;
+  return x;
 }

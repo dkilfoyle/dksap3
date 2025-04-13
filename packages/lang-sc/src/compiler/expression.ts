@@ -98,6 +98,17 @@ function compileSubExpression(scc: ScCompiler, expression: Expression): Expressi
       switch (expression.operator) {
         case "=":
           return applyAssignment(scc, expression);
+        case "+=":
+        case "-=":
+        case "*=":
+        case "/=":
+        case "%=":
+        case ">>=":
+        case "<<=":
+        case "&=":
+        case "^=":
+        case "|=":
+          return applyAssignOperation(scc, expression);
         case "+":
           return applyAddition(scc, expression);
         case "-":
@@ -250,16 +261,52 @@ function compileUnaryExpression(scc: ScCompiler, unary: UnaryExpression): Expres
 function applyAssignment(scc: ScCompiler, binary: BinaryExpression): ExpressionResult {
   if (!(isSymbolExpression(binary.left) && isLocalVarName(binary.left.element.ref)))
     throw new AstNodeError(binary.left, "lhs of assignment must be variable");
+
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
   let leftResult, rightResult: ExpressionResult;
+
   const node = expandTracedToNode(binary)`
     ; ${binary.$cstNode!.text}
     ${(leftResult = compileSubExpression(scc, binary.left)).node}
-    ${(leftResult.reg & FETCH) == 0 ? "ERROR: Need lval" : undefined}
     ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg, leftResult.lval) : [], NL)}
-    ${(rightResult = compileSubExpression(scc, binary.right)).node}
-    ${joinToNode(rightResult.reg & 1 ? rvalue(scc, rightResult) : [], NL)}
-    ; =
+    ${(rightResult = compileExpression(scc, binary.right)).node}
+    ; ${binary.operator}
+    ${joinToNode(store(scc, leftResult.lval), NL)}
+  `;
+  return { reg: 0, lval, node };
+}
+
+function applyAssignOperation(scc: ScCompiler, binary: BinaryExpression): ExpressionResult {
+  if (!(isSymbolExpression(binary.left) && isLocalVarName(binary.left.element.ref)))
+    throw new AstNodeError(binary.left, "lhs of assignment must be variable");
+
+  const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
+  let leftResult, rightResult: ExpressionResult;
+
+  const doOp = (res: ExpressionResult, res2: ExpressionResult) => {
+    switch (binary.operator) {
+      case "+=": {
+        const lines = [];
+        if (dbltest(res.lval, res2.lval)) {
+          lines.push(...scc.generator.gen_multiply(res.lval.ptr_type, res.lval.tagsym ? res.lval.tagsym.size : AsmGenerator.INTSIZE));
+        }
+        lines.push(...scc.generator.gen_add(res.lval, res2.lval));
+        result(res.lval, res2.lval);
+        return lines;
+      }
+    }
+    throw Error();
+  };
+
+  const node = expandTracedToNode(binary)`
+    ; ${binary.$cstNode!.text}
+    ${(leftResult = compileSubExpression(scc, binary.left)).node}
+    ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg, leftResult.lval) : [], NL)}
+    ${joinToNode(rvalue(scc, leftResult), NL)}
+    ${joinToNode(scc.generator.gen_push(leftResult.reg, (leftResult.lval.symbol as ISymbol).name))}
+    ${(rightResult = compileExpression(scc, binary.right)).node}
+    ; ${binary.operator}
+    ${joinToNode(doOp(leftResult, rightResult), NL)}
     ${joinToNode(store(scc, leftResult.lval), NL)}
   `;
   return { reg: 0, lval, node };
