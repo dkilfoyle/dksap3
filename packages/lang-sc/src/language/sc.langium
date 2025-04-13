@@ -123,7 +123,7 @@ FunctionCall:
     "(" (arguments+=Expression (',' arguments+=Expression)*)? ")";
 
 UnaryExpression:
-    prefix=('!' | '-' | "*" | "&" | "~" | "++" | "--") value=Expression;
+    prefix=('!' | '-' | "*" | "&" | "~" | "++" | "--") value=SymbolExpression;
 
 
 NumberExpression:

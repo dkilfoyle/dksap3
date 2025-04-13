@@ -259,6 +259,7 @@ function applyAssignment(scc: ScCompiler, binary: BinaryExpression): ExpressionR
     ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg, leftResult.lval) : [], NL)}
     ${(rightResult = compileSubExpression(scc, binary.right)).node}
     ${joinToNode(rightResult.reg & 1 ? rvalue(scc, rightResult) : [], NL)}
+    ; =
     ${joinToNode(store(scc, leftResult.lval), NL)}
   `;
   return { reg: 0, lval, node };
@@ -392,10 +393,12 @@ function compileSymbolExpression(scc: ScCompiler, symbolExpression: SymbolExpres
     case isLocalVarName(ref):
     case isParameterDeclaration(ref):
       res = compileLocalVariableReference(scc, ref);
+      if (symbolExpression.indexExpression) res = compileArrayIndex(scc, res, symbolExpression.indexExpression);
       if (symbolExpression.postfix) res = compilePostfix(scc, res, symbolExpression);
       break;
     case isGlobalVarName(ref):
       res = compileGlobalVariableReference(scc, ref);
+      if (symbolExpression.indexExpression) res = compileArrayIndex(scc, res, symbolExpression.indexExpression);
       if (symbolExpression.postfix) res = compilePostfix(scc, res, symbolExpression);
       break;
     // case isStructReference(symbolExpression):
@@ -405,7 +408,6 @@ function compileSymbolExpression(scc: ScCompiler, symbolExpression: SymbolExpres
     default:
       throw new AstNodeError(symbolExpression, "Trying to compile unknown symbol expression");
   }
-  if (symbolExpression.indexExpression) return compileArrayIndex(scc, res, symbolExpression.indexExpression);
   if (symbolExpression.functionCall) return compileFunctionCall(scc, res, symbolExpression);
   return res;
 }
@@ -416,6 +418,7 @@ function compileArrayIndex(scc: ScCompiler, symbolRes: ExpressionResult, indexEx
   if (!(ptr.identity == SymbolIdentity.POINTER || ptr.identity == SymbolIdentity.ARRAY)) throw Error("Can only index a pointer or array");
   const node = expandTracedToNode(indexExpression)`
     ${symbolRes.node}
+    ; [${indexExpression.$cstNode!.text}]
     ${ptr.identity == SymbolIdentity.POINTER ? joinToNode(rvalue(scc, symbolRes), NL) : undefined}
     ${joinToNode(scc.generator.gen_push(symbolRes.reg, (symbolRes.lval.symbol as ISymbol).name))}
     ${compileExpression(scc, indexExpression).node}
@@ -522,6 +525,7 @@ function compileLocalVariableReference(scc: ScCompiler, localVar: LocalVarName |
     // dap sp ; hl = &symbol
 
     const node = expandTracedToNode(localVar)`
+      ; ${localVar.name}
       ${joinToNode(lines, { appendNewLineIfNotEmpty: true })}
     `;
 
