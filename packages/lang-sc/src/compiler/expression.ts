@@ -103,8 +103,8 @@ function compileSubExpression(scc: ScCompiler, expression: Expression): Expressi
         case "*=":
         case "/=":
         case "%=":
-        case ">>=":
-        case "<<=":
+        case ">=":
+        case "<=":
         case "&=":
         case "^=":
         case "|=":
@@ -284,16 +284,46 @@ function applyAssignOperation(scc: ScCompiler, binary: BinaryExpression): Expres
   let leftResult, rightResult: ExpressionResult;
 
   const doOp = (res: ExpressionResult, res2: ExpressionResult) => {
+    const lines = [];
     switch (binary.operator) {
-      case "+=": {
-        const lines = [];
+      case "+=":
         if (dbltest(res.lval, res2.lval)) {
           lines.push(...scc.generator.gen_multiply(res.lval.ptr_type, res.lval.tagsym ? res.lval.tagsym.size : AsmGenerator.INTSIZE));
         }
         lines.push(...scc.generator.gen_add(res.lval, res2.lval));
         result(res.lval, res2.lval);
         return lines;
-      }
+      case "-=":
+        if (dbltest(res.lval, res2.lval)) {
+          lines.push(...scc.generator.gen_multiply(res.lval.ptr_type, res.lval.tagsym ? res.lval.tagsym.size : AsmGenerator.INTSIZE));
+        }
+        lines.push(...scc.generator.gen_sub());
+        result(res.lval, res2.lval);
+        return lines;
+      case "*=":
+        lines.push(...scc.generator.gen_mult());
+        return lines;
+      case "/=":
+        lines.push(...(nosign(res.lval) && nosign(res2.lval) ? scc.generator.gen_udiv() : scc.generator.gen_div()));
+        return lines;
+      case "%=":
+        lines.push(...(nosign(res.lval) && nosign(res2.lval) ? scc.generator.gen_umod() : scc.generator.gen_mod()));
+        return lines;
+      case ">=":
+        lines.push(...(nosign(res.lval) ? scc.generator.gen_logical_shift_right() : scc.generator.gen_arithm_shift_right()));
+        return lines;
+      case "<=":
+        lines.push(...scc.generator.gen_arithm_shift_left());
+        return lines;
+      case "&=":
+        lines.push(...scc.generator.gen_and());
+        return lines;
+      case "^=":
+        lines.push(...scc.generator.gen_xor());
+        return lines;
+      case "|=":
+        lines.push(...scc.generator.gen_or());
+        return lines;
     }
     throw Error();
   };

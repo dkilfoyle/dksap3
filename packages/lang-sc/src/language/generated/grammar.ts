@@ -1275,6 +1275,42 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
                     {
                       "$type": "Keyword",
                       "value": "+="
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": "-="
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": "*="
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": "/="
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": "%="
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": "&="
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": ">="
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": "<="
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": "^="
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": "|="
                     }
                   ]
                 }
