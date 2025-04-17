@@ -69,7 +69,7 @@ const debouncedSendScDocumentChange = debounce(sendScDocumentChange, 1000);
 shared.workspace.DocumentBuilder.onBuildPhase(DocumentState.Validated, (documents) => {
   for (const document of documents) {
     // console.log(document);
-    // console.log("AST", document.parseResult.value);
+    console.log("AST", document.parseResult.value);
     if (document.diagnostics?.length == 0) {
       debouncedSendScDocumentChange(document);
     }

@@ -85,19 +85,40 @@ Expression:
     Assignment;
 
 Assignment infers Expression:
-    Addition ({infer BinaryExpression.left=current} operator=('='|"+="|"-="|"*="|"/="|"%="|"&="|">>="|"<<="|"^="|"|=") right=Addition)*;
+    LogicalOr ({infer BinaryExpression.left=current} operator=('='|"+="|"-="|"*="|"/="|"%="|"&="|">>="|"<<="|"^="|"|=") right=LogicalOr)*;
+
+// Ternary infers Expression:
+//     LogicalOr ({infer TernaryExpression.test=current} "?" left=Expression ":" right=LogicalOr)*;
+
+LogicalOr infers Expression:
+    LogicalAnd ({infer BinaryExpression.left=current} operator="||" right=LogicalAnd)*;
+
+LogicalAnd infers Expression:
+    BitwiseOr ({infer BinaryExpression.left=current} operator="&&" right=BitwiseOr)*;
+
+BitwiseOr infers Expression:
+    BitwiseXor ({infer BinaryExpression.left=current} operator="|" right=BitwiseXor)*;
+
+BitwiseXor infers Expression:
+    BitwiseAnd ({infer BinaryExpression.left=current} operator="^" right=BitwiseAnd)*;
+
+BitwiseAnd infers Expression:
+    Equality ({infer BinaryExpression.left=current} operator="&" right=Equality)*;
+
+Equality infers Expression:
+    Comparison ({infer BinaryExpression.left=current} operator=('==' | '!=') right=Comparison)*;
+
+Comparison infers Expression:
+    BitwiseShift ({infer BinaryExpression.left=current} operator=('<' | '<=' | '>' | '>=') right=BitwiseShift)*;
+
+BitwiseShift infers Expression:
+    Addition ({infer BinaryExpression.left=current} operator=('>>' | '<<') right=Addition)*;
 
 Addition infers Expression:
     Multiplication ({infer BinaryExpression.left=current} operator=('+' | '-') right=Multiplication)*;
 
 Multiplication infers Expression:
-    Logical ({infer BinaryExpression.left=current} operator=('*' | '/' | '%') right=Logical)*;
-
-Logical infers Expression:
-    Comparison ({infer BinaryExpression.left=current} operator=('and' | 'or') right=Comparison)*;
-
-Comparison infers Expression:
-    Primary ({infer BinaryExpression.left=current} operator=('<' | '<=' | '>' | '>=' | '==' | '!=') right=Primary)*;
+    Primary ({infer BinaryExpression.left=current} operator=('*' | '/' | '%') right=Primary)*;
 
 Primary infers Expression:
     '(' Expression ')' |

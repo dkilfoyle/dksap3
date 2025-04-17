@@ -26,6 +26,7 @@ export type ScKeywordNames =
     | "%"
     | "%="
     | "&"
+    | "&&"
     | "&="
     | "("
     | ")"
@@ -43,18 +44,20 @@ export type ScKeywordNames =
     | "/="
     | ";"
     | "<"
+    | "<<"
     | "<<="
     | "<="
     | "="
     | "=="
     | ">"
     | ">="
+    | ">>"
     | ">>="
     | "["
     | "[]"
     | "]"
+    | "^"
     | "^="
-    | "and"
     | "auto"
     | "break"
     | "char"
@@ -64,7 +67,6 @@ export type ScKeywordNames =
     | "for"
     | "if"
     | "int"
-    | "or"
     | "register"
     | "return"
     | "signed"
@@ -74,7 +76,9 @@ export type ScKeywordNames =
     | "unsigned"
     | "while"
     | "{"
+    | "|"
     | "|="
+    | "||"
     | "}"
     | "~";
 
@@ -132,7 +136,7 @@ export interface BinaryExpression extends AstNode {
     readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | WhileStatement;
     readonly $type: 'BinaryExpression';
     left: Expression;
-    operator: '!=' | '%' | '%=' | '&=' | '*' | '*=' | '+' | '+=' | '-' | '-=' | '/' | '/=' | '<' | '<<=' | '<=' | '=' | '==' | '>' | '>=' | '>>=' | '^=' | 'and' | 'or' | '|=';
+    operator: '!=' | '%' | '%=' | '&&' | '&' | '&=' | '*' | '*=' | '+' | '+=' | '-' | '-=' | '/' | '/=' | '<' | '<<' | '<<=' | '<=' | '=' | '==' | '>' | '>=' | '>>' | '>>=' | '^' | '^=' | '|' | '|=' | '||';
     right: Expression;
 }
 
