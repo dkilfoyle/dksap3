@@ -43,8 +43,8 @@ export class WhileTable {
       type: WSType.WSWHILE,
       case_test: 0, //scc.generator.get_label(),
       label_num: lbl,
-      exit_label: `$${lbl}_wex`,
-      test_label: `$${lbl}_wif`,
+      exit_label: `$w${lbl}_ex`,
+      test_label: `$w${lbl}_tst`,
       body_label: "",
     };
     this.addWhile(ws);
@@ -58,9 +58,9 @@ export class WhileTable {
       type: WSType.WSDO,
       case_test: 0, //scc.generator.get_label(),
       label_num: lbl,
-      exit_label: `$${lbl}_dex`,
-      test_label: `$${lbl}_dif`,
-      body_label: `$${lbl}_dbl`,
+      exit_label: `$d${lbl}_ex  `,
+      test_label: `$d${lbl}_tst`,
+      body_label: `$d${lbl}_blk`,
     };
     this.addWhile(ws);
     return ws;
@@ -73,9 +73,9 @@ export class WhileTable {
       type: WSType.WSFOR,
       case_test: 0, //scc.generator.get_label(),
       label_num: lbl,
-      exit_label: `$${lbl}_fex`,
-      test_label: `$${lbl}_fif`,
-      body_label: `$${lbl}_fbl`,
+      exit_label: `$f${lbl}_ex`,
+      test_label: `$f${lbl}_tst`,
+      body_label: `$f${lbl}_blk`,
     };
     this.addWhile(ws);
     return ws;
@@ -153,35 +153,34 @@ export const compileDo = (scc: ScCompiler, dostat: DoStatement) => {
 export const compileFor = (scc: ScCompiler, forstat: ForStatement) => {
   const wt = scc.while_table.createFor(scc);
 
-  const node = expandTracedToNode(forstat)`
-      ; for (${forstat.condition?.$cstNode?.text})
-      ${forstat.init ? compileExpression(scc, forstat.init).node : undefined}
-    ${wt.test_label}:
-      ${
-        forstat.condition
-          ? expandToNode`
-            ${compileExpression(scc, forstat.condition).node}
-            ; jmp to body if test !=0 
-            ${joinToNode(scc.generator.gen_test_jump(`${wt.body_label}`, 1), NL)}
-            ; jmp to exit if test == 0
-            jmp ${wt.exit_label}`
-          : undefined
-      }
-    $${wt.label_num}_fin:
-      ${
-        forstat.execution
-          ? expandToNode`
-          ${compileExpression(scc, forstat.execution).node}
-          jmp ${forstat.condition ? wt.test_label : wt.body_label}
-        `
-          : undefined
-      }
-    ${wt.body_label}:
-      ${compileBlock(scc, forstat.block)}
-      jmp $${wt.label_num}_fin
-    ${wt.exit_label}:
-      ${joinToNode(scc.generator.gen_modify_stack(wt.stack_pointer), NL)}
-  `;
+  const node = expandTracedToNode(forstat)`  ; for${wt.label_num} (${forstat.condition?.$cstNode?.text})
+${forstat.init ? compileExpression(scc, forstat.init).node : undefined}
+${wt.test_label}:
+  ${
+    forstat.condition
+      ? expandToNode`
+        ${compileExpression(scc, forstat.condition).node}
+        ; jmp to body if test !=0 
+        ${joinToNode(scc.generator.gen_test_jump(`${wt.body_label}`, 1), NL)}
+        ; jmp to exit if test == 0
+        jmp ${wt.exit_label}`
+      : undefined
+  }
+$f${wt.label_num}_inc:
+  ${
+    forstat.execution
+      ? expandToNode`
+      ${compileExpression(scc, forstat.execution).node}
+      jmp ${forstat.condition ? wt.test_label : wt.body_label}
+    `
+      : undefined
+  }
+${wt.body_label}:
+${compileBlock(scc, forstat.block)}
+  jmp $f${wt.label_num}_inc
+${wt.exit_label}:
+  ${joinToNode(scc.generator.gen_modify_stack(wt.stack_pointer), NL)}
+`.appendNewLineIfNotEmpty();
 
   scc.symbol_table.local_table_index = wt.symbol_idx; // pop off any locals created in for init or for body
   scc.while_table.delWhile();

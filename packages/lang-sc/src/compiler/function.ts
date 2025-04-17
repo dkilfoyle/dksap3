@@ -1,4 +1,4 @@
-import { expandTracedToNode, joinToNode } from "langium/generate";
+import { expandToNode, expandTracedToNode, joinToNode } from "langium/generate";
 import { FunctionDeclaration, isStructTypeReference, ParameterDeclaration } from "../language/generated/ast";
 import { compileBlock } from "./statements";
 import { SymbolTable } from "./SymbolTable";
@@ -68,7 +68,7 @@ export const compileFunctionDeclaration = (scc: ScCompiler, fun: FunctionDeclara
   // compiler.generator.output_line("ret");
 
   const res = expandTracedToNode(fun)`
-    ${fun.name}:${fun.extern ? ":" : ""}
+    ${expandToNode`${fun.name}:${fun.extern ? ":" : ""}`}
     ${compileBlock(scc, fun.body)}
     $${scc.generator.fexitlab}:
       ${joinToNode(scc.generator.gen_modify_stack(0), { appendNewLineIfNotEmpty: true })}

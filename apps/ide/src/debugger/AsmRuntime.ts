@@ -49,7 +49,7 @@ export class AsmRuntime {
   public hlLabel = "";
   public deLabel = "";
 
-  constructor(public logLevel = 1) {
+  constructor(public logLevel = 2) {
     console.log("AsmRuntime constructed");
     emulator.bdosAddress = 7;
   }

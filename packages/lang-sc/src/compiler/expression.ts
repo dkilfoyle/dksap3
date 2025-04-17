@@ -82,12 +82,15 @@ const leafNode = (node: AstNode, lines: string[]) => {
   `;
 };
 
-export function compileExpression(scc: ScCompiler, expression: Expression): ExpressionResult {
+export function compileExpression(scc: ScCompiler, expression: Expression, asStatement = false): ExpressionResult {
   const res = compileSubExpression(scc, expression);
   if (res.reg & FETCH) {
     // hl|de = &symbol so need to retrieve symbol value from ram
     // hl = symbol value
     res.node = res.node.append(joinToNode(rvalue(scc, res), NL));
+  }
+  if (asStatement) {
+    res.node = expandTracedToNode(expression)`  ${res.node}`;
   }
   return res;
 }
@@ -103,8 +106,8 @@ function compileSubExpression(scc: ScCompiler, expression: Expression): Expressi
         case "*=":
         case "/=":
         case "%=":
-        case ">=":
-        case "<=":
+        case ">>=":
+        case "<<=":
         case "&=":
         case "^=":
         case "|=":
@@ -265,14 +268,12 @@ function applyAssignment(scc: ScCompiler, binary: BinaryExpression): ExpressionR
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
   let leftResult, rightResult: ExpressionResult;
 
-  const node = expandTracedToNode(binary)`
-    ; ${binary.$cstNode!.text}
-    ${(leftResult = compileSubExpression(scc, binary.left)).node}
-    ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg, leftResult.lval) : [], NL)}
-    ${(rightResult = compileExpression(scc, binary.right)).node}
-    ; ${binary.operator}
-    ${joinToNode(store(scc, leftResult.lval), NL)}
-  `;
+  const node = expandTracedToNode(binary)`  ; ${binary.$cstNode!.text}
+  ${(leftResult = compileSubExpression(scc, binary.left)).node}
+  ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg, leftResult.lval) : [], NL)}
+  ${(rightResult = compileExpression(scc, binary.right)).node}
+  ; ${binary.operator}
+  ${joinToNode(store(scc, leftResult.lval), NL)}`;
   return { reg: 0, lval, node };
 }
 

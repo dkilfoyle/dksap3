@@ -45,14 +45,17 @@ export class ScCompiler {
     // check all function calls for stdlib externs
     //
 
-    return toStringAndTrace(expandTracedToNode(root)`
+    const node = expandTracedToNode(root)`
       ; SmallC v2.4 8080 output
       ${joinToNode(
         root.definitions.map((def) => this.compileDefinition(def)),
         { appendNewLineIfNotEmpty: true }
       )}
       ${this.dumplits()}
-  `);
+    `;
+    console.log(node);
+
+    return toStringAndTrace(node);
   }
 
   compileDefinition(def: Definition) {

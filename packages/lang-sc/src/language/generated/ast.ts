@@ -43,17 +43,20 @@ export type ScKeywordNames =
     | "/="
     | ";"
     | "<"
+    | "<<="
     | "<="
     | "="
     | "=="
     | ">"
     | ">="
+    | ">>="
     | "["
     | "[]"
     | "]"
     | "^="
     | "and"
     | "auto"
+    | "break"
     | "char"
     | "do"
     | "else"
@@ -109,7 +112,7 @@ export function isSizeofSymbol(item: unknown): item is SizeofSymbol {
     return reflection.isInstance(item, SizeofSymbol);
 }
 
-export type Statement = DoStatement | Expression | ForStatement | IfStatement | InlineAssembly | LocalVariableDeclaration | ReturnStatement | StructDeclaration | WhileStatement;
+export type Statement = BreakStatement | DoStatement | Expression | ForStatement | IfStatement | InlineAssembly | LocalVariableDeclaration | ReturnStatement | StructDeclaration | WhileStatement;
 
 export const Statement = 'Statement';
 
@@ -129,7 +132,7 @@ export interface BinaryExpression extends AstNode {
     readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | WhileStatement;
     readonly $type: 'BinaryExpression';
     left: Expression;
-    operator: '!=' | '%' | '%=' | '&=' | '*' | '*=' | '+' | '+=' | '-' | '-=' | '/' | '/=' | '<' | '<=' | '=' | '==' | '>' | '>=' | '^=' | 'and' | 'or' | '|=';
+    operator: '!=' | '%' | '%=' | '&=' | '*' | '*=' | '+' | '+=' | '-' | '-=' | '/' | '/=' | '<' | '<<=' | '<=' | '=' | '==' | '>' | '>=' | '>>=' | '^=' | 'and' | 'or' | '|=';
     right: Expression;
 }
 
@@ -149,6 +152,18 @@ export const Block = 'Block';
 
 export function isBlock(item: unknown): item is Block {
     return reflection.isInstance(item, Block);
+}
+
+export interface BreakStatement extends AstNode {
+    readonly $container: Block;
+    readonly $type: 'BreakStatement';
+    break: 'break';
+}
+
+export const BreakStatement = 'BreakStatement';
+
+export function isBreakStatement(item: unknown): item is BreakStatement {
+    return reflection.isInstance(item, BreakStatement);
 }
 
 export interface CharExpression extends AstNode {
@@ -489,6 +504,7 @@ export function isPrimitiveTypeReference(item: unknown): item is PrimitiveTypeRe
 export type ScAstType = {
     BinaryExpression: BinaryExpression
     Block: Block
+    BreakStatement: BreakStatement
     CharExpression: CharExpression
     Definition: Definition
     DoStatement: DoStatement
@@ -525,7 +541,7 @@ export type ScAstType = {
 export class ScAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [BinaryExpression, Block, CharExpression, Definition, DoStatement, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, SizeofExpression, SizeofSymbol, SizeofTypeReference, Statement, StringExpression, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
+        return [BinaryExpression, Block, BreakStatement, CharExpression, Definition, DoStatement, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, SizeofExpression, SizeofSymbol, SizeofTypeReference, Statement, StringExpression, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
@@ -539,6 +555,7 @@ export class ScAstReflection extends AbstractAstReflection {
             case UnaryExpression: {
                 return this.isSubtype(Expression, supertype);
             }
+            case BreakStatement:
             case DoStatement:
             case Expression:
             case ForStatement:
@@ -618,6 +635,14 @@ export class ScAstReflection extends AbstractAstReflection {
                     name: Block,
                     properties: [
                         { name: 'statements', defaultValue: [] }
+                    ]
+                };
+            }
+            case BreakStatement: {
+                return {
+                    name: BreakStatement,
+                    properties: [
+                        { name: 'break' }
                     ]
                 };
             }

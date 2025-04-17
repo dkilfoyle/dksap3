@@ -50,6 +50,7 @@ Statement:
     WhileStatement |
     DoStatement ";"|
     ForStatement |
+    BreakStatement ";" |
     LocalVariableDeclaration | 
     ReturnStatement ';' | 
     StructDeclaration |
@@ -75,13 +76,16 @@ DoStatement:
 ReturnStatement:
     'return' value=Expression?;
 
+BreakStatement:
+    break='break';
+
 // ################ Expressions
 
 Expression:
     Assignment;
 
 Assignment infers Expression:
-    Addition ({infer BinaryExpression.left=current} operator=('='|"+="|"-="|"*="|"/="|"%="|"&="|">="|"<="|"^="|"|=") right=Addition)*;
+    Addition ({infer BinaryExpression.left=current} operator=('='|"+="|"-="|"*="|"/="|"%="|"&="|">>="|"<<="|"^="|"|=") right=Addition)*;
 
 Addition infers Expression:
     Multiplication ({infer BinaryExpression.left=current} operator=('+' | '-') right=Multiplication)*;
