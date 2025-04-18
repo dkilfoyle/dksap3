@@ -1,8 +1,8 @@
 int main()
 {
   unsigned int n;
-  n = 0;
   unsigned char c;
+  n = 0;
   c = 0;
 
   while (n++ < 100)

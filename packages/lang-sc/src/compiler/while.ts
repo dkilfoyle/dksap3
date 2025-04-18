@@ -116,18 +116,17 @@ export class WhileTable {
 
 export const compileWhile = (scc: ScCompiler, whilestat: WhileStatement) => {
   const wt = scc.while_table.createWhile(scc);
-  const node = expandTracedToNode(whilestat)`
-    ; while (${whilestat.condition.$cstNode?.text})
-    ${wt.test_label}:
-      ${compileExpression(scc, whilestat.condition).node}
-      ; jmp to loop exit if a==0
-      ${joinToNode(scc.generator.gen_test_jump(`${wt.exit_label}`, 0), NL)}
-      ; while block
-      ${compileBlock(scc, whilestat.block)}
-      jmp ${wt.test_label}
-    ${wt.exit_label}:
-      ${joinToNode(scc.generator.gen_modify_stack(wt.stack_pointer), NL)}
-  `;
+  const node = expandTracedToNode(whilestat)`  ; while (${whilestat.condition.$cstNode?.text})
+${wt.test_label}:
+  ${compileExpression(scc, whilestat.condition).node}
+  ; jmp to loop exit if a==0
+  ${joinToNode(scc.generator.gen_test_jump(`${wt.exit_label}`, 0), NL)}
+  ; while block
+${compileBlock(scc, whilestat.block)}
+  jmp ${wt.test_label}
+${wt.exit_label}:
+  ${joinToNode(scc.generator.gen_modify_stack(wt.stack_pointer), NL)}
+`;
 
   scc.symbol_table.local_table_index = wt.symbol_idx; // pop off any locals created in while body
   scc.while_table.delWhile();
@@ -138,7 +137,7 @@ export const compileDo = (scc: ScCompiler, dostat: DoStatement) => {
   const wt = scc.while_table.createDo(scc);
   const node = expandTracedToNode(dostat)`  ; do (${dostat.condition.$cstNode?.text})
 ${wt.body_label}:
-  ${compileBlock(scc, dostat.block)}
+${compileBlock(scc, dostat.block)}
 ${wt.test_label}:
   ${compileExpression(scc, dostat.condition).node}
   ; jmp to loop exit if a==0

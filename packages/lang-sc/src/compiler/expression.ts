@@ -72,7 +72,7 @@ export function rvalue(scc: ScCompiler, res: ExpressionResult) {
 }
 
 function store(scc: ScCompiler, lval: ILValue) {
-  if ((lval.indirect = 0)) return scc.generator.gen_put_memory(lval.symbol as ISymbol);
+  if (lval.indirect == 0) return scc.generator.gen_put_memory(lval.symbol as ISymbol);
   else return scc.generator.gen_put_indirect(lval.indirect);
 }
 
