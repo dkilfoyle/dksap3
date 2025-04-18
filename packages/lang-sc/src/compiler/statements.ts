@@ -5,6 +5,7 @@ import {
   InlineAssembly,
   isBinaryExpression,
   isBreakStatement,
+  isContinueStatement,
   isDoStatement,
   isExpression,
   isForStatement,
@@ -24,7 +25,7 @@ import { compileExpression, ExpressionResult } from "./expression";
 import { CompositeGeneratorNode, expandTracedToNode, expandTracedToNodeIf, JoinOptions, joinToNode, joinTracedToNode } from "langium/generate";
 import { userPreferences } from "../language/sc-userpreferences";
 import { ScCompiler } from "./sc-compiler";
-import { compileDo, compileFor, compileWhile } from "./while";
+import { compileBreak, compileContinue, compileDo, compileFor, compileWhile } from "./while";
 import { SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
 
 const getVariableType = (v: LocalVariableDeclaration) => {
@@ -46,13 +47,20 @@ export const compileBlock = (scc: ScCompiler, block: Block) => {
   //     { appendNewLineIfNotEmpty: true }
   //   )}
   // `;
-  return expandTracedToNode(block)`${joinToNode(block.statements.map((s) => compileStatement(scc, s)))}`;
+  return expandTracedToNode(block)`
+${joinTracedToNode(block, "declarations")(
+  block.declarations.map((d) => compileLocalDeclaration(scc, d)),
+  { appendNewLineIfNotEmpty: true }
+)}
+${joinTracedToNode(block, "statements")(
+  block.statements.map((s) => compileStatement(scc, s)),
+  { appendNewLineIfNotEmpty: true }
+)}
+`;
 };
 
 export const compileStatement = (scc: ScCompiler, statement: Statement): CompositeGeneratorNode => {
   switch (true) {
-    case isLocalVariableDeclaration(statement):
-      return compileLocalDeclaration(scc, statement);
     case isExpression(statement):
       return compileExpression(scc, statement, !isBinaryExpression(statement)).node!;
     case isReturnStatement(statement):
@@ -67,20 +75,14 @@ export const compileStatement = (scc: ScCompiler, statement: Statement): Composi
       return compileFor(scc, statement);
     case isBreakStatement(statement):
       return compileBreak(scc, statement);
+    case isContinueStatement(statement):
+      return compileContinue(scc, statement);
     case isIfStatement(statement):
       return compileIf(scc, statement);
     default:
       console.error("Unimplemented statement ", statement);
   }
   throw Error();
-};
-
-const compileBreak = (scc: ScCompiler, stmt: BreakStatement) => {
-  const ptr = scc.while_table.readWhile();
-  return expandTracedToNode(stmt)`  ; break
-  ${joinToNode(scc.generator.gen_modify_stack(ptr.stack_pointer), NL)}
-  jmp ${ptr.exit_label}
-  `;
 };
 
 const compileAssembly = (scc: ScCompiler, asm: InlineAssembly) => {

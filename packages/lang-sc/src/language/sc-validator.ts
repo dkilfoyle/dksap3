@@ -1,5 +1,5 @@
 import type { ValidationAcceptor, ValidationChecks } from "langium";
-import type { ScAstType, FunctionDeclaration, ParameterDeclaration } from "./generated/ast";
+import type { ScAstType, FunctionDeclaration, ParameterDeclaration, LocalVariableDeclaration } from "./generated/ast";
 import type { ScServices } from "./sc-module";
 
 /**

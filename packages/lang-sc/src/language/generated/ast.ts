@@ -61,6 +61,7 @@ export type ScKeywordNames =
     | "auto"
     | "break"
     | "char"
+    | "continue"
     | "do"
     | "else"
     | "extern"
@@ -116,7 +117,7 @@ export function isSizeofSymbol(item: unknown): item is SizeofSymbol {
     return reflection.isInstance(item, SizeofSymbol);
 }
 
-export type Statement = BreakStatement | DoStatement | Expression | ForStatement | IfStatement | InlineAssembly | LocalVariableDeclaration | ReturnStatement | StructDeclaration | WhileStatement;
+export type Statement = BreakStatement | ContinueStatement | DoStatement | Expression | ForStatement | IfStatement | InlineAssembly | ReturnStatement | StructDeclaration | WhileStatement;
 
 export const Statement = 'Statement';
 
@@ -149,6 +150,7 @@ export function isBinaryExpression(item: unknown): item is BinaryExpression {
 export interface Block extends AstNode {
     readonly $container: DoStatement | ForStatement | FunctionDeclaration | IfStatement | WhileStatement;
     readonly $type: 'Block';
+    declarations: Array<LocalVariableDeclaration>;
     statements: Array<Statement>;
 }
 
@@ -180,6 +182,18 @@ export const CharExpression = 'CharExpression';
 
 export function isCharExpression(item: unknown): item is CharExpression {
     return reflection.isInstance(item, CharExpression);
+}
+
+export interface ContinueStatement extends AstNode {
+    readonly $container: Block;
+    readonly $type: 'ContinueStatement';
+    continue: 'continue';
+}
+
+export const ContinueStatement = 'ContinueStatement';
+
+export function isContinueStatement(item: unknown): item is ContinueStatement {
+    return reflection.isInstance(item, ContinueStatement);
 }
 
 export interface DoStatement extends AstNode {
@@ -510,6 +524,7 @@ export type ScAstType = {
     Block: Block
     BreakStatement: BreakStatement
     CharExpression: CharExpression
+    ContinueStatement: ContinueStatement
     Definition: Definition
     DoStatement: DoStatement
     Expression: Expression
@@ -545,7 +560,7 @@ export type ScAstType = {
 export class ScAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [BinaryExpression, Block, BreakStatement, CharExpression, Definition, DoStatement, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, SizeofExpression, SizeofSymbol, SizeofTypeReference, Statement, StringExpression, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
+        return [BinaryExpression, Block, BreakStatement, CharExpression, ContinueStatement, Definition, DoStatement, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PrimitiveTypeReference, Program, ReturnStatement, SizeofExpression, SizeofSymbol, SizeofTypeReference, Statement, StringExpression, StructDeclaration, StructMember, StructTypeReference, SymbolExpression, TypeReference, UnaryExpression, WhileStatement];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
@@ -560,12 +575,12 @@ export class ScAstReflection extends AbstractAstReflection {
                 return this.isSubtype(Expression, supertype);
             }
             case BreakStatement:
+            case ContinueStatement:
             case DoStatement:
             case Expression:
             case ForStatement:
             case IfStatement:
             case InlineAssembly:
-            case LocalVariableDeclaration:
             case ReturnStatement:
             case WhileStatement: {
                 return this.isSubtype(Statement, supertype);
@@ -638,6 +653,7 @@ export class ScAstReflection extends AbstractAstReflection {
                 return {
                     name: Block,
                     properties: [
+                        { name: 'declarations', defaultValue: [] },
                         { name: 'statements', defaultValue: [] }
                     ]
                 };
@@ -655,6 +671,14 @@ export class ScAstReflection extends AbstractAstReflection {
                     name: CharExpression,
                     properties: [
                         { name: 'value' }
+                    ]
+                };
+            }
+            case ContinueStatement: {
+                return {
+                    name: ContinueStatement,
+                    properties: [
+                        { name: 'continue' }
                     ]
                 };
             }

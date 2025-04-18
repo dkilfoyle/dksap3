@@ -1,5 +1,5 @@
-import { DoStatement, Expression, ForStatement, WhileStatement } from "src/language/generated/ast";
-import { ScCompiler } from "./sc-compiler";
+import { BreakStatement, ContinueStatement, DoStatement, Expression, ForStatement, WhileStatement } from "src/language/generated/ast";
+import { createError, ScCompiler } from "./sc-compiler";
 import { expandToNode, expandTracedToNode, JoinOptions, joinToNode } from "langium/generate";
 import { compileBlock } from "./statements";
 import { compileExpression } from "./expression";
@@ -21,6 +21,7 @@ interface IWhile {
   test_label: string;
   exit_label: string;
   body_label: string;
+  incr_label: string;
 }
 
 export class WhileTable {
@@ -43,9 +44,10 @@ export class WhileTable {
       type: WSType.WSWHILE,
       case_test: 0, //scc.generator.get_label(),
       label_num: lbl,
-      exit_label: `$w${lbl}_ex`,
+      exit_label: `$w${lbl}_end`,
       test_label: `$w${lbl}_tst`,
       body_label: "",
+      incr_label: "",
     };
     this.addWhile(ws);
     return ws;
@@ -58,9 +60,10 @@ export class WhileTable {
       type: WSType.WSDO,
       case_test: 0, //scc.generator.get_label(),
       label_num: lbl,
-      exit_label: `$d${lbl}_ex  `,
+      exit_label: `$d${lbl}_end`,
       test_label: `$d${lbl}_tst`,
       body_label: `$d${lbl}_blk`,
+      incr_label: "",
     };
     this.addWhile(ws);
     return ws;
@@ -73,9 +76,10 @@ export class WhileTable {
       type: WSType.WSFOR,
       case_test: 0, //scc.generator.get_label(),
       label_num: lbl,
-      exit_label: `$f${lbl}_ex`,
+      exit_label: `$f${lbl}_end`,
       test_label: `$f${lbl}_tst`,
       body_label: `$f${lbl}_blk`,
+      incr_label: `$f${lbl}_inc`,
     };
     this.addWhile(ws);
     return ws;
@@ -132,17 +136,16 @@ export const compileWhile = (scc: ScCompiler, whilestat: WhileStatement) => {
 
 export const compileDo = (scc: ScCompiler, dostat: DoStatement) => {
   const wt = scc.while_table.createDo(scc);
-  const node = expandTracedToNode(dostat)`
-    ; do (${dostat.condition.$cstNode?.text})
-    ${wt.body_label}:
-      ${compileBlock(scc, dostat.block)}
-    ${wt.test_label}:
-      ${compileExpression(scc, dostat.condition).node}
-      ; jmp to loop exit if a==0
-      ${joinToNode(scc.generator.gen_test_jump(`${wt.exit_label}`, 0), NL)}
-      jmp ${wt.body_label}
-    ${wt.exit_label}:
-      ${joinToNode(scc.generator.gen_modify_stack(wt.stack_pointer), NL)}
+  const node = expandTracedToNode(dostat)`  ; do (${dostat.condition.$cstNode?.text})
+${wt.body_label}:
+  ${compileBlock(scc, dostat.block)}
+${wt.test_label}:
+  ${compileExpression(scc, dostat.condition).node}
+  ; jmp to loop exit if a==0
+  ${joinToNode(scc.generator.gen_test_jump(`${wt.exit_label}`, 0), NL)}
+  jmp ${wt.body_label}
+${wt.exit_label}:
+  ${joinToNode(scc.generator.gen_modify_stack(wt.stack_pointer), NL)}
   `;
 
   scc.symbol_table.local_table_index = wt.symbol_idx; // pop off any locals created in while body
@@ -166,7 +169,7 @@ ${wt.test_label}:
         jmp ${wt.exit_label}`
       : undefined
   }
-$f${wt.label_num}_inc:
+${wt.incr_label}:
   ${
     forstat.execution
       ? expandToNode`
@@ -177,7 +180,7 @@ $f${wt.label_num}_inc:
   }
 ${wt.body_label}:
 ${compileBlock(scc, forstat.block)}
-  jmp $f${wt.label_num}_inc
+  jmp ${wt.incr_label}
 ${wt.exit_label}:
   ${joinToNode(scc.generator.gen_modify_stack(wt.stack_pointer), NL)}
 `.appendNewLineIfNotEmpty();
@@ -185,4 +188,21 @@ ${wt.exit_label}:
   scc.symbol_table.local_table_index = wt.symbol_idx; // pop off any locals created in for init or for body
   scc.while_table.delWhile();
   return node;
+};
+
+export const compileBreak = (scc: ScCompiler, stmt: BreakStatement) => {
+  const ptr = scc.while_table.readWhile();
+  return expandTracedToNode(stmt)`  ; break
+${joinToNode(scc.generator.gen_modify_stack(ptr.stack_pointer), NL)}
+jmp ${ptr.exit_label}
+`;
+};
+
+export const compileContinue = (scc: ScCompiler, stmt: ContinueStatement) => {
+  const ptr = scc.while_table.findWhile();
+  if (!ptr) throw createError("No matching loop");
+  return expandTracedToNode(stmt)`  ; continue
+${joinToNode(scc.generator.gen_modify_stack(ptr.stack_pointer), NL)}
+jmp ${ptr.type == WSType.WSFOR ? ptr.incr_label : ptr.test_label}
+`;
 };

@@ -42,7 +42,7 @@ FunctionDeclaration:
 // ########### Statements
 
 Block:
-    '{' statements+=Statement* '}' |
+    '{' declarations+=LocalVariableDeclaration* statements+=Statement* '}' |
     statements+=Statement;
 
 Statement:
@@ -51,7 +51,7 @@ Statement:
     DoStatement ";"|
     ForStatement |
     BreakStatement ";" |
-    LocalVariableDeclaration | 
+    ContinueStatement ";" |
     ReturnStatement ';' | 
     StructDeclaration |
     InlineAssembly |
@@ -78,6 +78,9 @@ ReturnStatement:
 
 BreakStatement:
     break='break';
+
+ContinueStatement:
+    continue='continue';
 
 // ################ Expressions
 
