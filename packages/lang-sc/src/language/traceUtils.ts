@@ -1,6 +1,4 @@
-import * as monaco from "monaco-editor";
 import { TraceRegion, TextRegion } from "langium/generate";
-import * as vscode from "vscode";
 
 // Zero based
 export interface ILangiumPos {
@@ -10,10 +8,10 @@ export interface ILangiumPos {
 
 export class ZeroPos implements ILangiumPos {
   constructor(public line: number, public character: number) {}
-  static FromMonaco(pos: monaco.IPosition) {
+  static FromMonaco(pos: { lineNumber: number; column: number }) {
     return new ZeroPos(pos.lineNumber - 1, pos.column - 1);
   }
-  static FromVsCode(pos: vscode.Position) {
+  static FromVsCode(pos: { line: number; character: number }) {
     return new ZeroPos(pos.line, pos.character);
   }
   static FromTextRegion(region: TextRegion, rangeEnd: "start" | "end" = "start") {

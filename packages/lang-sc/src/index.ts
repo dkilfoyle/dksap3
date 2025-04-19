@@ -2,7 +2,7 @@ import * as AST from "./language/generated/ast";
 
 export { AST };
 export * from "./language/sc-module";
-export * from "./language/sc-validator";
+export * from "./language/traceUtils";
 export * from "./config/config";
 export * from "./language/main-browser";
 export * from "./compiler/stdlib";

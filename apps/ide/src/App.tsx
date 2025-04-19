@@ -6,7 +6,8 @@ import * as monaco from "@codingame/monaco-vscode-editor-api";
 import * as vscode from "vscode";
 import "./debugger/debugger.js";
 
-import { doIfInside, findFirstCodingLineAtOrAfter, ZeroPos } from "./traceUtils.js";
+import { doIfInside, findFirstCodingLineAtOrAfter, ZeroPos } from "@dksap3/lang-sc";
+// "../../../packages/lang-sc/src/language/traceUtils.js";
 
 const configResult = configure();
 const decorations: Record<string, monaco.editor.IEditorDecorationsCollection> = {};

@@ -4,28 +4,29 @@ import { FoldingRange, FoldingRangeKind, Trace } from "vscode-languageserver";
 import { AstUtils } from "langium";
 import { isDoStatement, isForStatement, isFunctionDeclaration, isIfStatement, isProgram, isWhileStatement } from "./generated/ast";
 import { TraceRegion } from "langium/generate";
+import { findFirstCodingLineAtOrAfter, findSmallestMatchingRegion, ZeroPos } from "./traceUtils";
 
 export type FoldingRangeAcceptor = (foldingRange: FoldingRange) => void;
 
-const findFirstSourceRegionAtLine = (curNode: TraceRegion, line: number): TraceRegion | undefined => {
-  if (!curNode.sourceRegion) return undefined;
-  const startLine = curNode.sourceRegion.range?.start.line;
-  const endLine = curNode.sourceRegion.range?.end.line;
-  if (startLine == undefined || endLine == undefined) throw Error("fold no region");
-  if (startLine == line) {
-    return curNode;
-  }
+// const findSmallestSourceRegionAtLine = (curNode: TraceRegion, line: number): TraceRegion | undefined => {
+//   if (!curNode.sourceRegion) return undefined;
+//   const startLine = curNode.sourceRegion.range?.start.line;
+//   const endLine = curNode.sourceRegion.range?.end.line;
+//   if (startLine == undefined || endLine == undefined) throw Error("fold no region");
+//   if (startLine == line) {
+//     return curNode;
+//   }
 
-  if (curNode.children && line >= startLine && line <= endLine) {
-    // node contains line
-    // console.log("testing node", node.sourceRegion, node.children);
-    for (let i = 0; i < curNode.children.length; i++) {
-      const n = findFirstSourceRegionAtLine(curNode.children[i], line);
-      if (n) return curNode.children[i];
-    }
-  }
-  return undefined;
-};
+//   if (curNode.children && line >= startLine && line <= endLine) {
+//     // node contains line
+//     // console.log("testing node", node.sourceRegion, node.children);
+//     for (let i = 0; i < curNode.children.length; i++) {
+//       const n = findSmallestSourceRegionAtLine(curNode.children[i], line);
+//       if (n) return curNode.children[i];
+//     }
+//   }
+//   return undefined;
+// };
 
 export class ScFoldProvider extends DefaultFoldingRangeProvider {
   constructor(services: LangiumServices) {
@@ -50,7 +51,12 @@ export const getAsmFolds = (document: LangiumDocument, trace: TraceRegion) => {
       if (!result.done) {
         const node = result.value;
         if (isFunctionDeclaration(node) || isIfStatement(node) || isWhileStatement(node) || isForStatement(node) || isDoStatement(node)) {
-          const region = findFirstSourceRegionAtLine(trace, node.$cstNode!.range.start.line);
+          const region = findSmallestMatchingRegion(
+            "source",
+            trace,
+            ZeroPos.FromLangium(node.$cstNode!.range.start),
+            ZeroPos.FromLangium(node.$cstNode!.range.end)
+          );
           console.log("matching regions", node, region);
           if (!region) throw Error("no region");
           const range = region.targetRegion.range!;

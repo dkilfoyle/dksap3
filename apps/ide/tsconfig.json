@@ -19,5 +19,5 @@
     { "path": "../../packages/lang-sc" },
     { "path": "../../packages/cpusim" }
   ],
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "../../packages/lang-sc/src/language/traceUtils.ts"]
 }
