@@ -20,7 +20,8 @@
     "watch": "tsc -b tsconfig.json --watch",
     "lint": "eslint src --ext ts",
     "langium:generate": "langium generate",
-    "langium:watch": "langium generate --watch"
+    "langium:watch": "langium generate --watch",
+    "prepare": "langium generate"
   },
   "dependencies": {
     "langium": "^3.3.1"

@@ -10,9 +10,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "tsx --tsconfig tsconfig.base.json apps/ide/src/index.ts",
-    "build": "tsc --build",
-    "clean": "tsc --build --clean",
-    "typecheck": "tsc --build --emitDeclarationOnly"
+    "dev": "npm run dev --workspace=@dksap3/ide",
+    "prepare": "npm run prepare --workspace=@dksap3/lang-asm --workspace=@dksap3/lang-sc --workspace=@dksap3/ui-cpu --workspace=@dksap3/ui-mem"
   }
 }
