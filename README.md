@@ -1,5 +1,7 @@
 # dksap3 - an IDE for Simple As Possible CPU v3
 
+![screenshot](image.png)
+
 ## Features
 
 1. 8080/5 assembly language server (Langium) with assembler and debugger
@@ -8,7 +10,7 @@
 ## Planned
 
 1. SmallC language server (WIP)
-2. SmallC compiler
+2. SmallC compiler (WIP)
 
 ## Acknowledgements
 
