@@ -11,6 +11,7 @@ import { ScGeneratedModule, ScGeneratedSharedModule } from "./generated/module";
 import { ScValidator, registerValidationChecks } from "./sc-validator";
 import { ScScopeComputation } from "./sc-scope";
 import { ScWorkspaceManager } from "./sc-workspace";
+import { ScFoldProvider } from "./sc-fold";
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -41,6 +42,9 @@ export const ScModule: Module<ScServices, PartialLangiumServices & ScAddedServic
   },
   references: {
     ScopeComputation: (services) => new ScScopeComputation(services),
+  },
+  lsp: {
+    FoldingRangeProvider: (services) => new ScFoldProvider(services),
   },
 };
 

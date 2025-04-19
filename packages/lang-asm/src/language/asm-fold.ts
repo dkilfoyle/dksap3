@@ -4,12 +4,16 @@ import { FoldingRange, FoldingRangeKind } from "vscode-languageserver";
 import { AstUtils } from "langium";
 import { isLabel } from "./generated/ast.js";
 
-export type FoldingRangeAcceptor = (foldingRange: FoldingRange) => void;
+type FoldingRangeAcceptor = (foldingRange: FoldingRange) => void;
+
+export const compiledFolds: Record<string, FoldingRange[]> = {};
 
 export class AsmFoldProvider implements FoldingRangeProvider {
   constructor() {}
 
   getFoldingRanges(document: LangiumDocument): FoldingRange[] {
+    const cf = compiledFolds[document.uri.toString()];
+    if (cf) return cf;
     const foldings: FoldingRange[] = [];
     const acceptor: FoldingRangeAcceptor = (foldingRange) => foldings.push(foldingRange);
     this.collectFolding(document, acceptor);

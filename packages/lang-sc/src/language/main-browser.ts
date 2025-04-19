@@ -5,12 +5,15 @@ import {
   BrowserMessageWriter,
   createConnection,
   DidChangeConfigurationParams,
+  FoldingRange,
   NotificationType,
+  Trace,
 } from "vscode-languageserver/browser";
 import { createScServices } from "./sc-module";
 import { TraceRegion } from "langium/generate";
 import { userPreferences } from "./sc-userpreferences";
 import { scCompiler } from "../compiler/sc-compiler";
+import { getAsmFolds } from "./sc-fold";
 
 declare const self: DedicatedWorkerGlobalScope;
 
@@ -35,6 +38,7 @@ export type ScDocumentChange = {
   ast: string;
   asm: string;
   trace: TraceRegion;
+  asmFolds: FoldingRange[];
 };
 
 const debounce = (fn: Function, ms = 300) => {
@@ -61,6 +65,7 @@ const sendScDocumentChange = (document: LangiumDocument<AstNode>) => {
     ast: json,
     asm: asm.text,
     trace: asm.trace,
+    asmFolds: getAsmFolds(document, asm.trace),
   });
 };
 

@@ -200,13 +200,16 @@ export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrap
   });
 
   wrapper.getLanguageClient("sc")?.onNotification("browser/ScDocumentChange", async (data: ScDocumentChange) => {
-    // console.log("App.tsx onNotification(browser/scDocumentChange)", data.uri);
+    console.log("App.tsx onNotification(browser/scDocumentChange)", data.uri);
     // console.log(data.asm);
-    // console.log(JSON.parse(data.ast));
+    console.log(JSON.parse(data.ast));
+    console.log(data.trace);
     // console.log(data.uri);
 
     traceRegions[data.uri] = data.trace;
     sourceAsts[data.uri] = JSON.parse(data.ast);
+
+    wrapper.getLanguageClient("asm")?.sendNotification("asmFolds", { folds: data.asmFolds, uri: data.uri.replace(".c", ".asm") });
 
     const uri = vscode.Uri.file(data.uri.replace(".c", ".asm").replace("file:///", ""));
     const content = Uint8Array.from(Array.from(data.asm).map((letter) => letter.charCodeAt(0)));

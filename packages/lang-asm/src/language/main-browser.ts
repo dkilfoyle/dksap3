@@ -5,12 +5,14 @@ import {
   BrowserMessageWriter,
   createConnection,
   DidChangeConfigurationParams,
+  FoldingRange,
   NotificationType,
 } from "vscode-languageserver/browser.js";
 import { createAsmServices } from "./asm-module.js";
 import { assembler } from "../assembler/asm-assembler.js";
 import { ILinkerInfo } from "../assembler/asm-linker.js";
 import { userPreferences } from "./asm-userpreferences.js";
+import { compiledFolds } from "./asm-fold.js";
 
 const status = {
   isDebugging: false,
@@ -38,6 +40,11 @@ connection.onDidChangeConfiguration((params: DidChangeConfigurationParams) => {
 connection.onNotification("statusChange", (n) => {
   if (n.isDebugging != undefined) status.isDebugging = n.isDebugging;
   // console.log("asmStatusChanged:", status);
+});
+
+connection.onNotification("asmFolds", (params: { folds: FoldingRange[]; uri: string }) => {
+  console.log("recevied asmFolds", params);
+  compiledFolds[params.uri] = params.folds;
 });
 
 export type AsmDocumentChange = {
