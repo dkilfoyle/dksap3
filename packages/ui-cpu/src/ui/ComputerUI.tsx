@@ -49,7 +49,7 @@ export function ComputerUI({ computerState, runtimeState }: { computerState: Com
   useEffect(() => {
     setHalfStage(Math.max(0, computerState.length - 1));
     setIsRun(false);
-    console.log(`ComputerUI received ${computerState.length} states, ir=${computerState[0].ir}`);
+    // console.log(`ComputerUI received ${computerState.length} states, ir=${computerState[0].ir}`);
   }, [computerState]);
 
   const lastTick = useMemo(() => computerState[Math.max(0, computerState.length - 2)], [computerState]);

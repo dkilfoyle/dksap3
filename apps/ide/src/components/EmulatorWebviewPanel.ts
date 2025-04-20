@@ -33,6 +33,7 @@ export class EmulatorWebviewPanel {
         { viewColumn: ViewColumn.Two, preserveFocus: true },
         {
           enableScripts: true,
+          retainContextWhenHidden: true,
         }
       );
       EmulatorWebviewPanel.currentPanel = new EmulatorWebviewPanel(panel);
@@ -57,7 +58,7 @@ export class EmulatorWebviewPanel {
   }
 
   static sendRuntimeState(rs: IRuntimeState) {
-    console.log("Runtime State", rs);
+    // console.log("Runtime State", rs);
     if (EmulatorWebviewPanel.currentPanel) {
       EmulatorWebviewPanel.currentPanel?._panel.webview.postMessage({ command: "setRuntimeState", data: rs });
     }

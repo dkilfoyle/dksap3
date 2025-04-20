@@ -151,7 +151,7 @@ export class Computer {
       clkState: this.clk.isTick ? "tick" : "tock",
       ctrl_word: this.ctrl.ctrl_word,
       ir: this.ir.out,
-      mem: [...this.mem.ram.slice(0, 255).values()],
+      mem: [...this.mem.ram.slice(0).values()], // sending entire ram TODO: performance implication??
       mar: this.mem.mar,
       regs: [...this.regs.registers.slice(0).values()],
       stage: this.ctrl.stage,

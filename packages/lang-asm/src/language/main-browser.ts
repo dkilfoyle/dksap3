@@ -18,7 +18,7 @@ const status = {
   isDebugging: false,
 };
 
-console.info("Starting asm main browser");
+// console.info("Starting ASM main browser");
 
 declare const self: DedicatedWorkerGlobalScope;
 
@@ -39,11 +39,9 @@ connection.onDidChangeConfiguration((params: DidChangeConfigurationParams) => {
 
 connection.onNotification("statusChange", (n) => {
   if (n.isDebugging != undefined) status.isDebugging = n.isDebugging;
-  // console.log("asmStatusChanged:", status);
 });
 
 connection.onNotification("asmFolds", (params: { folds: FoldingRange[]; uri: string }) => {
-  console.log("recevied asmFolds", params);
   compiledFolds[params.uri] = params.folds;
 });
 
@@ -65,7 +63,6 @@ const debounce = (fn: Function, ms = 300) => {
 const sendAsmDocumentChange = (document: LangiumDocument<AstNode>) => {
   if (status.isDebugging) return;
   const { bytes, linkerInfo } = assembler.assembleAndLink([document]);
-  console.log("LinkerInfo:", linkerInfo);
 
   const json = Asm.serializer.JsonSerializer.serialize(document.parseResult.value, {
     sourceText: false,
@@ -73,7 +70,6 @@ const sendAsmDocumentChange = (document: LangiumDocument<AstNode>) => {
     refText: true,
   });
   const documentChangeNotification = new NotificationType<AsmDocumentChange>("browser/AsmDocumentChange");
-  // console.log("Sending notification from browser:", hackvm.trace);
   connection.sendNotification(documentChangeNotification, {
     uri: document.uri.toString(),
     ast: json,
@@ -86,10 +82,9 @@ const debouncedSendAsmDocumentChange = debounce(sendAsmDocumentChange, 1000);
 
 shared.workspace.DocumentBuilder.onBuildPhase(DocumentState.Validated, (documents) => {
   for (const document of documents) {
-    // console.log("AST", document.parseResult.value);
-    // console.log("Builtin", shared.workspace.LangiumDocuments);
     if (document.diagnostics?.length == 0) {
-      debouncedSendAsmDocumentChange(document);
+      // debouncedSendAsmDocumentChange(document);
+      sendAsmDocumentChange(document);
     }
   }
 });

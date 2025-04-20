@@ -6,7 +6,6 @@ import { SymbolTable } from "./SymbolTable";
 import { TagTable } from "./TagTable";
 import { expandToNode, expandTracedToNode, joinToNode, joinTracedToNode, NL, toStringAndTrace } from "langium/generate";
 import { IRange } from "monaco-editor";
-import { assembler } from "@dksap3/lang-asm";
 import { WhileTable } from "./while";
 
 export function createError(description: string, range?: IRange) {
@@ -31,13 +30,15 @@ export class ScCompiler {
     return this._instance || (this._instance = new this());
   }
 
-  compile(root: AstNode) {
+  compile(uri: string, root: AstNode) {
     this.generator.init();
     this.symbol_table.init();
     this.tag_table.init();
     this.while_table.init();
     this.litq = [];
     this.litlab = this.generator.get_label();
+
+    console.groupCollapsed(`Compiling ${uri}`);
 
     if (!isProgram(root)) throw Error("Compiler expects Program root node");
 
@@ -53,9 +54,12 @@ export class ScCompiler {
       )}
       ${this.dumplits()}
     `;
-    console.log(node);
 
-    return toStringAndTrace(node);
+    const res = toStringAndTrace(node);
+    console.log("Received AST", root);
+    console.log("Trace", res.trace);
+    console.groupEnd();
+    return res;
   }
 
   compileDefinition(def: Definition) {

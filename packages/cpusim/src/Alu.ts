@@ -135,10 +135,10 @@ export class Alu implements IClocked {
           this.carry = getBit(this.flg, ALUFLG.C) == 1 ? 0 : 1;
           break;
         case ALUOP.INR:
-          this.acc++;
+          this.acc = (this.acc + 1) & 0xff;
           break;
         case ALUOP.DCR:
-          this.acc--;
+          this.acc = (this.acc - 1) & 0xff;
           break;
       }
     }

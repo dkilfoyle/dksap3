@@ -50,7 +50,6 @@ export class AsmRuntime {
   public deLabel = "";
 
   constructor(public logLevel = 2) {
-    console.log("AsmRuntime constructed");
     emulator.bdosAddress = 7;
   }
 
@@ -408,7 +407,7 @@ export class AsmRuntime {
         uri = "file://" + path.replaceAll("\\", "/");
       }
     }
-    console.log("Verify breakpoints", path, uri);
+    // console.log("Verify breakpoints", path, uri);
     if (!this.compiledAsm) throw Error("VerityBreakpoints no source");
     const lineAddressMap = this.compiledAsm!.linkerInfo[uri]?.lineAddressMap;
     if (!lineAddressMap) {

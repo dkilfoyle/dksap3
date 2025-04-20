@@ -69,6 +69,8 @@ class Assembler {
 
     this.mainfile = docs[0].uri.toString();
 
+    console.groupCollapsed(`assembleAndLink ${this.mainfile}`);
+
     // order in memory is os, runtime, stdlib, includes, main
     const allDocs = [this.os, this.runtime, this.stdlib, ...docs.slice(1, -1), docs[0]];
     const filenames = allDocs.map((doc) => doc.uri.toString());
@@ -96,7 +98,7 @@ class Assembler {
     // replace every address reference with file_base_addr + reference_offset
     this.relocateAddresses();
 
-    return {
+    const result = {
       bytes: this.concatenateFiles(filenames),
       linkerInfo: Object.values(this.files).reduce<ILinkerInfo>((accum, cur) => {
         accum[cur.filename] = {
@@ -109,6 +111,10 @@ class Assembler {
         return accum;
       }, {}),
     };
+
+    console.groupEnd();
+
+    return result;
   }
 
   concatenateFiles(filenames: string[]) {
@@ -170,7 +176,7 @@ class Assembler {
         this.files[filename].lines = root.lines; // don't trim main file or os
       } else {
         this.files[filename].lines = getImportedLines(root, externs);
-        console.log(`Trimmed ${filename} lines:`, this.files[filename].lines);
+        // console.log(`Trimmed ${filename} lines:`, this.files[filename].lines);
       }
     });
   }

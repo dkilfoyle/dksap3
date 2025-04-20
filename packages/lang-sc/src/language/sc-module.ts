@@ -12,6 +12,7 @@ import { ScValidator, registerValidationChecks } from "./sc-validator";
 import { ScScopeComputation } from "./sc-scope";
 import { ScWorkspaceManager } from "./sc-workspace";
 import { ScFoldProvider } from "./sc-fold";
+import { ScValueConverter } from "./sc-valueconverter";
 
 /**
  * Declaration of custom services - add your own service classes here.
@@ -45,6 +46,9 @@ export const ScModule: Module<ScServices, PartialLangiumServices & ScAddedServic
   },
   lsp: {
     FoldingRangeProvider: (services) => new ScFoldProvider(services),
+  },
+  parser: {
+    ValueConverter: () => new ScValueConverter(),
   },
 };
 

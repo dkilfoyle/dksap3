@@ -16,7 +16,7 @@ GlobalVarName returns NamedElement:
     {infer GlobalVarName} pointer?="*"? name=ID (ArrayIndexing | InitValue)?;
 
 fragment ArrayIndexing:
-    array?="[" dim=NUMBER? "]" ("=" "{" items+=Primary ("," items+=Primary)* "}")?;
+    array?="[" dim=DECNUMBER? "]" ("=" "{" items+=Primary ("," items+=Primary)* "}")?;
 
 fragment InitValue:
     assignment?='=' value=Expression;
@@ -25,7 +25,7 @@ LocalVariableDeclaration:
     type=TypeReference varNames+=LocalVarName ("," varNames+=LocalVarName)* ";";
 
 LocalVarName returns NamedElement:
-    {infer LocalVarName} pointer?="*"? name=ID (array?="[" dim=NUMBER? "]")?;
+    {infer LocalVarName} pointer?="*"? name=ID (array?="[" dim=DECNUMBER? "]")?;
 
 StructDeclaration:
     "struct" name=ID "{" members+=StructMember* "}";
@@ -155,7 +155,7 @@ UnaryExpression:
 
 
 NumberExpression:
-    value=NUMBER;
+    value=(DECNUMBER|HEXNUMBER|BINNUMBER);
 
 StringExpression:
     value=STRING;
@@ -184,7 +184,9 @@ type NamedElement = ParameterDeclaration | FunctionDeclaration | LocalVarName | 
 hidden terminal WS: /\s+/;
 terminal STRING: /"[^"]*"/;
 terminal ID: /[_a-zA-Z][\w_]*/;
-terminal NUMBER returns number: /[0-9]+/;
+terminal HEXNUMBER returns number: /0[xX][0-9a-fA-F]+/;
+terminal BINNUMBER returns number: /0[bB][0-1]+/;
+terminal DECNUMBER returns number: /[\-]?[0-9]+/;
 terminal ASM: /#asm[\s\S]*?#endasm/;
 terminal CHAR: /'.'/;
 

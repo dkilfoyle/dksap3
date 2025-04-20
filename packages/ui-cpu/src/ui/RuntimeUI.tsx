@@ -35,7 +35,6 @@ export const RuntimeUI = ({ compStates, halfStage, rtState }: { compStates: Comp
       },
       { sp: [], de: [], hl: [] }
     );
-    console.log("regChanges", res);
     return res;
   }, [compStates]);
 

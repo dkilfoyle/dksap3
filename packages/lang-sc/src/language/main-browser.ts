@@ -23,7 +23,7 @@ const messageWriter = new BrowserMessageWriter(self);
 const connection = createConnection(messageReader, messageWriter);
 const { shared, Sc } = createScServices({ connection, ...EmptyFileSystem });
 
-console.log("Starting SmallC main browser");
+// console.log("Starting SmallC main browser");
 startLanguageServer(shared);
 
 connection.onDidChangeConfiguration((params: DidChangeConfigurationParams) => {
@@ -50,16 +50,13 @@ const debounce = (fn: Function, ms = 300) => {
 };
 
 const sendScDocumentChange = (document: LangiumDocument<AstNode>) => {
-  const asm = scCompiler.compile(document.parseResult.value);
-
-  // console.log("ASM", asm);
+  const asm = scCompiler.compile(document.uri.toString(), document.parseResult.value);
   const json = Sc.serializer.JsonSerializer.serialize(document.parseResult.value, {
     sourceText: false,
     textRegions: true,
     refText: true,
   });
   const documentChangeNotification = new NotificationType<ScDocumentChange>("browser/ScDocumentChange");
-  // console.log("Sending notification from browser:", hackvm.trace);
   connection.sendNotification(documentChangeNotification, {
     uri: document.uri.toString(),
     ast: json,
@@ -74,9 +71,10 @@ const debouncedSendScDocumentChange = debounce(sendScDocumentChange, 1000);
 shared.workspace.DocumentBuilder.onBuildPhase(DocumentState.Validated, (documents) => {
   for (const document of documents) {
     // console.log(document);
-    console.log("AST", document.parseResult.value);
+    // console.log(`AST for ${document.uri.toString()}`, document.parseResult.value);
     if (document.diagnostics?.length == 0) {
-      debouncedSendScDocumentChange(document);
+      // debouncedSendScDocumentChange(document);
+      sendScDocumentChange(document);
     }
   }
 });

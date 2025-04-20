@@ -55,33 +55,32 @@ export const traceRegions: Record<string, TraceRegion> = {};
 export const sourceAsts: Record<string, AstNodeWithTextRegion> = {};
 
 const workspaceFile = vscode.Uri.file("/workspace/.vscode/workspace.code-workspace");
-const fileSystemProvider = new RegisteredFileSystemProvider(false);
-// const fileSystemProvider = new InMemoryFileSystemProvider();
 
-fileSystemProvider.registerFile(createDefaultWorkspaceFile(workspaceFile, "/dk8085"));
-
-const examplesAsm = import.meta.glob<string>("./examples/asm/*.asm", { eager: true, query: "?raw", import: "default" });
-Object.entries(examplesAsm).forEach(([key, value]) => {
-  fileSystemProvider.registerFile(new RegisteredMemoryFile(vscode.Uri.file(`dk8085/${key.replace("./examples/", "")}`), value));
-});
-
-const examplesC = import.meta.glob<string>("./examples/c/*.c", { eager: true, query: "?raw", import: "default" });
-Object.entries(examplesC).forEach(([key, value]) => {
-  fileSystemProvider.registerFile(new RegisteredMemoryFile(vscode.Uri.file(`dk8085/${key.replace("./examples/", "")}`), value));
-});
-
-const testC = import.meta.glob<string>("./examples/test/*.c", { eager: true, query: "?raw", import: "default" });
-Object.entries(testC).forEach(([key, value]) => {
-  fileSystemProvider.registerFile(new RegisteredMemoryFile(vscode.Uri.file(`dk8085/${key.replace("./examples/", "")}`), value));
-});
-
-registerFileSystemOverlay(1, fileSystemProvider);
+const buildFileSystem = () => {
+  const fileSystemProvider = new RegisteredFileSystemProvider(false);
+  fileSystemProvider.registerFile(createDefaultWorkspaceFile(workspaceFile, "/dk8085"));
+  const examplesAsm = import.meta.glob<string>("./examples/asm/*.asm", { eager: true, query: "?raw", import: "default" });
+  Object.entries(examplesAsm).forEach(([key, value]) => {
+    fileSystemProvider.registerFile(new RegisteredMemoryFile(vscode.Uri.file(`dk8085/${key.replace("./examples/", "")}`), value));
+  });
+  const examplesC = import.meta.glob<string>("./examples/c/*.c", { eager: true, query: "?raw", import: "default" });
+  Object.entries(examplesC).forEach(([key, value]) => {
+    fileSystemProvider.registerFile(new RegisteredMemoryFile(vscode.Uri.file(`dk8085/${key.replace("./examples/", "")}`), value));
+  });
+  const testC = import.meta.glob<string>("./examples/test/*.c", { eager: true, query: "?raw", import: "default" });
+  Object.entries(testC).forEach(([key, value]) => {
+    fileSystemProvider.registerFile(new RegisteredMemoryFile(vscode.Uri.file(`dk8085/${key.replace("./examples/", "")}`), value));
+  });
+  registerFileSystemOverlay(1, fileSystemProvider);
+};
 
 export const configure = (htmlContainer?: HTMLElement): ConfigResult => {
+  buildFileSystem();
+
   const wrapperConfig: WrapperConfig = {
     $type: "extended",
     id: "AAP",
-    logLevel: LogLevel.Debug,
+    logLevel: LogLevel.Error,
     htmlContainer,
     vscodeApiConfig: {
       serviceOverrides: {
@@ -187,8 +186,8 @@ export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrap
 
   // vscode.window.registerWebviewViewProvider(memoryViewProvider.viewType, memoryViewProvider);
 
-  EmulatorWebviewPanel.render();
   MemoryWebviewPanel.render();
+  EmulatorWebviewPanel.render();
 
   wrapper.getLanguageClient("asm")?.onNotification("browser/AsmDocumentChange", async (data: AsmDocumentChange) => {
     // console.log("App.tsx onNotification(browser/asmDocumentChange)", data.uri, data.machineCode.length);
@@ -200,11 +199,9 @@ export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrap
   });
 
   wrapper.getLanguageClient("sc")?.onNotification("browser/ScDocumentChange", async (data: ScDocumentChange) => {
-    console.log("App.tsx onNotification(browser/scDocumentChange)", data.uri);
-    // console.log(data.asm);
-    console.log(JSON.parse(data.ast));
-    console.log(data.trace);
-    // console.log(data.uri);
+    // console.log("App.tsx onNotification(browser/scDocumentChange)", data.uri);
+    // console.log(JSON.parse(data.ast));
+    // console.log(data.trace);
 
     traceRegions[data.uri] = data.trace;
     sourceAsts[data.uri] = JSON.parse(data.ast);
@@ -213,7 +210,13 @@ export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrap
 
     const uri = vscode.Uri.file(data.uri.replace(".c", ".asm").replace("file:///", ""));
     const content = Uint8Array.from(Array.from(data.asm).map((letter) => letter.charCodeAt(0)));
-    vscode.workspace.fs.writeFile(uri, content);
+
+    try {
+      await vscode.workspace.fs.writeFile(uri, content);
+    } catch (e) {
+      console.log("write file error", e);
+      //console.log(e);
+    }
 
     // compiledDocs[data.uri] = data;
   });
