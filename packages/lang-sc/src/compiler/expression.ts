@@ -210,7 +210,7 @@ function compileSizeofExpression(scc: ScCompiler, sizeexp: SizeofExpression): Ex
     if (symbol_table_idx == -1) throw Error("sizeof unable to find symbol");
     const sym = scc.symbol_table.symbols[symbol_table_idx];
     if (sym.storage == SymbolStorage.LSTATIC) throw Error("sizeof local static");
-    size = sym.offset; // TODO: This is bug? offset for nonstatics is stk offset not size, should ISymbol have a precomputed size?
+    size = sym.offset; // FIXME: This is bug? offset for nonstatics is stk offset not size, should ISymbol have a precomputed size?
     if (sym.type & SymbolType.CINT || sym.identity == SymbolIdentity.POINTER) size *= AsmGenerator.INTSIZE;
     else if (sym.type == SymbolType.STRUCT) size *= scc.tag_table.tags[sym.tagidx!].size;
   } else {

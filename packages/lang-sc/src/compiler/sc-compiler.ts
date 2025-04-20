@@ -15,6 +15,9 @@ export function createError(description: string, range?: IRange) {
   };
 }
 
+// TODO: compile structs
+// TODO: compile static vars
+
 export class ScCompiler {
   private static _instance: ScCompiler;
   generator = new AsmGenerator();

@@ -26,7 +26,4 @@ npm run dev
 2. https://langium.org/
 3. https://github.com/TypeFox/monaco-languageclient
 4. https://github.com/ncb85/SmallC-85
-
-```
-
-```
+5. https://github.com/c-testsuite/c-testsuite
