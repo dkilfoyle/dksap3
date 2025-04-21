@@ -136,7 +136,7 @@ export function isTypeReference(item: unknown): item is TypeReference {
 }
 
 export interface BinaryExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'BinaryExpression';
     left: Expression;
     operator: '!=' | '%' | '%=' | '&&' | '&' | '&=' | '*' | '*=' | '+' | '+=' | '-' | '-=' | '/' | '/=' | '<' | '<<' | '<<=' | '<=' | '=' | '==' | '>' | '>=' | '>>' | '>>=' | '^' | '^=' | '|' | '|=' | '||';
@@ -175,7 +175,7 @@ export function isBreakStatement(item: unknown): item is BreakStatement {
 }
 
 export interface CharExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'CharExpression';
     value: string;
 }
@@ -340,7 +340,7 @@ export function isLocalVarName(item: unknown): item is LocalVarName {
 }
 
 export interface NumberExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'NumberExpression';
     value: number;
 }
@@ -390,7 +390,7 @@ export function isReturnStatement(item: unknown): item is ReturnStatement {
 }
 
 export interface SizeofExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'SizeofExpression';
     arg: SizeofSymbol | SizeofTypeReference;
 }
@@ -414,7 +414,7 @@ export function isSizeofTypeReference(item: unknown): item is SizeofTypeReferenc
 }
 
 export interface StringExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'StringExpression';
     value: string;
 }
@@ -482,10 +482,10 @@ export function isSymbolExpression(item: unknown): item is SymbolExpression {
 }
 
 export interface UnaryExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | ReturnStatement | SymbolExpression | UnaryExpression | WhileStatement;
     readonly $type: 'UnaryExpression';
     prefix: '!' | '&' | '*' | '++' | '-' | '--' | '~';
-    value: SymbolExpression;
+    value: Expression;
 }
 
 export const UnaryExpression = 'UnaryExpression';

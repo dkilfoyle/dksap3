@@ -22,10 +22,10 @@ main()
     return 4;
 
   x = 1;
-  if (x | 4 != 5)
+  if ((x | 4) != 5)
     return 5;
-  if (x & 3 != 1)
+  if ((x & 3) != 1)
     return 6;
-  if (x ^ 3 != 2)
+  if ((x ^ 3) != 2)
     return 7;
 }

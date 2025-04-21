@@ -2498,7 +2498,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@35"
+                "$ref": "#/rules@22"
               },
               "arguments": []
             }

@@ -192,15 +192,14 @@ const compileIf = (scc: ScCompiler, ifstat: IfStatement) => {
 
   if (!ifstat.elseBlock) {
     // if only
-    return expandTracedToNode(ifstat)`
-        ; i${flab} ${ifstat.condition.$cstNode?.text}
-        ${compileExpression(scc, ifstat.condition).node}
-        ; if false jump to end
-        ${joinToNode(scc.generator.gen_test_jump(`$i${flab}_end`, 0), NL)}
-        ; if true block
-      ${block(ifstat.block)}
-      $i${flab}_end:
-    `.appendNewLine();
+    return expandTracedToNode(ifstat)`  ; i${flab} ${ifstat.condition.$cstNode?.text}
+  ${compileExpression(scc, ifstat.condition).node}
+  ; if false jump to end
+  ${joinToNode(scc.generator.gen_test_jump(`$i${flab}_end`, 0), NL)}
+  ; if true block
+${block(ifstat.block)}
+$i${flab}_end:
+`.appendNewLine();
   } else {
     // if else
     return expandTracedToNode(ifstat)`

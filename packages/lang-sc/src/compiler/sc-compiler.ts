@@ -7,6 +7,7 @@ import { TagTable } from "./TagTable";
 import { expandToNode, expandTracedToNode, joinToNode, joinTracedToNode, NL, toStringAndTrace } from "langium/generate";
 import { IRange } from "monaco-editor";
 import { WhileTable } from "./while";
+import { AstNodeError } from "./expression";
 
 export function createError(description: string, range?: IRange) {
   return {
@@ -45,11 +46,8 @@ export class ScCompiler {
 
     if (!isProgram(root)) throw Error("Compiler expects Program root node");
 
-    // todo
-    // check all function calls for stdlib externs
-    //
-
-    const node = expandTracedToNode(root)`
+    try {
+      const node = expandTracedToNode(root)`
       ; SmallC v2.4 8080 output
       ${joinToNode(
         root.definitions.map((def) => this.compileDefinition(def)),
@@ -58,11 +56,15 @@ export class ScCompiler {
       ${this.dumplits()}
     `;
 
-    const res = toStringAndTrace(node);
-    console.log("Received AST", root);
-    console.log("Trace", res.trace);
-    console.groupEnd();
-    return res;
+      const res = toStringAndTrace(node);
+      console.log("Received AST", root);
+      console.log("Trace", res.trace);
+      console.groupEnd();
+      return res;
+    } catch (e) {
+      console.groupEnd();
+      throw e;
+    }
   }
 
   compileDefinition(def: Definition) {
