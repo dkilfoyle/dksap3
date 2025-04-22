@@ -1,13 +1,15 @@
 main()
 {
-  int z[8];
-  int *r;
-  r = z;
-  // sizeof only working for struct
-  // if (sizeof(z) != 16)
-  //   return 1;
-  z[0] = 1;
-  if (*r != 1)
-    return 3;
+  int arr[2];
+  int *p;
+
+  arr[0] = 2;
+  arr[1] = 3;
+  p = &arr[0];
+
+  if (*(p++) != 2)
+    return 1;
+  if (*(p++) != 3)
+    return 2;
   return 0;
 }

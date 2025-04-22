@@ -45,6 +45,7 @@ export class ScCompiler {
     console.groupCollapsed(`Compiling ${uri}`);
 
     if (!isProgram(root)) throw Error("Compiler expects Program root node");
+    console.log("Received AST", root);
 
     try {
       const node = expandTracedToNode(root)`
@@ -57,7 +58,6 @@ export class ScCompiler {
     `;
 
       const res = toStringAndTrace(node);
-      console.log("Received AST", root);
       console.log("Trace", res.trace);
       console.groupEnd();
       return res;

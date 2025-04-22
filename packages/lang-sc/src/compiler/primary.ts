@@ -23,7 +23,6 @@ import { CompilerRegs, ILValue, ISymbol, SymbolIdentity, SymbolStorage, SymbolTy
 import { expandToNode, expandTracedToNode, joinToNode, joinTracedToNode } from "langium/generate";
 import { ScCompiler } from "./sc-compiler";
 import { ExpressionResult, leafNode, AstNodeError, rvalue, compileExpression, FETCH, NL } from "./expression";
-import { compilePostfix } from "./unary";
 
 export function compileNumberExpression(scc: ScCompiler, numexp: NumberExpression): ExpressionResult {
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
@@ -58,13 +57,13 @@ export function compileSymbolExpression(scc: ScCompiler, symbolExpression: Symbo
     case isParameterDeclaration(ref):
       res = compileLocalVariableReference(scc, ref);
       if (symbolExpression.indexExpression) res = compileArrayIndex(scc, res, symbolExpression.indexExpression);
-      if (symbolExpression.postfix) res = compilePostfix(scc, res, symbolExpression);
+      // if (symbolExpression.postfix) res = compilePostfix(scc, res, symbolExpression);
 
       break;
     case isGlobalVarName(ref):
       res = compileGlobalVariableReference(scc, ref);
       if (symbolExpression.indexExpression) res = compileArrayIndex(scc, res, symbolExpression.indexExpression);
-      if (symbolExpression.postfix) res = compilePostfix(scc, res, symbolExpression);
+      // if (symbolExpression.postfix) res = compilePostfix(scc, res, symbolExpression);
 
       break;
     // case isStructReference(symbolExpression):

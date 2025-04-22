@@ -121,11 +121,17 @@ Addition infers Expression:
     Multiplication ({infer BinaryExpression.left=current} operator=('+' | '-') right=Multiplication)*;
 
 Multiplication infers Expression:
-    Primary ({infer BinaryExpression.left=current} operator=('*' | '/' | '%') right=Primary)*;
+    Prefix ({infer BinaryExpression.left=current} operator=('*' | '/' | '%') right=Prefix)*;
+
+Prefix infers Expression:
+    {infer PrefixExpression} operator=("*"|"&"|"-"|"++"|"--"|"!"|"~") operand=Prefix 
+    | Postfix;
+
+Postfix infers Expression:
+    Primary ({infer PostfixExpression.operand=current} operator=("++"|"--"))*;
 
 Primary infers Expression:
     '(' Expression ')' |
-    UnaryExpression |
     NumberExpression |
     StringExpression |
     SizeofExpression |
@@ -138,8 +144,7 @@ SymbolExpression:
         ("." structMember=[StructMember:ID]) |
         functionCall=FunctionCall |
         ("[" indexExpression=Expression "]") 
-    )?
-    postfix=("++"|"--")?;
+    )?;
 
 SizeofExpression:
     "sizeof" "(" arg=(SizeofSymbol|SizeofTypeReference) ")";
@@ -150,8 +155,8 @@ SizeofSymbol:
 FunctionCall:
     "(" (arguments+=Expression (',' arguments+=Expression)*)? ")";
 
-UnaryExpression:
-    prefix=('!' | '-' | "*" | "&" | "~" | "++" | "--") value=Expression;
+// UnaryExpression:
+//     prefix=('!' | '-' | "*" | "&" | "~" | "++" | "--") value=Expression;
 
 
 NumberExpression:

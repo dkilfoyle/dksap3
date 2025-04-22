@@ -4,10 +4,11 @@ import {
   isBinaryExpression,
   isCharExpression,
   isNumberExpression,
+  isPostfixExpression,
+  isPrefixExpression,
   isSizeofExpression,
   isStringExpression,
   isSymbolExpression,
-  isUnaryExpression,
 } from "../language/generated/ast";
 import { CompilerRegs, ILValue, ISymbol, SymbolType } from "./interface";
 import { CompositeGeneratorNode, expandTracedToNode, JoinOptions, joinToNode } from "langium/generate";
@@ -23,7 +24,7 @@ import {
   applyLogical,
   applyComparison,
 } from "./binary";
-import { compileUnaryExpression } from "./unary";
+import { compilePostfixExpression, compilePrefixExpression } from "./unary";
 import {
   compileSymbolExpression,
   compileNumberExpression,
@@ -139,16 +140,18 @@ export function compileSubExpression(scc: ScCompiler, expression: Expression): E
         default:
           throw new AstNodeError(expression, `Unimplemented binary expression operator ${expression}`);
       }
-    case isUnaryExpression(expression):
-      return compileUnaryExpression(scc, expression);
-    case isSymbolExpression(expression):
-      return compileSymbolExpression(scc, expression);
+    case isPrefixExpression(expression):
+      return compilePrefixExpression(scc, expression);
+    case isPostfixExpression(expression):
+      return compilePostfixExpression(scc, expression);
     case isNumberExpression(expression):
       return compileNumberExpression(scc, expression);
     case isStringExpression(expression):
       return compileStringExpression(scc, expression);
     case isCharExpression(expression):
       return compileCharExpression(scc, expression);
+    case isSymbolExpression(expression):
+      return compileSymbolExpression(scc, expression);
     case isSizeofExpression(expression):
       return compileSizeofExpression(scc, expression);
     default:
