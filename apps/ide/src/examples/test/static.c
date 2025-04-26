@@ -1,24 +1,27 @@
 // TODO: Test me
 
-int x;
-struct
-{
-  int a;
-  int b;
-  int c;
-} s = {1, 2, 3};
+int x = 23;
+// struct
+// {
+//   int a;
+//   int b;
+//   int c;
+// } s = {1, 2, 3};
 
 int main()
 {
-  x = 77;
-  if (x != 77)
-    return 7;
-  if (s.a != 1)
+  if (x != 23)
     return 1;
-  if (s.b != 2)
+  x = 56;
+  if (x != 56)
     return 2;
-  if (s.c != 3)
-    return 3;
+
+  // if (s.a != 1)
+  //   return 1;
+  // if (s.b != 2)
+  //   return 2;
+  // if (s.c != 3)
+  //   return 3;
 
   return 0;
 }

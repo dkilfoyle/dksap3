@@ -7,9 +7,9 @@ import {
   isGlobalVarName,
   isLocalVarName,
   isParameterDeclaration,
-  isPrimitiveTypeReference,
+  isPrimitiveTypeSpecifier,
   isSizeofSymbol,
-  isStructTypeReference,
+  isStructTypeSpecifier,
   LocalVarName,
   NumberExpression,
   ParameterDeclaration,
@@ -238,9 +238,9 @@ export function compileSizeofExpression(scc: ScCompiler, sizeexp: SizeofExpressi
     if (sizeexp.arg.pointer) {
       size = AsmGenerator.INTSIZE;
     } else {
-      if (isPrimitiveTypeReference(sizeexp.arg)) {
-        size = sizeexp.arg.type == "int" ? AsmGenerator.INTSIZE : 1;
-      } else if (isStructTypeReference(sizeexp.arg)) {
+      if (isPrimitiveTypeSpecifier(sizeexp.arg)) {
+        size = sizeexp.arg.atomicType == "int" ? AsmGenerator.INTSIZE : 1;
+      } else if (isStructTypeSpecifier(sizeexp.arg)) {
         const otag = scc.tag_table.find(sizeexp.arg.structName.$refText);
         if (!otag) throw Error("sizeof unable to find struct in table");
         size = scc.tag_table.tags[otag].size;

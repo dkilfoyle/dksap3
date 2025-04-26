@@ -1,20 +1,10 @@
 import { expandToNode, expandTracedToNode, joinToNode } from "langium/generate";
-import { FunctionDeclaration, isStructTypeReference, ParameterDeclaration } from "../language/generated/ast";
+import { FunctionDeclaration, GlobalVariableDeclaration } from "../language/generated/ast";
 import { compileBlock } from "./statements";
-import { SymbolTable } from "./SymbolTable";
+import { getSymbolType, SymbolTable } from "./symbol";
 import { ScCompiler } from "./sc-compiler";
 import { AsmGenerator } from "./Generator";
 import { SymbolType, SymbolIdentity, SymbolStorage } from "./interface";
-
-const getParameterType = (param: ParameterDeclaration) => {
-  if (isStructTypeReference(param.type)) {
-    return SymbolType.STRUCT;
-  } else {
-    if (param.type.signed == "unsigned") {
-      return param.type.type == "char" ? SymbolType.UCHAR : SymbolType.UINT;
-    } else return param.type.type == "char" ? SymbolType.CCHAR : SymbolType.CINT;
-  }
-};
 
 export const compileFunctionDeclaration = (scc: ScCompiler, fun: FunctionDeclaration) => {
   let argstk = 0;
@@ -42,16 +32,16 @@ export const compileFunctionDeclaration = (scc: ScCompiler, fun: FunctionDeclara
     const { index: argptr, lines } = scc.symbol_table.add_local(
       param.name,
       param.pointer || param.array ? SymbolIdentity.POINTER : SymbolIdentity.VARIABLE,
-      getParameterType(param),
+      getSymbolType(param),
       0,
       SymbolStorage.AUTO
     );
     argstk += AsmGenerator.INTSIZE;
 
     let ptr = scc.symbol_table.local_table_index;
-    if (param.type.type == "struct") {
+    if (param.typeSpecifier.atomicType == "struct") {
       if (!param.pointer) throw Error(`only struct pointers allowed as function parameter`);
-      let otag = scc.tag_table.find(param.type.structName.$refText);
+      let otag = scc.tag_table.find(param.typeSpecifier.structName.$refText);
       if (otag == -1) throw Error(`${param.name} is not a declared struct`);
       scc.symbol_table.symbols[argptr].tagidx = otag;
     }

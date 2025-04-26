@@ -1,13 +1,14 @@
 import { AstNode, LangiumDocument } from "langium";
-import { Definition, isFunctionDeclaration, isProgram } from "../language/generated/ast";
+import { Definition, isFunctionDeclaration, isGlobalVariableDeclaration, isProgram } from "../language/generated/ast";
 import { AsmGenerator } from "./Generator";
 import { compileFunctionDeclaration } from "./function";
-import { SymbolTable } from "./SymbolTable";
+import { compileGlobalVariableDeclaration, InitialTable, SymbolTable } from "./symbol";
 import { TagTable } from "./TagTable";
 import { expandToNode, expandTracedToNode, joinToNode, joinTracedToNode, NL, toStringAndTrace } from "langium/generate";
 import { IRange } from "monaco-editor";
 import { WhileTable } from "./while";
 import { AstNodeError } from "./expression";
+import { compileGlobalVariableReference } from "./primary";
 
 export function createError(description: string, range?: IRange) {
   return {
@@ -27,6 +28,7 @@ export class ScCompiler {
   litq: number[] = [];
   litlab = this.generator.get_label();
   while_table = new WhileTable(this);
+  initials_table = new InitialTable();
 
   private constructor() {}
 
@@ -39,6 +41,7 @@ export class ScCompiler {
     this.symbol_table.init();
     this.tag_table.init();
     this.while_table.init();
+    this.initials_table.init();
     this.litq = [];
     this.litlab = this.generator.get_label();
 
@@ -70,7 +73,9 @@ export class ScCompiler {
   compileDefinition(def: Definition) {
     if (isFunctionDeclaration(def)) {
       return compileFunctionDeclaration(this, def);
-    } else throw createError("Non function definitions not implemented");
+    } else if (isGlobalVariableDeclaration(def)) {
+      return compileGlobalVariableDeclaration(this, def);
+    }
   }
 
   dumplits() {
@@ -88,6 +93,8 @@ export class ScCompiler {
         )}
     `;
   }
+
+  dumpglobals() {}
 }
 
 export const scCompiler = ScCompiler.Instance;

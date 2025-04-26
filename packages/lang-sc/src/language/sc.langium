@@ -10,19 +10,19 @@ Definition:
 // ########### Declarations
 
 GlobalVariableDeclaration:
-    type=TypeReference varNames+=GlobalVarName ("," varNames+=GlobalVarName)* ";";
+    storage=("extern"|"static")? typeSpecifier=TypeSpecifier varNames+=GlobalVarName ("," varNames+=GlobalVarName)* ";";
 
 GlobalVarName returns NamedElement:
     {infer GlobalVarName} pointer?="*"? name=ID (ArrayIndexing | InitValue)?;
 
 fragment ArrayIndexing:
-    array?="[" dim=DECNUMBER? "]" ("=" "{" items+=Primary ("," items+=Primary)* "}")?;
+    array?="[" dim=DECNUMBER? "]" (assignment?="=" "{" items+=LiteralExpression ("," items+=LiteralExpression)* "}")?;
 
 fragment InitValue:
-    assignment?='=' value=Expression;
+    assignment?='=' items+=LiteralExpression;
 
 LocalVariableDeclaration:
-    type=TypeReference varNames+=LocalVarName ("," varNames+=LocalVarName)* ";";
+    storage=("static"|"register"|"auto")? typeSpecifier=TypeSpecifier varNames+=LocalVarName ("," varNames+=LocalVarName)* ";";
 
 LocalVarName returns NamedElement:
     {infer LocalVarName} pointer?="*"? name=ID (array?="[" dim=DECNUMBER? "]")?;
@@ -31,13 +31,13 @@ StructDeclaration:
     "struct" name=ID "{" members+=StructMember* "}";
 
 StructMember:
-    PrimitiveTypeReference pointer?="*"? name=ID ";";
+    PrimitiveTypeSpecifier pointer?="*"? name=ID ";";
 
 ParameterDeclaration:
-    type=TypeReference pointer?="*"? name=ID array?="[]"?;
+    typeSpecifier=TypeSpecifier pointer?="*"? name=ID array?="[]"?;
 
 FunctionDeclaration:
-    extern?="extern"? (returnType?=TypeReference)? name=ID '(' (parameters+=ParameterDeclaration (',' parameters+=ParameterDeclaration)*)? ')' body=Block;
+    extern?="extern"? (returnType?=TypeSpecifier)? name=ID '(' (parameters+=ParameterDeclaration (',' parameters+=ParameterDeclaration)*)? ')' body=Block;
 
 // ########### Statements
 
@@ -132,11 +132,14 @@ Postfix infers Expression:
 
 Primary infers Expression:
     '(' Expression ')' |
-    NumberExpression |
-    StringExpression |
+    LiteralExpression |
     SizeofExpression |
-    CharExpression |
     SymbolExpression;
+
+LiteralExpression:
+    NumberExpression |
+    CharExpression |
+    StringExpression;
 
 SymbolExpression:
     element=[NamedElement:ID]
@@ -170,17 +173,17 @@ CharExpression:
 
 // ########### Types
 
-TypeReference:
-    PrimitiveTypeReference | StructTypeReference;
+TypeSpecifier:
+    PrimitiveTypeSpecifier | StructTypeSpecifier;
 
 SizeofTypeReference:
-    TypeReference pointer?="*";
+    TypeSpecifier pointer?="*";
 
-PrimitiveTypeReference:
-    storage=("static"|"register"|"auto")? signed=("signed"|"unsigned")? type=("int" | "char");
+PrimitiveTypeSpecifier:
+    signed=("signed"|"unsigned")? atomicType=("int" | "char");
 
-StructTypeReference:
-    storage=("static"|"register"|"auto")? type="struct" structName=[StructDeclaration:ID];
+StructTypeSpecifier:
+    atomicType="struct" structName=[StructDeclaration:ID];
 
 type NamedElement = ParameterDeclaration | FunctionDeclaration | LocalVarName | StructDeclaration | GlobalVarName;
 
