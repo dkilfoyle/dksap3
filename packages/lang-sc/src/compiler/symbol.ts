@@ -224,10 +224,10 @@ export const compileGlobalVariableDeclaration = (scc: ScCompiler, decl: GlobalVa
     decl.varNames.forEach((vn) => {
       const gvn = vn as GlobalVarName;
       let identity = gvn.pointer ? SymbolIdentity.POINTER : SymbolIdentity.VARIABLE;
-      let dim = 0;
+      let dim = -1;
       if (isArraySpecifier(gvn.arraySpecifier)) {
         identity = SymbolIdentity.ARRAY;
-        dim = gvn.arraySpecifier.dim?.value || -1;
+        dim = gvn.arraySpecifier.dim || -1;
       }
       identity = initials(gvn, identity, dim, 0);
       scc.symbol_table.add_global(gvn.name, identity, atomicType, dim, 0);

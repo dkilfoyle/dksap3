@@ -167,10 +167,7 @@ export class Controller implements IClocked {
         case ir8 == "371":
           this.SPHL();
           break;
-        case ir8 == "062":
-        case ir8 == "072":
-          this.STALDA_a16(comp.ir.out);
-          break;
+
         case ir8.match(/3[0-7]+5/) != null:
           this.PUSH(comp.ir.out);
           break;
@@ -195,6 +192,15 @@ export class Controller implements IClocked {
           this.STAX_LDAX(comp.ir.out);
           break;
 
+        case ir8 == "042":
+        case ir8 == "052":
+          this.SHLD_LHLD_a16(comp.ir.out);
+          break;
+        case ir8 == "062":
+        case ir8 == "072":
+          this.STA_LDA_a16(comp.ir.out);
+          break;
+
         default:
           console.error(`opcode 0o${ir8} / 0x${comp.ir.out.toString(16)} not implemented`);
           this.setControl(CTRL.HLT);
@@ -202,6 +208,42 @@ export class Controller implements IClocked {
           this.stage_max = 3;
           this.stage_rst = 1;
       }
+    }
+  }
+
+  SHLD_LHLD_a16(irout: number) {
+    // 0x22 0o042 store HL at addr
+    // 0x2a 0o052 load HL with *addr
+    const op3 = getBit(irout, 3); // 1 = LHLD, 0 = SHLD
+    this.stage_max = 10;
+    switch (this.stage) {
+      case 3:
+        this.setControls("mar=reg", REGSEL.PC);
+        break;
+      case 4:
+        this.setControls("reg=mem", REGSEL.Z);
+        break;
+      case 5:
+        this.setControls("pc++");
+        break;
+      case 6:
+        this.setControls("mar=reg", REGSEL.PC);
+        break;
+      case 7:
+        this.setControl(CTRL.MEM_OE);
+        this.setControls("reg=bus", REGSEL.W);
+        break;
+      case 8:
+        this.setControls("pc++");
+        break;
+      case 9:
+        this.setControls("mar=reg", REGSEL.WZ);
+        break;
+      case 10:
+        if (op3) this.setControls("reg=mem", REGSEL.HL); // lhld
+        else this.setControls("mem=reg", REGSEL.HL); // shld
+        this.stage_rst = 1;
+        break;
     }
   }
 
@@ -1037,7 +1079,7 @@ export class Controller implements IClocked {
     }
   }
 
-  STALDA_a16(irout: number) {
+  STA_LDA_a16(irout: number) {
     this.stage_max = 10;
     const op3 = getBit(irout, 3); // 1 = LDA, 0 = STA
     switch (this.stage) {
