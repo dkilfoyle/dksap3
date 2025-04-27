@@ -143,6 +143,20 @@ export function isTypeSpecifier(item: unknown): item is TypeSpecifier {
     return reflection.isInstance(item, TypeSpecifier);
 }
 
+export interface ArraySpecifier extends AstNode {
+    readonly $container: GlobalVarName;
+    readonly $type: 'ArraySpecifier';
+    assignment: boolean;
+    dim?: number;
+    items: Array<LiteralExpression>;
+}
+
+export const ArraySpecifier = 'ArraySpecifier';
+
+export function isArraySpecifier(item: unknown): item is ArraySpecifier {
+    return reflection.isInstance(item, ArraySpecifier);
+}
+
 export interface BinaryExpression extends AstNode {
     readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
     readonly $type: 'BinaryExpression';
@@ -183,7 +197,7 @@ export function isBreakStatement(item: unknown): item is BreakStatement {
 }
 
 export interface CharExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
+    readonly $container: ArraySpecifier | BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | ValueSpecifier | WhileStatement;
     readonly $type: 'CharExpression';
     value: string;
 }
@@ -279,12 +293,10 @@ export function isGlobalVariableDeclaration(item: unknown): item is GlobalVariab
 export interface GlobalVarName extends AstNode {
     readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | SizeofExpression;
     readonly $type: 'GlobalVarName';
-    array: boolean;
-    assignment: boolean;
-    dim?: number;
-    items: Array<LiteralExpression>;
+    arraySpecifier?: ArraySpecifier;
     name: string;
     pointer: boolean;
+    valueSpecifier?: ValueSpecifier;
 }
 
 export const GlobalVarName = 'GlobalVarName';
@@ -349,7 +361,7 @@ export function isLocalVarName(item: unknown): item is LocalVarName {
 }
 
 export interface NumberExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
+    readonly $container: ArraySpecifier | BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | ValueSpecifier | WhileStatement;
     readonly $type: 'NumberExpression';
     value: number;
 }
@@ -449,7 +461,7 @@ export function isSizeofTypeReference(item: unknown): item is SizeofTypeReferenc
 }
 
 export interface StringExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | GlobalVarName | IfStatement | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
+    readonly $container: ArraySpecifier | BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | ValueSpecifier | WhileStatement;
     readonly $type: 'StringExpression';
     value: string;
 }
@@ -514,6 +526,19 @@ export function isSymbolExpression(item: unknown): item is SymbolExpression {
     return reflection.isInstance(item, SymbolExpression);
 }
 
+export interface ValueSpecifier extends AstNode {
+    readonly $container: GlobalVarName;
+    readonly $type: 'ValueSpecifier';
+    assignment: boolean;
+    value: LiteralExpression;
+}
+
+export const ValueSpecifier = 'ValueSpecifier';
+
+export function isValueSpecifier(item: unknown): item is ValueSpecifier {
+    return reflection.isInstance(item, ValueSpecifier);
+}
+
 export interface WhileStatement extends AstNode {
     readonly $container: Block;
     readonly $type: 'WhileStatement';
@@ -541,6 +566,7 @@ export function isPrimitiveTypeSpecifier(item: unknown): item is PrimitiveTypeSp
 }
 
 export type ScAstType = {
+    ArraySpecifier: ArraySpecifier
     BinaryExpression: BinaryExpression
     Block: Block
     BreakStatement: BreakStatement
@@ -577,13 +603,14 @@ export type ScAstType = {
     StructTypeSpecifier: StructTypeSpecifier
     SymbolExpression: SymbolExpression
     TypeSpecifier: TypeSpecifier
+    ValueSpecifier: ValueSpecifier
     WhileStatement: WhileStatement
 }
 
 export class ScAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [BinaryExpression, Block, BreakStatement, CharExpression, ContinueStatement, Definition, DoStatement, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LiteralExpression, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PostfixExpression, PrefixExpression, PrimitiveTypeSpecifier, Program, ReturnStatement, SizeofExpression, SizeofSymbol, SizeofTypeReference, Statement, StringExpression, StructDeclaration, StructMember, StructTypeSpecifier, SymbolExpression, TypeSpecifier, WhileStatement];
+        return [ArraySpecifier, BinaryExpression, Block, BreakStatement, CharExpression, ContinueStatement, Definition, DoStatement, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LiteralExpression, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PostfixExpression, PrefixExpression, PrimitiveTypeSpecifier, Program, ReturnStatement, SizeofExpression, SizeofSymbol, SizeofTypeReference, Statement, StringExpression, StructDeclaration, StructMember, StructTypeSpecifier, SymbolExpression, TypeSpecifier, ValueSpecifier, WhileStatement];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
@@ -666,6 +693,16 @@ export class ScAstReflection extends AbstractAstReflection {
 
     getTypeMetaData(type: string): TypeMetaData {
         switch (type) {
+            case ArraySpecifier: {
+                return {
+                    name: ArraySpecifier,
+                    properties: [
+                        { name: 'assignment', defaultValue: false },
+                        { name: 'dim' },
+                        { name: 'items', defaultValue: [] }
+                    ]
+                };
+            }
             case BinaryExpression: {
                 return {
                     name: BinaryExpression,
@@ -763,12 +800,10 @@ export class ScAstReflection extends AbstractAstReflection {
                 return {
                     name: GlobalVarName,
                     properties: [
-                        { name: 'array', defaultValue: false },
-                        { name: 'assignment', defaultValue: false },
-                        { name: 'dim' },
-                        { name: 'items', defaultValue: [] },
+                        { name: 'arraySpecifier' },
                         { name: 'name' },
-                        { name: 'pointer', defaultValue: false }
+                        { name: 'pointer', defaultValue: false },
+                        { name: 'valueSpecifier' }
                     ]
                 };
             }
@@ -923,6 +958,15 @@ export class ScAstReflection extends AbstractAstReflection {
                         { name: 'functionCall' },
                         { name: 'indexExpression' },
                         { name: 'structMember' }
+                    ]
+                };
+            }
+            case ValueSpecifier: {
+                return {
+                    name: ValueSpecifier,
+                    properties: [
+                        { name: 'assignment', defaultValue: false },
+                        { name: 'value' }
                     ]
                 };
             }

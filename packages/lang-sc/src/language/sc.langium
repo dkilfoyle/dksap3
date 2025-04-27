@@ -13,13 +13,13 @@ GlobalVariableDeclaration:
     storage=("extern"|"static")? typeSpecifier=TypeSpecifier varNames+=GlobalVarName ("," varNames+=GlobalVarName)* ";";
 
 GlobalVarName returns NamedElement:
-    {infer GlobalVarName} pointer?="*"? name=ID (ArrayIndexing | InitValue)?;
+    {infer GlobalVarName} pointer?="*"? name=ID (arraySpecifier=ArraySpecifier | valueSpecifier=ValueSpecifier)?;
 
-fragment ArrayIndexing:
-    array?="[" dim=DECNUMBER? "]" (assignment?="=" "{" items+=LiteralExpression ("," items+=LiteralExpression)* "}")?;
+ArraySpecifier:
+    ("[" dim=DECNUMBER "]")|"[]" (assignment?="=" "{" items+=LiteralExpression ("," items+=LiteralExpression)* "}")?;
 
-fragment InitValue:
-    assignment?='=' items+=LiteralExpression;
+ValueSpecifier:
+    assignment?='=' value=LiteralExpression;
 
 LocalVariableDeclaration:
     storage=("static"|"register"|"auto")? typeSpecifier=TypeSpecifier varNames+=LocalVarName ("," varNames+=LocalVarName)* ";";

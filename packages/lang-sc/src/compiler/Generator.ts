@@ -1,6 +1,7 @@
 // Adapted from SmallC code8080.c: 2.2 (84/08/31,10:05:09) */
 
 import { CompilerRegs, ILValue, ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
+import { SymbolTable } from "./symbol";
 import { ITagSymbol } from "./TagTable";
 
 /*      Define ASNM and LDNM to the names of the assembler and linker
@@ -664,5 +665,14 @@ export class AsmGenerator {
    */
   data_segment_gdata() {
     return ["\t.area  SMALLC_GENERATED_DATA  (REL,CON,DSEG)"];
+  }
+
+  ppubext(sym: ISymbol) {
+    if (sym.storage == SymbolStorage.STATIC) return [];
+    return [(sym.storage == SymbolStorage.EXTERN ? ";extern " : ";.globl ") + sym.name];
+  }
+  fpubext(fun: ISymbol) {
+    if (fun.storage == SymbolStorage.STATIC) return [];
+    return [(fun.offset == SymbolIdentity.FUNCTION ? ";.globl " : ";extern ") + fun.name];
   }
 }

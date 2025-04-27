@@ -49,7 +49,7 @@ export const findFirstCodingLineAtOrAfter = (region: "source" | "target", node: 
   const end = region == "source" ? ZeroPos.FromTextRegion(node.sourceRegion, "end") : ZeroPos.FromTextRegion(node.targetRegion, "end");
 
   if (start.line == line) {
-    console.log(`found region starting on line ${line}`, node, node.sourceRegion!.range!.start, node.sourceRegion!.range!.end);
+    // console.log(`found region starting on line ${line}`, node, node.sourceRegion!.range!.start, node.sourceRegion!.range!.end);
     return node;
   }
 

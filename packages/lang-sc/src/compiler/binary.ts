@@ -1,4 +1,4 @@
-import { BinaryExpression, isLocalVarName, isSymbolExpression } from "../language/generated/ast";
+import { BinaryExpression, isGlobalVarName, isLocalVarName, isSymbolExpression } from "../language/generated/ast";
 import { AsmGenerator } from "./Generator";
 import { ILValue, ISymbol, SymbolType } from "./interface";
 import { expandTracedToNode, joinToNode } from "langium/generate";
@@ -61,7 +61,7 @@ export function applyLogical(scc: ScCompiler, op: "&&" | "||", binary: BinaryExp
 }
 
 export function applyAssignment(scc: ScCompiler, binary: BinaryExpression): ExpressionResult {
-  if (!(isSymbolExpression(binary.left) && isLocalVarName(binary.left.element.ref)))
+  if (!(isSymbolExpression(binary.left) && (isLocalVarName(binary.left.element.ref) || isGlobalVarName(binary.left.element.ref))))
     throw new AstNodeError(binary.left, "lhs of assignment must be variable");
 
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };

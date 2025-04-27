@@ -190,18 +190,28 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
             "$type": "Alternatives",
             "elements": [
               {
-                "$type": "RuleCall",
-                "rule": {
-                  "$ref": "#/rules@4"
-                },
-                "arguments": []
+                "$type": "Assignment",
+                "feature": "arraySpecifier",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@4"
+                  },
+                  "arguments": []
+                }
               },
               {
-                "$type": "RuleCall",
-                "rule": {
-                  "$ref": "#/rules@5"
-                },
-                "arguments": []
+                "$type": "Assignment",
+                "feature": "valueSpecifier",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@5"
+                  },
+                  "arguments": []
+                }
               }
             ],
             "cardinality": "?"
@@ -217,71 +227,57 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
     },
     {
       "$type": "ParserRule",
-      "fragment": true,
-      "name": "ArrayIndexing",
+      "name": "ArraySpecifier",
       "definition": {
-        "$type": "Group",
+        "$type": "Alternatives",
         "elements": [
-          {
-            "$type": "Assignment",
-            "feature": "array",
-            "operator": "?=",
-            "terminal": {
-              "$type": "Keyword",
-              "value": "["
-            }
-          },
-          {
-            "$type": "Assignment",
-            "feature": "dim",
-            "operator": "=",
-            "terminal": {
-              "$type": "RuleCall",
-              "rule": {
-                "$ref": "#/rules@54"
-              },
-              "arguments": []
-            },
-            "cardinality": "?"
-          },
-          {
-            "$type": "Keyword",
-            "value": "]"
-          },
           {
             "$type": "Group",
             "elements": [
               {
-                "$type": "Assignment",
-                "feature": "assignment",
-                "operator": "?=",
-                "terminal": {
-                  "$type": "Keyword",
-                  "value": "="
-                }
-              },
-              {
                 "$type": "Keyword",
-                "value": "{"
+                "value": "["
               },
               {
                 "$type": "Assignment",
-                "feature": "items",
-                "operator": "+=",
+                "feature": "dim",
+                "operator": "=",
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@37"
+                    "$ref": "#/rules@54"
                   },
                   "arguments": []
                 }
               },
               {
+                "$type": "Keyword",
+                "value": "]"
+              }
+            ]
+          },
+          {
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "Keyword",
+                "value": "[]"
+              },
+              {
                 "$type": "Group",
                 "elements": [
                   {
+                    "$type": "Assignment",
+                    "feature": "assignment",
+                    "operator": "?=",
+                    "terminal": {
+                      "$type": "Keyword",
+                      "value": "="
+                    }
+                  },
+                  {
                     "$type": "Keyword",
-                    "value": ","
+                    "value": "{"
                   },
                   {
                     "$type": "Assignment",
@@ -294,29 +290,50 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
                       },
                       "arguments": []
                     }
+                  },
+                  {
+                    "$type": "Group",
+                    "elements": [
+                      {
+                        "$type": "Keyword",
+                        "value": ","
+                      },
+                      {
+                        "$type": "Assignment",
+                        "feature": "items",
+                        "operator": "+=",
+                        "terminal": {
+                          "$type": "RuleCall",
+                          "rule": {
+                            "$ref": "#/rules@37"
+                          },
+                          "arguments": []
+                        }
+                      }
+                    ],
+                    "cardinality": "*"
+                  },
+                  {
+                    "$type": "Keyword",
+                    "value": "}"
                   }
                 ],
-                "cardinality": "*"
-              },
-              {
-                "$type": "Keyword",
-                "value": "}"
+                "cardinality": "?"
               }
-            ],
-            "cardinality": "?"
+            ]
           }
         ]
       },
       "definesHiddenTokens": false,
       "entry": false,
+      "fragment": false,
       "hiddenTokens": [],
       "parameters": [],
       "wildcard": false
     },
     {
       "$type": "ParserRule",
-      "fragment": true,
-      "name": "InitValue",
+      "name": "ValueSpecifier",
       "definition": {
         "$type": "Group",
         "elements": [
@@ -331,8 +348,8 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
           },
           {
             "$type": "Assignment",
-            "feature": "items",
-            "operator": "+=",
+            "feature": "value",
+            "operator": "=",
             "terminal": {
               "$type": "RuleCall",
               "rule": {
@@ -345,6 +362,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
       },
       "definesHiddenTokens": false,
       "entry": false,
+      "fragment": false,
       "hiddenTokens": [],
       "parameters": [],
       "wildcard": false

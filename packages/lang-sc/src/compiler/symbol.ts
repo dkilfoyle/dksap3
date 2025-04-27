@@ -1,15 +1,18 @@
 import {
   GlobalVariableDeclaration,
   GlobalVarName,
+  isArraySpecifier,
   isCharExpression,
   isNumberExpression,
   isPrimitiveTypeSpecifier,
   isStringExpression,
   isStructTypeSpecifier,
+  isValueSpecifier,
+  LiteralExpression,
   LocalVariableDeclaration,
   LocalVarName,
   ParameterDeclaration,
-} from "src/language/generated/ast";
+} from "../language/generated/ast";
 import { AsmGenerator } from "./Generator";
 import { ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
 import { scCompiler, ScCompiler } from "./sc-compiler";
@@ -156,6 +159,23 @@ export const compileGlobalVariableDeclaration = (scc: ScCompiler, decl: GlobalVa
   const atomicType = getSymbolType(decl);
 
   const initials = (gvn: GlobalVarName, identity: SymbolIdentity, dim: number, otag: number) => {
+    const initLiteral = (lit: LiteralExpression) => {
+      if (isNumberExpression(lit)) {
+        scc.initials_table.add_initial(gvn.name, SymbolType.CINT, lit.value, 0);
+      } else if (isCharExpression(lit)) {
+        scc.initials_table.add_initial(gvn.name, SymbolType.CCHAR, lit.value.charCodeAt(0), 0);
+      } else if (isStringExpression(lit)) {
+        if (identity == SymbolIdentity.VARIABLE || !(atomicType & SymbolType.CCHAR)) throw Error("must assign to char pointer or char array"); // TODO: add validation check - maybe typir
+        lit.value.split("").forEach((x) => {
+          const xcode = x.charCodeAt(0);
+          scc.litq.push(xcode);
+          scc.initials_table.add_initial(gvn.name, SymbolType.CCHAR, xcode, 0);
+        });
+        scc.litq.push(0); // 0 terminated
+        scc.initials_table.add_initial(gvn.name, SymbolType.CCHAR, 0, 0);
+      }
+    };
+
     let litptr = 0;
     let dim_unknown = dim == 0 ? 1 : 0;
     // int x[] = {1,2,3}
@@ -165,31 +185,24 @@ export const compileGlobalVariableDeclaration = (scc: ScCompiler, decl: GlobalVa
       // struct init
       throw Error("Not implemented");
     } else {
-      if (gvn.items.length) {
+      if (isArraySpecifier(gvn.arraySpecifier)) {
         // there is an initial assignment
         // eg int x[] = {1,2,3}
-        // eg int x = 5;
-        gvn.items.forEach((i) => {
-          if (isNumberExpression(i)) {
-            scc.initials_table.add_initial(gvn.name, SymbolType.CINT, i.value, 0);
-          } else if (isCharExpression(i)) {
-            scc.initials_table.add_initial(gvn.name, SymbolType.CCHAR, i.value.charCodeAt(0), 0);
-          } else if (isStringExpression(i)) {
-            if (identity == SymbolIdentity.VARIABLE || !(atomicType & SymbolType.CCHAR))
-              throw Error("must assign to char pointer or char array"); // TODO: add validation check - maybe typir
-            i.value.split("").forEach((x) => {
-              const xcode = x.charCodeAt(0);
-              scc.litq.push(xcode);
-              scc.initials_table.add_initial(gvn.name, SymbolType.CCHAR, xcode, 0);
-            });
-            scc.litq.push(0); // 0 terminated
-            scc.initials_table.add_initial(gvn.name, SymbolType.CCHAR, 0, 0);
-          }
+        // eg int x[3] = {1,2,3}
+        // eg int x[5] = {1,2,3} = pads to {1,2,3,0,0}
+        // marked as invalid:
+        // int x[];
+        // int x[0];
+        // int x[2] = {1,2,3};
+        gvn.arraySpecifier.items.forEach((i) => {
+          initLiteral(i);
         });
+      } else if (isValueSpecifier(gvn.valueSpecifier)) {
+        // eg int x = 5;
+        initLiteral(gvn.valueSpecifier.value);
       } else {
         // no initial assignment
-        // eg int x;
-        // defaults to 0
+        // eg int x; defaults to x=0
         if (atomicType & SymbolType.CCHAR) {
           scc.initials_table.add_initial(gvn.name, SymbolType.CCHAR, 0, 0);
         } else if (atomicType & SymbolType.CINT) {
@@ -211,8 +224,11 @@ export const compileGlobalVariableDeclaration = (scc: ScCompiler, decl: GlobalVa
     decl.varNames.forEach((vn) => {
       const gvn = vn as GlobalVarName;
       let identity = gvn.pointer ? SymbolIdentity.POINTER : SymbolIdentity.VARIABLE;
-      let dim = gvn.dim || 0;
-      if (gvn.array) identity = SymbolIdentity.ARRAY;
+      let dim = 0;
+      if (isArraySpecifier(gvn.arraySpecifier)) {
+        identity = SymbolIdentity.ARRAY;
+        dim = gvn.arraySpecifier.dim?.value || -1;
+      }
       identity = initials(gvn, identity, dim, 0);
       scc.symbol_table.add_global(gvn.name, identity, atomicType, dim, 0);
     });

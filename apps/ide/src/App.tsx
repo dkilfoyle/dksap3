@@ -31,7 +31,7 @@ function App() {
             if (sourceEditor && targetEditor && sourceUri.endsWith(".c")) {
               const trace = traceRegions[sourceEditor.getModel()!.uri.toString()];
               const sourceAst = sourceAsts[sourceEditor.getModel()!.uri.toString()];
-              console.log("pos", pos.line, pos.character);
+              // console.log("pos", pos.line, pos.character);
               if (trace && sourceAst) {
                 const sourceRegion = findFirstCodingLineAtOrAfter("source", trace, pos.line);
                 const sourceDecs = decorations[uri.toString()];
@@ -68,8 +68,8 @@ function App() {
                     });
                   });
 
-                  console.log(sourceHighlights);
-                  console.log(targetHighlights);
+                  // console.log(sourceHighlights);
+                  // console.log(targetHighlights);
 
                   // const start = sourceRegion.sourceRegion!.range!.start;
                   // const end = sourceRegion.sourceRegion!.range!.end;

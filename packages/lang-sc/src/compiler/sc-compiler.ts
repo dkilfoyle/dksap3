@@ -1,14 +1,14 @@
-import { AstNode, LangiumDocument } from "langium";
+import { AstNode } from "langium";
 import { Definition, isFunctionDeclaration, isGlobalVariableDeclaration, isProgram } from "../language/generated/ast";
 import { AsmGenerator } from "./Generator";
 import { compileFunctionDeclaration } from "./function";
 import { compileGlobalVariableDeclaration, InitialTable, SymbolTable } from "./symbol";
 import { TagTable } from "./TagTable";
-import { expandToNode, expandTracedToNode, joinToNode, joinTracedToNode, NL, toStringAndTrace } from "langium/generate";
+import { expandToNode, expandTracedToNode, joinToNode, toStringAndTrace } from "langium/generate";
 import { IRange } from "monaco-editor";
 import { WhileTable } from "./while";
-import { AstNodeError } from "./expression";
-import { compileGlobalVariableReference } from "./primary";
+import { ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
+import { NL } from "./expression";
 
 export function createError(description: string, range?: IRange) {
   return {
@@ -58,6 +58,7 @@ export class ScCompiler {
         { appendNewLineIfNotEmpty: true }
       )}
       ${this.dumplits()}
+      ${this.dumpglobals()}
     `;
 
       const res = toStringAndTrace(node);
@@ -94,7 +95,55 @@ export class ScCompiler {
     `;
   }
 
-  dumpglobals() {}
+  dumpglobals() {
+    const lines: string[] = [];
+    for (let i = 0; i < this.symbol_table.global_table_index; i++) {
+      const globalSymbol = this.symbol_table.symbols[i];
+      if (globalSymbol.identity == SymbolIdentity.FUNCTION) {
+        lines.push(...this.generator.fpubext(globalSymbol));
+      } else {
+        lines.push(...this.generator.ppubext(globalSymbol));
+        if (globalSymbol.storage == SymbolStorage.EXTERN) continue;
+        lines.push(`${globalSymbol.name}:`);
+        let dim = globalSymbol.offset;
+        let list_size = 0;
+        let line_count = 0;
+        const initials = this.initials_table.initials[globalSymbol.name];
+        if (initials) {
+          list_size = initials.dim;
+          if (dim == -1) {
+            dim = list_size;
+          }
+          const def = globalSymbol.type & SymbolType.CINT || globalSymbol.identity == SymbolIdentity.POINTER ? "dw" : "db";
+          for (let j = 0; j < dim; j++) {
+            if (globalSymbol.type == SymbolType.STRUCT) {
+              this.dumpstruct(globalSymbol, i);
+            } else {
+              if (line_count % 10 == 0) {
+                lines.push(`${def} `);
+              }
+              if (j < list_size) {
+                const value = this.initials_table.get_item_at(globalSymbol.name, j, 0);
+                lines[lines.length - 1] += value?.toString();
+              } else {
+                lines[lines.length - 1] += "0";
+              }
+              line_count++;
+              if (line_count % 10 == 0) line_count = 0;
+              else {
+                if (j < dim - 1) lines[lines.length - 1] += ", ";
+              }
+            }
+          }
+        }
+      }
+    }
+    return joinToNode(lines, NL);
+  }
+
+  dumpstruct(sym: ISymbol, i: number) {
+    throw Error("Global struct dump not implemented yet");
+  }
 }
 
 export const scCompiler = ScCompiler.Instance;
