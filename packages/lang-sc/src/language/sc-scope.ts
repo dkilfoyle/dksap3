@@ -1,8 +1,18 @@
-import type { AstNode, AstNodeDescription, LangiumDocument, PrecomputedScopes } from "langium";
-import { AstUtils, Cancellation, DefaultScopeComputation, interruptAndCheck, MultiMap } from "langium";
+import type { AstNode, AstNodeDescription, LangiumDocument, PrecomputedScopes, ReferenceInfo, Scope } from "langium";
+import { AstUtils, Cancellation, DefaultScopeComputation, DefaultScopeProvider, interruptAndCheck, MultiMap } from "langium";
 import { ScServices } from "./sc-module.js";
 // import { ClassDec, isClassDec, isSubroutineDec, isVarName } from "./generated/ast.js";
-import { isLocalVarName, isGlobalVarName } from "./generated/ast.js";
+import {
+  isLocalVarName,
+  isGlobalVarName,
+  isStructTypeDeclaration,
+  isStructTypeReference,
+  isStructMember,
+  MemberAccess,
+  isSymbolExpression,
+  isLocalVariableDeclaration,
+} from "./generated/ast.js";
+import { LangiumServices } from "langium/lsp";
 
 export class ScScopeComputation extends DefaultScopeComputation {
   constructor(services: ScServices) {
@@ -29,12 +39,37 @@ export class ScScopeComputation extends DefaultScopeComputation {
     // boost each varName to be sibling of VarDec's container
     // this allows to declare multiple varNames in one VarDec
     // eg var int x,y;
-    const container = isLocalVarName(node) || isGlobalVarName(node) ? node.$container.$container : node.$container;
+    let container =
+      isLocalVarName(node) || isGlobalVarName(node) || isStructTypeDeclaration(node) ? node.$container.$container : node.$container;
     if (container) {
       const name = this.nameProvider.getName(node);
       if (name) {
         scopes.add(container, this.descriptions.createDescription(node, name, document));
       }
     }
+  }
+}
+
+export class ScScopeProvider extends DefaultScopeProvider {
+  constructor(services: LangiumServices) {
+    super(services);
+  }
+
+  override getScope(context: ReferenceInfo): Scope {
+    console.log(context);
+    if (context.property == "member") {
+      const memberAccess = context.container as MemberAccess;
+      const receiver = memberAccess.receiver;
+      if (isSymbolExpression(receiver)) {
+        const container = receiver.element.ref?.$container;
+        if (isLocalVariableDeclaration(container)) {
+          if (isStructTypeDeclaration(container.typeSpecifier)) {
+            return this.createScopeForNodes(container.typeSpecifier.members);
+          }
+        }
+      }
+    }
+
+    return super.getScope(context);
   }
 }

@@ -6,6 +6,7 @@ import {
   isNumberExpression,
   isPrimitiveTypeSpecifier,
   isStringExpression,
+  isStructTypeDeclaration,
   isStructTypeSpecifier,
   isValueSpecifier,
   LiteralExpression,
@@ -250,7 +251,8 @@ const compileLocalVarName = (scc: ScCompiler, localVar: LocalVarName, decl: Loca
 
   let otag = -1;
   if (isStructTypeSpecifier(decl.typeSpecifier)) {
-    otag = scc.tag_table.find(decl.typeSpecifier.structName.$refText);
+    if (isStructTypeDeclaration(decl.typeSpecifier)) otag = scc.tag_table.find(decl.typeSpecifier.name);
+    else otag = scc.tag_table.find(decl.typeSpecifier.structTypeName.$refText);
   }
 
   let j, k;

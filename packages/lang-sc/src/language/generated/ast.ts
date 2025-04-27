@@ -95,7 +95,7 @@ export function isDefinition(item: unknown): item is Definition {
     return reflection.isInstance(item, Definition);
 }
 
-export type Expression = BinaryExpression | LiteralExpression | PostfixExpression | PrefixExpression | SizeofExpression | SymbolExpression;
+export type Expression = BinaryExpression | LiteralExpression | MemberAccess | PostfixExpression | PrefixExpression | SizeofExpression | SymbolExpression;
 
 export const Expression = 'Expression';
 
@@ -111,7 +111,7 @@ export function isLiteralExpression(item: unknown): item is LiteralExpression {
     return reflection.isInstance(item, LiteralExpression);
 }
 
-export type NamedElement = FunctionDeclaration | GlobalVarName | LocalVarName | ParameterDeclaration | StructDeclaration;
+export type NamedElement = FunctionDeclaration | GlobalVarName | LocalVarName | ParameterDeclaration;
 
 export const NamedElement = 'NamedElement';
 
@@ -127,12 +127,20 @@ export function isSizeofSymbol(item: unknown): item is SizeofSymbol {
     return reflection.isInstance(item, SizeofSymbol);
 }
 
-export type Statement = BreakStatement | ContinueStatement | DoStatement | Expression | ForStatement | IfStatement | InlineAssembly | ReturnStatement | StructDeclaration | WhileStatement;
+export type Statement = BreakStatement | ContinueStatement | DoStatement | Expression | ForStatement | IfStatement | InlineAssembly | ReturnStatement | WhileStatement;
 
 export const Statement = 'Statement';
 
 export function isStatement(item: unknown): item is Statement {
     return reflection.isInstance(item, Statement);
+}
+
+export type StructTypeSpecifier = StructTypeDeclaration | StructTypeReference;
+
+export const StructTypeSpecifier = 'StructTypeSpecifier';
+
+export function isStructTypeSpecifier(item: unknown): item is StructTypeSpecifier {
+    return reflection.isInstance(item, StructTypeSpecifier);
 }
 
 export type TypeSpecifier = PrimitiveTypeSpecifier | StructTypeSpecifier;
@@ -158,7 +166,7 @@ export function isArraySpecifier(item: unknown): item is ArraySpecifier {
 }
 
 export interface BinaryExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | MemberAccess | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
     readonly $type: 'BinaryExpression';
     left: Expression;
     operator: '!=' | '%' | '%=' | '&&' | '&' | '&=' | '*' | '*=' | '+' | '+=' | '-' | '-=' | '/' | '/=' | '<' | '<<' | '<<=' | '<=' | '=' | '==' | '>' | '>=' | '>>' | '>>=' | '^' | '^=' | '|' | '|=' | '||';
@@ -197,7 +205,7 @@ export function isBreakStatement(item: unknown): item is BreakStatement {
 }
 
 export interface CharExpression extends AstNode {
-    readonly $container: ArraySpecifier | BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | ValueSpecifier | WhileStatement;
+    readonly $container: ArraySpecifier | BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | MemberAccess | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | ValueSpecifier | WhileStatement;
     readonly $type: 'CharExpression';
     value: string;
 }
@@ -360,8 +368,21 @@ export function isLocalVarName(item: unknown): item is LocalVarName {
     return reflection.isInstance(item, LocalVarName);
 }
 
+export interface MemberAccess extends AstNode {
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | MemberAccess | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
+    readonly $type: 'MemberAccess';
+    member: Reference<StructMember>;
+    receiver: Expression;
+}
+
+export const MemberAccess = 'MemberAccess';
+
+export function isMemberAccess(item: unknown): item is MemberAccess {
+    return reflection.isInstance(item, MemberAccess);
+}
+
 export interface NumberExpression extends AstNode {
-    readonly $container: ArraySpecifier | BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | ValueSpecifier | WhileStatement;
+    readonly $container: ArraySpecifier | BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | MemberAccess | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | ValueSpecifier | WhileStatement;
     readonly $type: 'NumberExpression';
     value: number;
 }
@@ -388,7 +409,7 @@ export function isParameterDeclaration(item: unknown): item is ParameterDeclarat
 }
 
 export interface PostfixExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | MemberAccess | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
     readonly $type: 'PostfixExpression';
     operand: Expression;
     operator: '++' | '--';
@@ -401,7 +422,7 @@ export function isPostfixExpression(item: unknown): item is PostfixExpression {
 }
 
 export interface PrefixExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | MemberAccess | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
     readonly $type: 'PrefixExpression';
     operand: Expression;
     operator: '!' | '&' | '*' | '++' | '-' | '--' | '~';
@@ -437,7 +458,7 @@ export function isReturnStatement(item: unknown): item is ReturnStatement {
 }
 
 export interface SizeofExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | MemberAccess | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
     readonly $type: 'SizeofExpression';
     arg: SizeofSymbol | SizeofTypeReference;
 }
@@ -450,7 +471,7 @@ export function isSizeofExpression(item: unknown): item is SizeofExpression {
 
 export interface SizeofTypeReference extends AstNode {
     readonly $container: SizeofExpression;
-    readonly $type: 'PrimitiveTypeSpecifier' | 'SizeofTypeReference' | 'StructTypeSpecifier' | 'TypeSpecifier';
+    readonly $type: 'PrimitiveTypeSpecifier' | 'SizeofTypeReference' | 'StructTypeDeclaration' | 'StructTypeReference' | 'StructTypeSpecifier' | 'TypeSpecifier';
     pointer: boolean;
 }
 
@@ -461,7 +482,7 @@ export function isSizeofTypeReference(item: unknown): item is SizeofTypeReferenc
 }
 
 export interface StringExpression extends AstNode {
-    readonly $container: ArraySpecifier | BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | ValueSpecifier | WhileStatement;
+    readonly $container: ArraySpecifier | BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | MemberAccess | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | ValueSpecifier | WhileStatement;
     readonly $type: 'StringExpression';
     value: string;
 }
@@ -472,21 +493,8 @@ export function isStringExpression(item: unknown): item is StringExpression {
     return reflection.isInstance(item, StringExpression);
 }
 
-export interface StructDeclaration extends AstNode {
-    readonly $container: Block | GlobalVariableDeclaration | LocalVariableDeclaration | SizeofExpression;
-    readonly $type: 'StructDeclaration';
-    members: Array<StructMember>;
-    name: string;
-}
-
-export const StructDeclaration = 'StructDeclaration';
-
-export function isStructDeclaration(item: unknown): item is StructDeclaration {
-    return reflection.isInstance(item, StructDeclaration);
-}
-
 export interface StructMember extends AstNode {
-    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | ParameterDeclaration | StructDeclaration;
+    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | ParameterDeclaration | StructTypeDeclaration;
     readonly $type: 'PrimitiveTypeSpecifier' | 'StructMember';
     name: string;
     pointer: boolean;
@@ -498,26 +506,39 @@ export function isStructMember(item: unknown): item is StructMember {
     return reflection.isInstance(item, StructMember);
 }
 
-export interface StructTypeSpecifier extends AstNode {
+export interface StructTypeDeclaration extends AstNode {
     readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | ParameterDeclaration;
-    readonly $type: 'StructTypeSpecifier';
+    readonly $type: 'StructTypeDeclaration';
     atomicType: 'struct';
-    structName: Reference<StructDeclaration>;
+    members: Array<StructMember>;
+    name: string;
 }
 
-export const StructTypeSpecifier = 'StructTypeSpecifier';
+export const StructTypeDeclaration = 'StructTypeDeclaration';
 
-export function isStructTypeSpecifier(item: unknown): item is StructTypeSpecifier {
-    return reflection.isInstance(item, StructTypeSpecifier);
+export function isStructTypeDeclaration(item: unknown): item is StructTypeDeclaration {
+    return reflection.isInstance(item, StructTypeDeclaration);
+}
+
+export interface StructTypeReference extends AstNode {
+    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | ParameterDeclaration;
+    readonly $type: 'StructTypeReference';
+    atomicType: 'struct';
+    structTypeName: Reference<StructTypeDeclaration>;
+}
+
+export const StructTypeReference = 'StructTypeReference';
+
+export function isStructTypeReference(item: unknown): item is StructTypeReference {
+    return reflection.isInstance(item, StructTypeReference);
 }
 
 export interface SymbolExpression extends AstNode {
-    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
+    readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | MemberAccess | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
     readonly $type: 'SymbolExpression';
     element: Reference<NamedElement>;
     functionCall?: FunctionCall;
     indexExpression?: Expression;
-    structMember?: Reference<StructMember>;
 }
 
 export const SymbolExpression = 'SymbolExpression';
@@ -585,6 +606,7 @@ export type ScAstType = {
     LiteralExpression: LiteralExpression
     LocalVarName: LocalVarName
     LocalVariableDeclaration: LocalVariableDeclaration
+    MemberAccess: MemberAccess
     NamedElement: NamedElement
     NumberExpression: NumberExpression
     ParameterDeclaration: ParameterDeclaration
@@ -598,8 +620,9 @@ export type ScAstType = {
     SizeofTypeReference: SizeofTypeReference
     Statement: Statement
     StringExpression: StringExpression
-    StructDeclaration: StructDeclaration
     StructMember: StructMember
+    StructTypeDeclaration: StructTypeDeclaration
+    StructTypeReference: StructTypeReference
     StructTypeSpecifier: StructTypeSpecifier
     SymbolExpression: SymbolExpression
     TypeSpecifier: TypeSpecifier
@@ -610,13 +633,14 @@ export type ScAstType = {
 export class ScAstReflection extends AbstractAstReflection {
 
     getAllTypes(): string[] {
-        return [ArraySpecifier, BinaryExpression, Block, BreakStatement, CharExpression, ContinueStatement, Definition, DoStatement, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LiteralExpression, LocalVarName, LocalVariableDeclaration, NamedElement, NumberExpression, ParameterDeclaration, PostfixExpression, PrefixExpression, PrimitiveTypeSpecifier, Program, ReturnStatement, SizeofExpression, SizeofSymbol, SizeofTypeReference, Statement, StringExpression, StructDeclaration, StructMember, StructTypeSpecifier, SymbolExpression, TypeSpecifier, ValueSpecifier, WhileStatement];
+        return [ArraySpecifier, BinaryExpression, Block, BreakStatement, CharExpression, ContinueStatement, Definition, DoStatement, Expression, ForStatement, FunctionCall, FunctionDeclaration, GlobalVarName, GlobalVariableDeclaration, IfStatement, InlineAssembly, LiteralExpression, LocalVarName, LocalVariableDeclaration, MemberAccess, NamedElement, NumberExpression, ParameterDeclaration, PostfixExpression, PrefixExpression, PrimitiveTypeSpecifier, Program, ReturnStatement, SizeofExpression, SizeofSymbol, SizeofTypeReference, Statement, StringExpression, StructMember, StructTypeDeclaration, StructTypeReference, StructTypeSpecifier, SymbolExpression, TypeSpecifier, ValueSpecifier, WhileStatement];
     }
 
     protected override computeIsSubtype(subtype: string, supertype: string): boolean {
         switch (subtype) {
             case BinaryExpression:
             case LiteralExpression:
+            case MemberAccess:
             case PostfixExpression:
             case PrefixExpression:
             case SizeofExpression:
@@ -658,8 +682,9 @@ export class ScAstReflection extends AbstractAstReflection {
             case PrimitiveTypeSpecifier: {
                 return this.isSubtype(StructMember, supertype) || this.isSubtype(TypeSpecifier, supertype);
             }
-            case StructDeclaration: {
-                return this.isSubtype(NamedElement, supertype) || this.isSubtype(Statement, supertype);
+            case StructTypeDeclaration:
+            case StructTypeReference: {
+                return this.isSubtype(StructTypeSpecifier, supertype);
             }
             case StructTypeSpecifier: {
                 return this.isSubtype(TypeSpecifier, supertype);
@@ -676,14 +701,14 @@ export class ScAstReflection extends AbstractAstReflection {
     getReferenceType(refInfo: ReferenceInfo): string {
         const referenceId = `${refInfo.container.$type}:${refInfo.property}`;
         switch (referenceId) {
-            case 'StructTypeSpecifier:structName': {
-                return StructDeclaration;
+            case 'MemberAccess:member': {
+                return StructMember;
+            }
+            case 'StructTypeReference:structTypeName': {
+                return StructTypeDeclaration;
             }
             case 'SymbolExpression:element': {
                 return NamedElement;
-            }
-            case 'SymbolExpression:structMember': {
-                return StructMember;
             }
             default: {
                 throw new Error(`${referenceId} is not a valid reference id.`);
@@ -846,6 +871,15 @@ export class ScAstReflection extends AbstractAstReflection {
                     ]
                 };
             }
+            case MemberAccess: {
+                return {
+                    name: MemberAccess,
+                    properties: [
+                        { name: 'member' },
+                        { name: 'receiver' }
+                    ]
+                };
+            }
             case NumberExpression: {
                 return {
                     name: NumberExpression,
@@ -923,15 +957,6 @@ export class ScAstReflection extends AbstractAstReflection {
                     ]
                 };
             }
-            case StructDeclaration: {
-                return {
-                    name: StructDeclaration,
-                    properties: [
-                        { name: 'members', defaultValue: [] },
-                        { name: 'name' }
-                    ]
-                };
-            }
             case StructMember: {
                 return {
                     name: StructMember,
@@ -941,12 +966,22 @@ export class ScAstReflection extends AbstractAstReflection {
                     ]
                 };
             }
-            case StructTypeSpecifier: {
+            case StructTypeDeclaration: {
                 return {
-                    name: StructTypeSpecifier,
+                    name: StructTypeDeclaration,
                     properties: [
                         { name: 'atomicType' },
-                        { name: 'structName' }
+                        { name: 'members', defaultValue: [] },
+                        { name: 'name' }
+                    ]
+                };
+            }
+            case StructTypeReference: {
+                return {
+                    name: StructTypeReference,
+                    properties: [
+                        { name: 'atomicType' },
+                        { name: 'structTypeName' }
                     ]
                 };
             }
@@ -956,8 +991,7 @@ export class ScAstReflection extends AbstractAstReflection {
                     properties: [
                         { name: 'element' },
                         { name: 'functionCall' },
-                        { name: 'indexExpression' },
-                        { name: 'structMember' }
+                        { name: 'indexExpression' }
                     ]
                 };
             }

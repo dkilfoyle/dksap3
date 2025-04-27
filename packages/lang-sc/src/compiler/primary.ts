@@ -9,6 +9,8 @@ import {
   isParameterDeclaration,
   isPrimitiveTypeSpecifier,
   isSizeofSymbol,
+  isStructTypeDeclaration,
+  isStructTypeReference,
   isStructTypeSpecifier,
   LocalVarName,
   NumberExpression,
@@ -240,8 +242,12 @@ export function compileSizeofExpression(scc: ScCompiler, sizeexp: SizeofExpressi
     } else {
       if (isPrimitiveTypeSpecifier(sizeexp.arg)) {
         size = sizeexp.arg.atomicType == "int" ? AsmGenerator.INTSIZE : 1;
-      } else if (isStructTypeSpecifier(sizeexp.arg)) {
-        const otag = scc.tag_table.find(sizeexp.arg.structName.$refText);
+      } else if (isStructTypeReference(sizeexp.arg)) {
+        const otag = scc.tag_table.find(sizeexp.arg.structTypeName.$refText);
+        if (!otag) throw Error("sizeof unable to find struct in table");
+        size = scc.tag_table.tags[otag].size;
+      } else if (isStructTypeDeclaration(sizeexp.arg)) {
+        const otag = scc.tag_table.find(sizeexp.arg.name);
         if (!otag) throw Error("sizeof unable to find struct in table");
         size = scc.tag_table.tags[otag].size;
       }

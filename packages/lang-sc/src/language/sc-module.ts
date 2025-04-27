@@ -9,7 +9,7 @@ import {
 } from "langium/lsp";
 import { ScGeneratedModule, ScGeneratedSharedModule } from "./generated/module";
 import { ScValidator, registerValidationChecks } from "./sc-validator";
-import { ScScopeComputation } from "./sc-scope";
+import { ScScopeComputation, ScScopeProvider } from "./sc-scope";
 import { ScWorkspaceManager } from "./sc-workspace";
 import { ScFoldProvider } from "./sc-fold";
 import { ScValueConverter } from "./sc-valueconverter";
@@ -23,6 +23,7 @@ export type ScAddedServices = {
   };
   references: {
     ScopeComputation: ScScopeComputation;
+    ScopeProvider: ScScopeProvider;
   };
 };
 
@@ -43,6 +44,7 @@ export const ScModule: Module<ScServices, PartialLangiumServices & ScAddedServic
   },
   references: {
     ScopeComputation: (services) => new ScScopeComputation(services),
+    ScopeProvider: (services) => new ScScopeProvider(services),
   },
   lsp: {
     FoldingRangeProvider: (services) => new ScFoldProvider(services),

@@ -27,8 +27,8 @@ LocalVariableDeclaration:
 LocalVarName returns NamedElement:
     {infer LocalVarName} pointer?="*"? name=ID (array?="[" dim=DECNUMBER? "]")?;
 
-StructDeclaration:
-    "struct" name=ID "{" members+=StructMember* "}";
+StructTypeDeclaration:
+    atomicType="struct" name=ID "{" members+=StructMember* "}";
 
 StructMember:
     PrimitiveTypeSpecifier pointer?="*"? name=ID ";";
@@ -38,6 +38,25 @@ ParameterDeclaration:
 
 FunctionDeclaration:
     extern?="extern"? (returnType?=TypeSpecifier)? name=ID '(' (parameters+=ParameterDeclaration (',' parameters+=ParameterDeclaration)*)? ')' body=Block;
+
+// ########### Types
+
+TypeSpecifier:
+    PrimitiveTypeSpecifier | StructTypeSpecifier;
+
+StructTypeSpecifier:
+    StructTypeDeclaration | StructTypeReference;
+
+PrimitiveTypeSpecifier:
+    signed=("signed"|"unsigned")? atomicType=("int" | "char");
+
+StructTypeReference:
+    atomicType="struct" structTypeName=[StructTypeDeclaration:ID];
+
+SizeofTypeReference:
+    TypeSpecifier pointer?="*";
+
+type NamedElement = ParameterDeclaration | FunctionDeclaration | LocalVarName | GlobalVarName;
 
 // ########### Statements
 
@@ -53,7 +72,6 @@ Statement:
     BreakStatement ";" |
     ContinueStatement ";" |
     ReturnStatement ';' | 
-    StructDeclaration |
     InlineAssembly |
     Expression ';'
 ;
@@ -128,7 +146,10 @@ Prefix infers Expression:
     | Postfix;
 
 Postfix infers Expression:
-    Primary ({infer PostfixExpression.operand=current} operator=("++"|"--"))*;
+    Chained ({infer PostfixExpression.operand=current} operator=("++"|"--"))*;
+
+Chained infers Expression:
+    Primary ({infer MemberAccess.receiver=current} "." member=[StructMember:ID])*;
 
 Primary infers Expression:
     '(' Expression ')' |
@@ -144,7 +165,7 @@ LiteralExpression:
 SymbolExpression:
     element=[NamedElement:ID]
     (
-        ("." structMember=[StructMember:ID]) |
+    // ("." structMember=[StructMember:ID]) |
         functionCall=FunctionCall |
         ("[" indexExpression=Expression "]") 
     )?;
@@ -170,22 +191,6 @@ StringExpression:
 
 CharExpression:
     value=CHAR;
-
-// ########### Types
-
-TypeSpecifier:
-    PrimitiveTypeSpecifier | StructTypeSpecifier;
-
-SizeofTypeReference:
-    TypeSpecifier pointer?="*";
-
-PrimitiveTypeSpecifier:
-    signed=("signed"|"unsigned")? atomicType=("int" | "char");
-
-StructTypeSpecifier:
-    atomicType="struct" structName=[StructDeclaration:ID];
-
-type NamedElement = ParameterDeclaration | FunctionDeclaration | LocalVarName | StructDeclaration | GlobalVarName;
 
 // ########## Terminals
 
