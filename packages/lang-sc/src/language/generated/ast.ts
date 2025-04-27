@@ -9,6 +9,7 @@ import { AbstractAstReflection } from 'langium';
 
 export const ScTerminals = {
     WS: /\s+/,
+    MINUS: /[\-](?!>)/,
     STRING: /"[^"]*"/,
     ID: /[_a-zA-Z][\w_]*/,
     HEXNUMBER: /0[xX][0-9a-fA-F]+/,
@@ -38,9 +39,9 @@ export type ScKeywordNames =
     | "++"
     | "+="
     | ","
-    | "-"
     | "--"
     | "-="
+    | "->"
     | "."
     | "/"
     | "/="
@@ -169,7 +170,7 @@ export interface BinaryExpression extends AstNode {
     readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | MemberAccess | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
     readonly $type: 'BinaryExpression';
     left: Expression;
-    operator: '!=' | '%' | '%=' | '&&' | '&' | '&=' | '*' | '*=' | '+' | '+=' | '-' | '-=' | '/' | '/=' | '<' | '<<' | '<<=' | '<=' | '=' | '==' | '>' | '>=' | '>>' | '>>=' | '^' | '^=' | '|' | '|=' | '||';
+    operator: '!=' | '%' | '%=' | '&&' | '&' | '&=' | '*' | '*=' | '+' | '+=' | '-=' | '/' | '/=' | '<' | '<<' | '<<=' | '<=' | '=' | '==' | '>' | '>=' | '>>' | '>>=' | '^' | '^=' | '|' | '|=' | '||' | string;
     right: Expression;
 }
 
@@ -372,6 +373,7 @@ export interface MemberAccess extends AstNode {
     readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | MemberAccess | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
     readonly $type: 'MemberAccess';
     member: Reference<StructMember>;
+    operator: '->' | '.';
     receiver: Expression;
 }
 
@@ -425,7 +427,7 @@ export interface PrefixExpression extends AstNode {
     readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | MemberAccess | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
     readonly $type: 'PrefixExpression';
     operand: Expression;
-    operator: '!' | '&' | '*' | '++' | '-' | '--' | '~';
+    operator: '!' | '&' | '*' | '++' | '--' | '~' | string;
 }
 
 export const PrefixExpression = 'PrefixExpression';
@@ -876,6 +878,7 @@ export class ScAstReflection extends AbstractAstReflection {
                     name: MemberAccess,
                     properties: [
                         { name: 'member' },
+                        { name: 'operator' },
                         { name: 'receiver' }
                     ]
                 };

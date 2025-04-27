@@ -181,7 +181,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@53"
+                "$ref": "#/rules@54"
               },
               "arguments": []
             }
@@ -245,7 +245,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@56"
+                    "$ref": "#/rules@57"
                   },
                   "arguments": []
                 }
@@ -488,7 +488,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@53"
+                "$ref": "#/rules@54"
               },
               "arguments": []
             }
@@ -512,7 +512,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@56"
+                    "$ref": "#/rules@57"
                   },
                   "arguments": []
                 },
@@ -556,7 +556,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@53"
+                "$ref": "#/rules@54"
               },
               "arguments": []
             }
@@ -621,7 +621,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@53"
+                "$ref": "#/rules@54"
               },
               "arguments": []
             }
@@ -674,7 +674,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@53"
+                "$ref": "#/rules@54"
               },
               "arguments": []
             }
@@ -734,7 +734,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@53"
+                "$ref": "#/rules@54"
               },
               "arguments": []
             }
@@ -945,7 +945,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
               "terminal": {
                 "$type": "RuleCall",
                 "rule": {
-                  "$ref": "#/rules@53"
+                  "$ref": "#/rules@54"
                 },
                 "arguments": []
               },
@@ -1191,7 +1191,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
         "terminal": {
           "$type": "RuleCall",
           "rule": {
-            "$ref": "#/rules@57"
+            "$ref": "#/rules@58"
           },
           "arguments": []
         }
@@ -2234,8 +2234,11 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
                       "value": "+"
                     },
                     {
-                      "$type": "Keyword",
-                      "value": "-"
+                      "$type": "RuleCall",
+                      "rule": {
+                        "$ref": "#/rules@52"
+                      },
+                      "arguments": []
                     }
                   ]
                 }
@@ -2375,8 +2378,11 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
                       "value": "&"
                     },
                     {
-                      "$type": "Keyword",
-                      "value": "-"
+                      "$type": "RuleCall",
+                      "rule": {
+                        "$ref": "#/rules@52"
+                      },
+                      "arguments": []
                     },
                     {
                       "$type": "Keyword",
@@ -2516,8 +2522,22 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
                 "operator": "="
               },
               {
-                "$type": "Keyword",
-                "value": "."
+                "$type": "Assignment",
+                "feature": "operator",
+                "operator": "=",
+                "terminal": {
+                  "$type": "Alternatives",
+                  "elements": [
+                    {
+                      "$type": "Keyword",
+                      "value": "."
+                    },
+                    {
+                      "$type": "Keyword",
+                      "value": "->"
+                    }
+                  ]
+                }
               },
               {
                 "$type": "Assignment",
@@ -2531,7 +2551,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
                   "terminal": {
                     "$type": "RuleCall",
                     "rule": {
-                      "$ref": "#/rules@53"
+                      "$ref": "#/rules@54"
                     },
                     "arguments": []
                   },
@@ -2664,7 +2684,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
               "terminal": {
                 "$type": "RuleCall",
                 "rule": {
-                  "$ref": "#/rules@53"
+                  "$ref": "#/rules@54"
                 },
                 "arguments": []
               },
@@ -2886,14 +2906,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
             {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@56"
-              },
-              "arguments": []
-            },
-            {
-              "$type": "RuleCall",
-              "rule": {
-                "$ref": "#/rules@54"
+                "$ref": "#/rules@57"
               },
               "arguments": []
             },
@@ -2901,6 +2914,13 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
               "$type": "RuleCall",
               "rule": {
                 "$ref": "#/rules@55"
+              },
+              "arguments": []
+            },
+            {
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@56"
               },
               "arguments": []
             }
@@ -2924,7 +2944,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
         "terminal": {
           "$type": "RuleCall",
           "rule": {
-            "$ref": "#/rules@52"
+            "$ref": "#/rules@53"
           },
           "arguments": []
         }
@@ -2946,7 +2966,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
         "terminal": {
           "$type": "RuleCall",
           "rule": {
-            "$ref": "#/rules@58"
+            "$ref": "#/rules@59"
           },
           "arguments": []
         }
@@ -2967,6 +2987,16 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
         "regex": "/\\\\s+/"
       },
       "fragment": false
+    },
+    {
+      "$type": "TerminalRule",
+      "name": "MINUS",
+      "definition": {
+        "$type": "RegexToken",
+        "regex": "/[\\\\-](?!>)/"
+      },
+      "fragment": false,
+      "hidden": false
     },
     {
       "$type": "TerminalRule",

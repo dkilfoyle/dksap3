@@ -136,20 +136,20 @@ BitwiseShift infers Expression:
     Addition ({infer BinaryExpression.left=current} operator=('>>' | '<<') right=Addition)*;
 
 Addition infers Expression:
-    Multiplication ({infer BinaryExpression.left=current} operator=('+' | '-') right=Multiplication)*;
+    Multiplication ({infer BinaryExpression.left=current} operator=('+' | MINUS) right=Multiplication)*;
 
 Multiplication infers Expression:
     Prefix ({infer BinaryExpression.left=current} operator=('*' | '/' | '%') right=Prefix)*;
 
 Prefix infers Expression:
-    {infer PrefixExpression} operator=("*"|"&"|"-"|"++"|"--"|"!"|"~") operand=Prefix 
+    {infer PrefixExpression} operator=("*"|"&"|MINUS|"++"|"--"|"!"|"~") operand=Prefix 
     | Postfix;
 
 Postfix infers Expression:
     Chained ({infer PostfixExpression.operand=current} operator=("++"|"--"))*;
 
 Chained infers Expression:
-    Primary ({infer MemberAccess.receiver=current} "." member=[StructMember:ID])*;
+    Primary ({infer MemberAccess.receiver=current} operator=("."|"->") member=[StructMember:ID])*;
 
 Primary infers Expression:
     '(' Expression ')' |
@@ -195,6 +195,7 @@ CharExpression:
 // ########## Terminals
 
 hidden terminal WS: /\s+/;
+terminal MINUS: /[\-](?!>)/;
 terminal STRING: /"[^"]*"/;
 terminal ID: /[_a-zA-Z][\w_]*/;
 terminal HEXNUMBER returns number: /0[xX][0-9a-fA-F]+/;
