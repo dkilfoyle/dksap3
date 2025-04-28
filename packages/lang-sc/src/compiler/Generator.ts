@@ -250,7 +250,7 @@ export class AsmGenerator {
    * modify the stack pointer to the new value indicated
    * @param newstkp new value
    */
-  gen_modify_stack(newstkp: number, comment = "stk-=2") {
+  gen_modify_stack(newstkp: number, comment: string | string[] = "stk-=2") {
     const lines: string[] = [];
     let k = newstkp - this.stkp;
     if (k == 0) {
@@ -276,8 +276,10 @@ export class AsmGenerator {
           lines.push(`dcx sp`);
           k++;
         }
+        let cc = 0;
         while (k) {
-          lines.push(`push b ; ${comment}`);
+          if (Array.isArray(comment)) lines.push(`push b ; ${comment[cc++]}`);
+          else lines.push(`push b ; ${comment}`);
           k = k + AsmGenerator.INTSIZE;
         }
         this.stkp = newstkp;

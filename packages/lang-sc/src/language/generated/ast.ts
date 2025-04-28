@@ -77,6 +77,7 @@ export type ScKeywordNames =
     | "sizeof"
     | "static"
     | "struct"
+    | "union"
     | "unsigned"
     | "while"
     | "{"
@@ -436,6 +437,19 @@ export function isPrefixExpression(item: unknown): item is PrefixExpression {
     return reflection.isInstance(item, PrefixExpression);
 }
 
+export interface PrimitiveTypeSpecifier extends AstNode {
+    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | ParameterDeclaration | StructMember;
+    readonly $type: 'PrimitiveTypeSpecifier';
+    atomicType: 'char' | 'int';
+    signed?: 'signed' | 'unsigned';
+}
+
+export const PrimitiveTypeSpecifier = 'PrimitiveTypeSpecifier';
+
+export function isPrimitiveTypeSpecifier(item: unknown): item is PrimitiveTypeSpecifier {
+    return reflection.isInstance(item, PrimitiveTypeSpecifier);
+}
+
 export interface Program extends AstNode {
     readonly $type: 'Program';
     definitions: Array<Definition>;
@@ -496,10 +510,13 @@ export function isStringExpression(item: unknown): item is StringExpression {
 }
 
 export interface StructMember extends AstNode {
-    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | ParameterDeclaration | StructTypeDeclaration;
-    readonly $type: 'PrimitiveTypeSpecifier' | 'StructMember';
+    readonly $container: StructTypeDeclaration;
+    readonly $type: 'StructMember';
+    array: boolean;
+    dim?: number;
     name: string;
     pointer: boolean;
+    typeSpecifier: PrimitiveTypeSpecifier;
 }
 
 export const StructMember = 'StructMember';
@@ -511,7 +528,7 @@ export function isStructMember(item: unknown): item is StructMember {
 export interface StructTypeDeclaration extends AstNode {
     readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | ParameterDeclaration;
     readonly $type: 'StructTypeDeclaration';
-    atomicType: 'struct';
+    atomicType: 'struct' | 'union';
     members: Array<StructMember>;
     name: string;
 }
@@ -525,7 +542,7 @@ export function isStructTypeDeclaration(item: unknown): item is StructTypeDeclar
 export interface StructTypeReference extends AstNode {
     readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | ParameterDeclaration;
     readonly $type: 'StructTypeReference';
-    atomicType: 'struct';
+    atomicType: 'struct' | 'union';
     structTypeName: Reference<StructTypeDeclaration>;
 }
 
@@ -573,19 +590,6 @@ export const WhileStatement = 'WhileStatement';
 
 export function isWhileStatement(item: unknown): item is WhileStatement {
     return reflection.isInstance(item, WhileStatement);
-}
-
-export interface PrimitiveTypeSpecifier extends StructMember {
-    readonly $container: GlobalVariableDeclaration | LocalVariableDeclaration | ParameterDeclaration;
-    readonly $type: 'PrimitiveTypeSpecifier';
-    atomicType: 'char' | 'int';
-    signed?: 'signed' | 'unsigned';
-}
-
-export const PrimitiveTypeSpecifier = 'PrimitiveTypeSpecifier';
-
-export function isPrimitiveTypeSpecifier(item: unknown): item is PrimitiveTypeSpecifier {
-    return reflection.isInstance(item, PrimitiveTypeSpecifier);
 }
 
 export type ScAstType = {
@@ -681,15 +685,13 @@ export class ScAstReflection extends AbstractAstReflection {
             case ParameterDeclaration: {
                 return this.isSubtype(NamedElement, supertype) || this.isSubtype(SizeofSymbol, supertype);
             }
-            case PrimitiveTypeSpecifier: {
-                return this.isSubtype(StructMember, supertype) || this.isSubtype(TypeSpecifier, supertype);
+            case PrimitiveTypeSpecifier:
+            case StructTypeSpecifier: {
+                return this.isSubtype(TypeSpecifier, supertype);
             }
             case StructTypeDeclaration:
             case StructTypeReference: {
                 return this.isSubtype(StructTypeSpecifier, supertype);
-            }
-            case StructTypeSpecifier: {
-                return this.isSubtype(TypeSpecifier, supertype);
             }
             case TypeSpecifier: {
                 return this.isSubtype(SizeofTypeReference, supertype);
@@ -920,6 +922,15 @@ export class ScAstReflection extends AbstractAstReflection {
                     ]
                 };
             }
+            case PrimitiveTypeSpecifier: {
+                return {
+                    name: PrimitiveTypeSpecifier,
+                    properties: [
+                        { name: 'atomicType' },
+                        { name: 'signed' }
+                    ]
+                };
+            }
             case Program: {
                 return {
                     name: Program,
@@ -964,8 +975,11 @@ export class ScAstReflection extends AbstractAstReflection {
                 return {
                     name: StructMember,
                     properties: [
+                        { name: 'array', defaultValue: false },
+                        { name: 'dim' },
                         { name: 'name' },
-                        { name: 'pointer', defaultValue: false }
+                        { name: 'pointer', defaultValue: false },
+                        { name: 'typeSpecifier' }
                     ]
                 };
             }
@@ -1013,17 +1027,6 @@ export class ScAstReflection extends AbstractAstReflection {
                     properties: [
                         { name: 'block' },
                         { name: 'condition' }
-                    ]
-                };
-            }
-            case PrimitiveTypeSpecifier: {
-                return {
-                    name: PrimitiveTypeSpecifier,
-                    properties: [
-                        { name: 'atomicType' },
-                        { name: 'name' },
-                        { name: 'pointer', defaultValue: false },
-                        { name: 'signed' }
                     ]
                 };
             }

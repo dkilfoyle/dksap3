@@ -545,8 +545,17 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
             "feature": "atomicType",
             "operator": "=",
             "terminal": {
-              "$type": "Keyword",
-              "value": "struct"
+              "$type": "Alternatives",
+              "elements": [
+                {
+                  "$type": "Keyword",
+                  "value": "struct"
+                },
+                {
+                  "$type": "Keyword",
+                  "value": "union"
+                }
+              ]
             }
           },
           {
@@ -598,11 +607,16 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
         "$type": "Group",
         "elements": [
           {
-            "$type": "RuleCall",
-            "rule": {
-              "$ref": "#/rules@14"
-            },
-            "arguments": []
+            "$type": "Assignment",
+            "feature": "typeSpecifier",
+            "operator": "=",
+            "terminal": {
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@14"
+              },
+              "arguments": []
+            }
           },
           {
             "$type": "Assignment",
@@ -625,6 +639,38 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
               },
               "arguments": []
             }
+          },
+          {
+            "$type": "Group",
+            "elements": [
+              {
+                "$type": "Assignment",
+                "feature": "array",
+                "operator": "?=",
+                "terminal": {
+                  "$type": "Keyword",
+                  "value": "["
+                }
+              },
+              {
+                "$type": "Assignment",
+                "feature": "dim",
+                "operator": "=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@57"
+                  },
+                  "arguments": []
+                },
+                "cardinality": "?"
+              },
+              {
+                "$type": "Keyword",
+                "value": "]"
+              }
+            ],
+            "cardinality": "?"
           },
           {
             "$type": "Keyword",
@@ -929,8 +975,17 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
             "feature": "atomicType",
             "operator": "=",
             "terminal": {
-              "$type": "Keyword",
-              "value": "struct"
+              "$type": "Alternatives",
+              "elements": [
+                {
+                  "$type": "Keyword",
+                  "value": "struct"
+                },
+                {
+                  "$type": "Keyword",
+                  "value": "union"
+                }
+              ]
             }
           },
           {

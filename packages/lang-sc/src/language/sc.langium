@@ -28,10 +28,10 @@ LocalVarName returns NamedElement:
     {infer LocalVarName} pointer?="*"? name=ID (array?="[" dim=DECNUMBER? "]")?;
 
 StructTypeDeclaration:
-    atomicType="struct" name=ID "{" members+=StructMember* "}";
+    atomicType=("struct"|"union") name=ID "{" members+=StructMember* "}";
 
 StructMember:
-    PrimitiveTypeSpecifier pointer?="*"? name=ID ";";
+    typeSpecifier=PrimitiveTypeSpecifier pointer?="*"? name=ID (array?="[" dim=DECNUMBER? "]")? ";";
 
 ParameterDeclaration:
     typeSpecifier=TypeSpecifier pointer?="*"? name=ID array?="[]"?;
@@ -51,7 +51,7 @@ PrimitiveTypeSpecifier:
     signed=("signed"|"unsigned")? atomicType=("int" | "char");
 
 StructTypeReference:
-    atomicType="struct" structTypeName=[StructTypeDeclaration:ID];
+    atomicType=("struct"|"union") structTypeName=[StructTypeDeclaration:ID];
 
 SizeofTypeReference:
     TypeSpecifier pointer?="*";

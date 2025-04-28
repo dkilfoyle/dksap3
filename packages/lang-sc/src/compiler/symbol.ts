@@ -13,6 +13,7 @@ import {
   LocalVariableDeclaration,
   LocalVarName,
   ParameterDeclaration,
+  StructMember,
 } from "../language/generated/ast";
 import { AsmGenerator } from "./Generator";
 import { ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
@@ -71,6 +72,8 @@ export class SymbolTable {
       type,
       offset,
       storage,
+      tagidx: -1,
+      struct_size: 0,
     };
 
     this.local_table_index++;
@@ -88,6 +91,8 @@ export class SymbolTable {
       type,
       offset,
       storage,
+      tagidx: -1,
+      struct_size: 0,
     };
     return this.global_table_index - 1;
   }
@@ -146,13 +151,28 @@ export class InitialTable {
     }
   }
 }
-export const getSymbolType = (v: LocalVariableDeclaration | GlobalVariableDeclaration | ParameterDeclaration) => {
-  if (v.typeSpecifier.atomicType == "struct") {
+export const getSymbolType = (v: LocalVariableDeclaration | GlobalVariableDeclaration | ParameterDeclaration | StructMember) => {
+  if (isStructTypeSpecifier(v.typeSpecifier)) {
     return SymbolType.STRUCT;
   } else {
     if (v.typeSpecifier.signed == "unsigned") {
       return v.typeSpecifier.atomicType == "char" ? SymbolType.UCHAR : SymbolType.UINT;
     } else return v.typeSpecifier.atomicType == "char" ? SymbolType.CCHAR : SymbolType.CINT;
+  }
+};
+
+export const getSymbolStorage = (v: LocalVariableDeclaration | GlobalVariableDeclaration) => {
+  switch (v.storage) {
+    case "auto":
+      return SymbolStorage.AUTO;
+    case "extern":
+      return SymbolStorage.EXTERN;
+    case "register":
+      return SymbolStorage.AUTO;
+    case "static":
+      return SymbolStorage.STATIC;
+    default:
+      return SymbolStorage.AUTO;
   }
 };
 
@@ -238,7 +258,7 @@ export const compileGlobalVariableDeclaration = (scc: ScCompiler, decl: GlobalVa
 
 export const compileLocalDeclaration = (scc: ScCompiler, decl: LocalVariableDeclaration) => {
   // ${userPreferences.compiler.commentStatements ? `; ${decl.$cstNode!.text}` : undefined}
-  return expandTracedToNode(decl)`  ; ${decl.$cstNode!.text}
+  return expandTracedToNode(decl)`  ; ${decl.$cstNode!.text.split("\n")[0]}
   ${joinTracedToNode(decl, "varNames")(
     decl.varNames.map((vn) => compileLocalVarName(scc, vn as LocalVarName, decl)),
     { appendNewLineIfNotEmpty: true }
@@ -248,11 +268,13 @@ export const compileLocalDeclaration = (scc: ScCompiler, decl: LocalVariableDecl
 const compileLocalVarName = (scc: ScCompiler, localVar: LocalVarName, decl: LocalVariableDeclaration) => {
   if (scc.symbol_table.find_local(localVar.name) != -1) throw Error(`${localVar.name} is already in local symbol table`);
   const typ = getSymbolType(decl);
+  const storage = getSymbolStorage(decl);
 
   let otag = -1;
   if (isStructTypeSpecifier(decl.typeSpecifier)) {
-    if (isStructTypeDeclaration(decl.typeSpecifier)) otag = scc.tag_table.find(decl.typeSpecifier.name);
-    else otag = scc.tag_table.find(decl.typeSpecifier.structTypeName.$refText);
+    otag = isStructTypeDeclaration(decl.typeSpecifier)
+      ? scc.tag_table.define_struct(decl.typeSpecifier, storage)
+      : scc.tag_table.find(decl.typeSpecifier.structTypeName.$refText);
   }
 
   let j, k;
@@ -290,11 +312,13 @@ const compileLocalVarName = (scc: ScCompiler, localVar: LocalVarName, decl: Loca
       }
     }
   }
-  let lines: string[];
+  let lines: string[] = [];
 
   if (decl.storage != "static") {
-    const nonstaticLines = scc.generator.gen_modify_stack(scc.generator.stkp - k, `${localVar.name}`);
-    lines = nonstaticLines;
+    if (isStructTypeDeclaration(decl.typeSpecifier)) {
+      const names = decl.typeSpecifier.members.map((m) => `${localVar.name}.${m.name}`);
+      lines.push(...scc.generator.gen_modify_stack(scc.generator.stkp - k, names));
+    } else lines.push(...scc.generator.gen_modify_stack(scc.generator.stkp - k, `${localVar.name}`));
     // lines[0] += `\t\t\t\t${decl.type.type} ${localVar.name}`;
     const { index: current_symbol_table_idx } = scc.symbol_table.add_local(localVar.name, j, typ, scc.generator.stkp, SymbolStorage.AUTO);
     if (typ == SymbolType.STRUCT) {

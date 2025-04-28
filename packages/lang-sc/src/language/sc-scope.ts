@@ -1,13 +1,10 @@
 import type { AstNode, AstNodeDescription, LangiumDocument, PrecomputedScopes, ReferenceInfo, Scope } from "langium";
 import { AstUtils, Cancellation, DefaultScopeComputation, DefaultScopeProvider, interruptAndCheck, MultiMap } from "langium";
 import { ScServices } from "./sc-module.js";
-// import { ClassDec, isClassDec, isSubroutineDec, isVarName } from "./generated/ast.js";
 import {
   isLocalVarName,
   isGlobalVarName,
   isStructTypeDeclaration,
-  isStructTypeReference,
-  isStructMember,
   MemberAccess,
   isSymbolExpression,
   isLocalVariableDeclaration,
@@ -56,7 +53,6 @@ export class ScScopeProvider extends DefaultScopeProvider {
   }
 
   override getScope(context: ReferenceInfo): Scope {
-    console.log(context);
     if (context.property == "member") {
       const memberAccess = context.container as MemberAccess;
       const receiver = memberAccess.receiver;

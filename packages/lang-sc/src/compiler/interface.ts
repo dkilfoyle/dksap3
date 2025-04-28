@@ -51,7 +51,8 @@ export interface ISymbol {
    */
   storage: SymbolStorage;
   offset: number;
-  tagidx?: number;
+  tagidx: number;
+  struct_size: number;
 }
 
 /**
