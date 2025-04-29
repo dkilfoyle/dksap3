@@ -32,10 +32,10 @@ export class ScValidator {
   }
   checkInitialsSize(a: ArraySpecifier, accept: ValidationAcceptor) {
     if (a.dim != undefined) {
-      if (a.items.length > 0 && a.items.length > a.dim.value) {
+      if (a.items.length > 0 && a.items.length > a.dim) {
         accept("warning", "Array dimension < initializer length", { node: a, property: "dim" });
       }
-      if (a.dim.value == 0) {
+      if (a.dim == 0) {
         // Not sure if this is correct
         // Reference SmallC will compile this, just produces a label with no dw
         accept("error", "Zero dimension arrays not allowed", { node: a, property: "dim" });

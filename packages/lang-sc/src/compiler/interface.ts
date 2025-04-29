@@ -1,4 +1,4 @@
-import { ITagSymbol } from "./TagTable";
+import { ITagSymbol } from "./struct";
 
 export enum CompilerRegs {
   NONE = 0,

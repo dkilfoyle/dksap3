@@ -53,7 +53,7 @@ export class ScScopeProvider extends DefaultScopeProvider {
   }
 
   override getScope(context: ReferenceInfo): Scope {
-    if (context.property == "member") {
+    if (context.property == "memberName") {
       const memberAccess = context.container as MemberAccess;
       const receiver = memberAccess.receiver;
       if (isSymbolExpression(receiver)) {

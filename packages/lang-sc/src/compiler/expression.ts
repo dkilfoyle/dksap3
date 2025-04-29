@@ -3,6 +3,7 @@ import {
   Expression,
   isBinaryExpression,
   isCharExpression,
+  isMemberAccess,
   isNumberExpression,
   isPostfixExpression,
   isPrefixExpression,
@@ -32,6 +33,7 @@ import {
   compileCharExpression,
   compileSizeofExpression,
 } from "./primary";
+import { compileMemberExpression } from "./struct";
 
 export const FETCH = 1;
 export const NL: JoinOptions<string> = { appendNewLineIfNotEmpty: true };
@@ -150,6 +152,8 @@ export function compileSubExpression(scc: ScCompiler, expression: Expression): E
       return compileStringExpression(scc, expression);
     case isCharExpression(expression):
       return compileCharExpression(scc, expression);
+    case isMemberAccess(expression):
+      return compileMemberExpression(scc, expression);
     case isSymbolExpression(expression):
       return compileSymbolExpression(scc, expression);
     case isSizeofExpression(expression):

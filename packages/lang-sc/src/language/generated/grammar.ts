@@ -2596,7 +2596,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
               },
               {
                 "$type": "Assignment",
-                "feature": "member",
+                "feature": "memberName",
                 "operator": "=",
                 "terminal": {
                   "$type": "CrossReference",

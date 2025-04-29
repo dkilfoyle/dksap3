@@ -2,7 +2,7 @@
 
 import { CompilerRegs, ILValue, ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
 import { SymbolTable } from "./symbol";
-import { ITagSymbol } from "./TagTable";
+import { ITagSymbol } from "./struct";
 
 /*      Define ASNM and LDNM to the names of the assembler and linker
         respectively */

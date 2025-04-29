@@ -373,7 +373,7 @@ export function isLocalVarName(item: unknown): item is LocalVarName {
 export interface MemberAccess extends AstNode {
     readonly $container: BinaryExpression | Block | DoStatement | ForStatement | FunctionCall | IfStatement | MemberAccess | PostfixExpression | PrefixExpression | ReturnStatement | SymbolExpression | WhileStatement;
     readonly $type: 'MemberAccess';
-    member: Reference<StructMember>;
+    memberName: Reference<StructMember>;
     operator: '->' | '.';
     receiver: Expression;
 }
@@ -705,7 +705,7 @@ export class ScAstReflection extends AbstractAstReflection {
     getReferenceType(refInfo: ReferenceInfo): string {
         const referenceId = `${refInfo.container.$type}:${refInfo.property}`;
         switch (referenceId) {
-            case 'MemberAccess:member': {
+            case 'MemberAccess:memberName': {
                 return StructMember;
             }
             case 'StructTypeReference:structTypeName': {
@@ -879,7 +879,7 @@ export class ScAstReflection extends AbstractAstReflection {
                 return {
                     name: MemberAccess,
                     properties: [
-                        { name: 'member' },
+                        { name: 'memberName' },
                         { name: 'operator' },
                         { name: 'receiver' }
                     ]

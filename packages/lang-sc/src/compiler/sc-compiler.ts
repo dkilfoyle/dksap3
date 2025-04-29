@@ -3,7 +3,7 @@ import { Definition, isFunctionDeclaration, isGlobalVariableDeclaration, isProgr
 import { AsmGenerator } from "./Generator";
 import { compileFunctionDeclaration } from "./function";
 import { compileGlobalVariableDeclaration, InitialTable, SymbolTable } from "./symbol";
-import { TagTable } from "./TagTable";
+import { TagTable } from "./struct";
 import { expandToNode, expandTracedToNode, joinToNode, toStringAndTrace } from "langium/generate";
 import { IRange } from "monaco-editor";
 import { WhileTable } from "./while";

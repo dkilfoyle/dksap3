@@ -19,7 +19,7 @@ import { AsmGenerator } from "./Generator";
 import { ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
 import { scCompiler, ScCompiler } from "./sc-compiler";
 import { expandTracedToNode, joinTracedToNode, joinToNode } from "langium/generate";
-import { ITagSymbol } from "./TagTable";
+import { ITagSymbol } from "./struct";
 
 export class SymbolTable {
   public static NUMBER_OF_GLOBALS = 100;

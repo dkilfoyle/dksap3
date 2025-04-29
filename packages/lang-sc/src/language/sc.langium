@@ -30,6 +30,7 @@ LocalVarName returns NamedElement:
 StructTypeDeclaration:
     atomicType=("struct"|"union") name=ID "{" members+=StructMember* "}";
 
+// TODO: typeSpecifier=PrimmitiveTypeSpecifier|StructTypeReference
 StructMember:
     typeSpecifier=PrimitiveTypeSpecifier pointer?="*"? name=ID (array?="[" dim=DECNUMBER? "]")? ";";
 
@@ -149,7 +150,7 @@ Postfix infers Expression:
     Chained ({infer PostfixExpression.operand=current} operator=("++"|"--"))*;
 
 Chained infers Expression:
-    Primary ({infer MemberAccess.receiver=current} operator=("."|"->") member=[StructMember:ID])*;
+    Primary ({infer MemberAccess.receiver=current} operator=("."|"->") memberName=[StructMember:ID])*;
 
 Primary infers Expression:
     '(' Expression ')' |
