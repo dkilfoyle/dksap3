@@ -187,33 +187,29 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
             }
           },
           {
-            "$type": "Alternatives",
-            "elements": [
-              {
-                "$type": "Assignment",
-                "feature": "arraySpecifier",
-                "operator": "=",
-                "terminal": {
-                  "$type": "RuleCall",
-                  "rule": {
-                    "$ref": "#/rules@4"
-                  },
-                  "arguments": []
-                }
+            "$type": "Assignment",
+            "feature": "arraySpecifier",
+            "operator": "=",
+            "terminal": {
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@7"
               },
-              {
-                "$type": "Assignment",
-                "feature": "valueSpecifier",
-                "operator": "=",
-                "terminal": {
-                  "$type": "RuleCall",
-                  "rule": {
-                    "$ref": "#/rules@5"
-                  },
-                  "arguments": []
-                }
-              }
-            ],
+              "arguments": []
+            },
+            "cardinality": "?"
+          },
+          {
+            "$type": "Assignment",
+            "feature": "initials",
+            "operator": "=",
+            "terminal": {
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@4"
+              },
+              "arguments": []
+            },
             "cardinality": "?"
           }
         ]
@@ -227,7 +223,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
     },
     {
       "$type": "ParserRule",
-      "name": "ArraySpecifier",
+      "name": "Initials",
       "definition": {
         "$type": "Alternatives",
         "elements": [
@@ -236,52 +232,18 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
             "elements": [
               {
                 "$type": "Keyword",
-                "value": "["
-              },
-              {
-                "$type": "Assignment",
-                "feature": "dim",
-                "operator": "=",
-                "terminal": {
-                  "$type": "RuleCall",
-                  "rule": {
-                    "$ref": "#/rules@57"
-                  },
-                  "arguments": []
-                }
-              },
-              {
-                "$type": "Keyword",
-                "value": "]"
-              }
-            ]
-          },
-          {
-            "$type": "Group",
-            "elements": [
-              {
-                "$type": "Keyword",
-                "value": "[]"
+                "value": "="
               },
               {
                 "$type": "Group",
                 "elements": [
-                  {
-                    "$type": "Assignment",
-                    "feature": "assignment",
-                    "operator": "?=",
-                    "terminal": {
-                      "$type": "Keyword",
-                      "value": "="
-                    }
-                  },
                   {
                     "$type": "Keyword",
                     "value": "{"
                   },
                   {
                     "$type": "Assignment",
-                    "feature": "items",
+                    "feature": "values",
                     "operator": "+=",
                     "terminal": {
                       "$type": "RuleCall",
@@ -300,7 +262,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
                       },
                       {
                         "$type": "Assignment",
-                        "feature": "items",
+                        "feature": "values",
                         "operator": "+=",
                         "terminal": {
                           "$type": "RuleCall",
@@ -317,39 +279,14 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
                     "$type": "Keyword",
                     "value": "}"
                   }
-                ],
-                "cardinality": "?"
+                ]
               }
             ]
-          }
-        ]
-      },
-      "definesHiddenTokens": false,
-      "entry": false,
-      "fragment": false,
-      "hiddenTokens": [],
-      "parameters": [],
-      "wildcard": false
-    },
-    {
-      "$type": "ParserRule",
-      "name": "ValueSpecifier",
-      "definition": {
-        "$type": "Group",
-        "elements": [
-          {
-            "$type": "Assignment",
-            "feature": "assignment",
-            "operator": "?=",
-            "terminal": {
-              "$type": "Keyword",
-              "value": "="
-            }
           },
           {
             "$type": "Assignment",
-            "feature": "value",
-            "operator": "=",
+            "feature": "values",
+            "operator": "+=",
             "terminal": {
               "$type": "RuleCall",
               "rule": {
@@ -415,7 +352,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
             "terminal": {
               "$type": "RuleCall",
               "rule": {
-                "$ref": "#/rules@7"
+                "$ref": "#/rules@6"
               },
               "arguments": []
             }
@@ -434,7 +371,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@7"
+                    "$ref": "#/rules@6"
                   },
                   "arguments": []
                 }
@@ -494,16 +431,39 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
             }
           },
           {
+            "$type": "Assignment",
+            "feature": "arraySpecifier",
+            "operator": "=",
+            "terminal": {
+              "$type": "RuleCall",
+              "rule": {
+                "$ref": "#/rules@7"
+              },
+              "arguments": []
+            },
+            "cardinality": "?"
+          }
+        ]
+      },
+      "definesHiddenTokens": false,
+      "entry": false,
+      "fragment": false,
+      "hiddenTokens": [],
+      "parameters": [],
+      "wildcard": false
+    },
+    {
+      "$type": "ParserRule",
+      "name": "ArraySpecifier",
+      "definition": {
+        "$type": "Alternatives",
+        "elements": [
+          {
             "$type": "Group",
             "elements": [
               {
-                "$type": "Assignment",
-                "feature": "array",
-                "operator": "?=",
-                "terminal": {
-                  "$type": "Keyword",
-                  "value": "["
-                }
+                "$type": "Keyword",
+                "value": "["
               },
               {
                 "$type": "Assignment",
@@ -515,15 +475,17 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
                     "$ref": "#/rules@57"
                   },
                   "arguments": []
-                },
-                "cardinality": "?"
+                }
               },
               {
                 "$type": "Keyword",
                 "value": "]"
               }
-            ],
-            "cardinality": "?"
+            ]
+          },
+          {
+            "$type": "Keyword",
+            "value": "[]"
           }
         ]
       },
@@ -1067,7 +1029,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
                 "terminal": {
                   "$type": "RuleCall",
                   "rule": {
-                    "$ref": "#/rules@6"
+                    "$ref": "#/rules@5"
                   },
                   "arguments": []
                 },
@@ -2865,7 +2827,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
           {
             "$type": "RuleCall",
             "rule": {
-              "$ref": "#/rules@7"
+              "$ref": "#/rules@6"
             },
             "arguments": []
           },
@@ -3178,7 +3140,7 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
           {
             "$type": "SimpleType",
             "typeRef": {
-              "$ref": "#/rules@7/definition/elements@0/inferredType"
+              "$ref": "#/rules@6/definition/elements@0/inferredType"
             }
           },
           {

@@ -4,11 +4,9 @@ import {
   isArraySpecifier,
   isCharExpression,
   isNumberExpression,
-  isPrimitiveTypeSpecifier,
   isStringExpression,
   isStructTypeDeclaration,
   isStructTypeSpecifier,
-  isValueSpecifier,
   LiteralExpression,
   LocalVariableDeclaration,
   LocalVarName,
@@ -121,19 +119,23 @@ export class InitialTable {
       data_len: 0,
       data_start: this.data.length,
     };
+    return this.initials[name];
   }
-  add_initial(name: string, type: SymbolType, value: number, tag: ITagSymbol | 0) {
-    if (!this.initials[name]) this.add_symbol(name, tag == 0 ? type : SymbolType.STRUCT);
+  add_initial(name: string, type: SymbolType, value: number, tag: ITagSymbol | 0, member_index?: number) {
+    const initial = this.initials[name] || this.add_symbol(name, tag == 0 ? type : SymbolType.STRUCT);
     if (tag != 0) {
-      throw Error("Struct initials not supported yet");
+      if (member_index == undefined) throw Error("Need member index");
+      const index = initial.dim % tag.members.length;
+      const member_type = tag.members[member_index].type;
+      this.add_initial(name, member_type, value, 0);
     } else {
       if (type & SymbolType.CCHAR) {
         this.data.push(0xff & value);
-        this.initials[name].data_len += 1;
+        initial.data_len += 1;
       } else if (type & SymbolType.CINT) {
         this.data.push((0xff00 & value) >> 8);
         this.data.push(0xff & value);
-        this.initials[name].data_len += 2;
+        initial.data_len += 2;
       } else throw Error("add initials invalid type " + type.toString());
     }
     this.initials[name].dim += 1;
@@ -180,33 +182,39 @@ export const compileGlobalVariableDeclaration = (scc: ScCompiler, decl: GlobalVa
   const atomicType = getSymbolType(decl);
 
   const initials = (gvn: GlobalVarName, identity: SymbolIdentity, dim: number, otag: number) => {
-    const initLiteral = (lit: LiteralExpression) => {
+    const initLiteral = (name: string, lit: LiteralExpression, otag: ITagSymbol | 0, member_index?: number) => {
       if (isNumberExpression(lit)) {
-        scc.initials_table.add_initial(gvn.name, SymbolType.CINT, lit.value, 0);
+        scc.initials_table.add_initial(name, SymbolType.CINT, lit.value, otag, member_index);
       } else if (isCharExpression(lit)) {
-        scc.initials_table.add_initial(gvn.name, SymbolType.CCHAR, lit.value.charCodeAt(0), 0);
+        scc.initials_table.add_initial(name, SymbolType.CCHAR, lit.value.charCodeAt(0), otag, member_index);
       } else if (isStringExpression(lit)) {
         if (identity == SymbolIdentity.VARIABLE || !(atomicType & SymbolType.CCHAR)) throw Error("must assign to char pointer or char array"); // TODO: add validation check - maybe typir
         lit.value.split("").forEach((x) => {
           const xcode = x.charCodeAt(0);
           scc.litq.push(xcode);
-          scc.initials_table.add_initial(gvn.name, SymbolType.CCHAR, xcode, 0);
+          scc.initials_table.add_initial(name, SymbolType.CCHAR, xcode, otag, member_index);
         });
         scc.litq.push(0); // 0 terminated
-        scc.initials_table.add_initial(gvn.name, SymbolType.CCHAR, 0, 0);
+        scc.initials_table.add_initial(name, SymbolType.CCHAR, 0, otag, member_index);
       }
     };
 
-    let litptr = 0;
-    let dim_unknown = dim == 0 ? 1 : 0;
-    // int x[] = {1,2,3}
-    // int x[3] = {1,2,3}
-    if ((identity == SymbolIdentity.POINTER || identity == SymbolIdentity.VARIABLE) && atomicType == SymbolType.STRUCT) {
-      // dim = 0;
-      // struct init
-      throw Error("Not implemented");
-    } else {
-      if (isArraySpecifier(gvn.arraySpecifier)) {
+    if (gvn.initials) {
+      // int x = 1;
+      // int x[] = {1,2,3}
+      // int x[3] = {1,2,3}
+      // struct S s = {1,"c"}
+
+      if ((identity == SymbolIdentity.POINTER || identity == SymbolIdentity.VARIABLE) && atomicType == SymbolType.STRUCT) {
+        const dim = 0;
+        const tag = scc.tag_table.tags[otag];
+        tag.members.forEach((member, i) => {
+          initLiteral(tag.name, gvn.initials!.values[i], tag, i);
+        });
+
+        // struct init
+        throw Error("Not implemented");
+      } else {
         // there is an initial assignment
         // eg int x[] = {1,2,3}
         // eg int x[3] = {1,2,3}
@@ -215,45 +223,43 @@ export const compileGlobalVariableDeclaration = (scc: ScCompiler, decl: GlobalVa
         // int x[];
         // int x[0];
         // int x[2] = {1,2,3};
-        gvn.arraySpecifier.items.forEach((i) => {
-          initLiteral(i);
+        gvn.initials.values.forEach((i) => {
+          initLiteral(gvn.name, i, 0);
         });
-      } else if (isValueSpecifier(gvn.valueSpecifier)) {
-        // eg int x = 5;
-        initLiteral(gvn.valueSpecifier.value);
-      } else {
-        // no initial assignment
-        // eg int x; defaults to x=0
-        if (atomicType & SymbolType.CCHAR) {
-          scc.initials_table.add_initial(gvn.name, SymbolType.CCHAR, 0, 0);
-        } else if (atomicType & SymbolType.CINT) {
-          scc.initials_table.add_initial(gvn.name, SymbolType.CINT, 0, 0);
-        } else if (atomicType == SymbolType.STRUCT) {
-          throw Error("struct default assignment not supported yet");
-        }
       }
     }
-
     return identity;
   };
 
-  if (isPrimitiveTypeSpecifier(decl.typeSpecifier)) {
+  const storage = getSymbolStorage(decl);
+  let otag = -1;
+  if (isStructTypeSpecifier(decl.typeSpecifier)) {
+    if (isStructTypeDeclaration(decl.typeSpecifier)) otag = scc.tag_table.define_struct(decl.typeSpecifier, storage);
+    else {
+      otag = scc.tag_table.find(decl.typeSpecifier.structTypeName.$refText);
+      if (otag == -1) throw Error("otag not found"); // this shouldn't happen
+    }
+  }
+
+  decl.varNames.forEach((vn) => {
+    const gvn = vn as GlobalVarName;
+    let dim = 1;
+    let identity = gvn.pointer ? SymbolIdentity.POINTER : SymbolIdentity.VARIABLE;
+    if (isArraySpecifier(gvn.arraySpecifier)) {
+      identity = SymbolIdentity.ARRAY;
+      dim = gvn.arraySpecifier.dim || -1;
+    }
+
     // int x;
     // int x = 10;
     // int x[3] = {1,2,3};
     // extern int x;
-    decl.varNames.forEach((vn) => {
-      const gvn = vn as GlobalVarName;
-      let identity = gvn.pointer ? SymbolIdentity.POINTER : SymbolIdentity.VARIABLE;
-      let dim = -1;
-      if (isArraySpecifier(gvn.arraySpecifier)) {
-        identity = SymbolIdentity.ARRAY;
-        dim = gvn.arraySpecifier.dim || -1;
-      }
-      identity = initials(gvn, identity, dim, 0);
-      scc.symbol_table.add_global(gvn.name, identity, atomicType, dim, 0);
-    });
-  } else throw Error("struct declaration not supported yet");
+    identity = initials(gvn, identity, dim, otag);
+    const glbl = scc.symbol_table.add_global(gvn.name, identity, atomicType, dim, storage);
+    if (decl.typeSpecifier.atomicType == "struct") {
+      scc.symbol_table.symbols[glbl].tagidx = otag;
+    }
+  });
 };
 
 export const compileLocalDeclaration = (scc: ScCompiler, decl: LocalVariableDeclaration) => {
@@ -279,8 +285,8 @@ const compileLocalVarName = (scc: ScCompiler, localVar: LocalVarName, decl: Loca
 
   let j, k;
   j = localVar.pointer ? SymbolIdentity.POINTER : SymbolIdentity.VARIABLE;
-  if (localVar.array) {
-    k = localVar.dim || 0;
+  if (localVar.arraySpecifier) {
+    k = localVar.arraySpecifier.dim || 0;
     if (k) {
       // [dim]
       j = SymbolIdentity.ARRAY;
@@ -316,7 +322,7 @@ const compileLocalVarName = (scc: ScCompiler, localVar: LocalVarName, decl: Loca
 
   if (decl.storage != "static") {
     if (isStructTypeDeclaration(decl.typeSpecifier)) {
-      const names = decl.typeSpecifier.members.map((m) => `${localVar.name}.${m.name}`);
+      const names = decl.typeSpecifier.members.map((m) => `${localVar.name}.${m.name}`).reverse();
       lines.push(...scc.generator.gen_modify_stack(scc.generator.stkp - k, names));
     } else lines.push(...scc.generator.gen_modify_stack(scc.generator.stkp - k, `${localVar.name}`));
     // lines[0] += `\t\t\t\t${decl.type.type} ${localVar.name}`;

@@ -13,19 +13,19 @@ GlobalVariableDeclaration:
     storage=("extern"|"static")? typeSpecifier=TypeSpecifier varNames+=GlobalVarName ("," varNames+=GlobalVarName)* ";";
 
 GlobalVarName returns NamedElement:
-    {infer GlobalVarName} pointer?="*"? name=ID (arraySpecifier=ArraySpecifier | valueSpecifier=ValueSpecifier)?;
+    {infer GlobalVarName} pointer?="*"? name=ID arraySpecifier=ArraySpecifier? initials=Initials?;
 
-ArraySpecifier:
-    ("[" dim=DECNUMBER "]")|"[]" (assignment?="=" "{" items+=LiteralExpression ("," items+=LiteralExpression)* "}")?;
-
-ValueSpecifier:
-    assignment?='=' value=LiteralExpression;
+Initials:
+    "=" ("{" values+=LiteralExpression ("," values+=LiteralExpression)* "}") | values+=LiteralExpression;
 
 LocalVariableDeclaration:
     storage=("static"|"register"|"auto")? typeSpecifier=TypeSpecifier varNames+=LocalVarName ("," varNames+=LocalVarName)* ";";
 
 LocalVarName returns NamedElement:
-    {infer LocalVarName} pointer?="*"? name=ID (array?="[" dim=DECNUMBER? "]")?;
+    {infer LocalVarName} pointer?="*"? name=ID arraySpecifier=ArraySpecifier?;
+
+ArraySpecifier:
+    ("[" dim=DECNUMBER "]")|"[]";
 
 StructTypeDeclaration:
     atomicType=("struct"|"union") name=ID "{" members+=StructMember* "}";

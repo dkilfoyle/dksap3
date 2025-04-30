@@ -89,7 +89,7 @@ export function compileMemberExpression(scc: ScCompiler, memberExpr: MemberAcces
     receiverRes.node = receiverRes.node.append(joinToNode(["xchg"], NL));
   }
 
-  receiverRes.node = receiverRes.node.append(joinToNode(scc.generator.add_offset(member.offset), NL));
+  receiverRes.node = receiverRes.node.appendNewLine().append(joinToNode(scc.generator.add_offset(member.offset), NL));
 
   const lval = receiverRes.lval;
   lval.symbol = member;

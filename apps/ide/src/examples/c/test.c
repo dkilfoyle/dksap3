@@ -1,11 +1,11 @@
+struct S
+{
+  int x;
+  int y;
+  int z;
+} s, z;
 main()
 {
-  struct S
-  {
-    int x;
-    int y;
-    int z;
-  } s, z;
   s.x = 21;
   s.y = 22;
   s.z = 23;

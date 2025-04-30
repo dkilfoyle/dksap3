@@ -8,6 +8,7 @@ import {
   MemberAccess,
   isSymbolExpression,
   isLocalVariableDeclaration,
+  isGlobalVariableDeclaration,
 } from "./generated/ast.js";
 import { LangiumServices } from "langium/lsp";
 
@@ -36,6 +37,7 @@ export class ScScopeComputation extends DefaultScopeComputation {
     // boost each varName to be sibling of VarDec's container
     // this allows to declare multiple varNames in one VarDec
     // eg var int x,y;
+
     let container =
       isLocalVarName(node) || isGlobalVarName(node) || isStructTypeDeclaration(node) ? node.$container.$container : node.$container;
     if (container) {
@@ -58,7 +60,7 @@ export class ScScopeProvider extends DefaultScopeProvider {
       const receiver = memberAccess.receiver;
       if (isSymbolExpression(receiver)) {
         const container = receiver.element.ref?.$container;
-        if (isLocalVariableDeclaration(container)) {
+        if (isLocalVariableDeclaration(container) || isGlobalVariableDeclaration(container)) {
           if (isStructTypeDeclaration(container.typeSpecifier)) {
             return this.createScopeForNodes(container.typeSpecifier.members);
           }

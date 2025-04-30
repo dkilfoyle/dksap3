@@ -1,5 +1,5 @@
 import { expandToNode, expandTracedToNode, joinToNode } from "langium/generate";
-import { FunctionDeclaration, GlobalVariableDeclaration } from "../language/generated/ast";
+import { FunctionDeclaration, GlobalVariableDeclaration, isStructTypeDeclaration } from "../language/generated/ast";
 import { compileBlock } from "./statements";
 import { getSymbolType, SymbolTable } from "./symbol";
 import { ScCompiler } from "./sc-compiler";
@@ -41,7 +41,9 @@ export const compileFunctionDeclaration = (scc: ScCompiler, fun: FunctionDeclara
     let ptr = scc.symbol_table.local_table_index;
     if (param.typeSpecifier.atomicType == "struct") {
       if (!param.pointer) throw Error(`only struct pointers allowed as function parameter`);
-      let otag = scc.tag_table.find(param.typeSpecifier.structName.$refText);
+      let otag = scc.tag_table.find(
+        isStructTypeDeclaration(param.typeSpecifier) ? param.typeSpecifier.name : param.typeSpecifier.structTypeName.$refText
+      );
       if (otag == -1) throw Error(`${param.name} is not a declared struct`);
       scc.symbol_table.symbols[argptr].tagidx = otag;
     }

@@ -114,25 +114,25 @@ export class ScCompiler {
           if (dim == -1) {
             dim = list_size;
           }
-          const def = globalSymbol.type & SymbolType.CINT || globalSymbol.identity == SymbolIdentity.POINTER ? "dw" : "db";
-          for (let j = 0; j < dim; j++) {
-            if (globalSymbol.type == SymbolType.STRUCT) {
-              this.dumpstruct(globalSymbol, i);
+        }
+        const def = globalSymbol.type & SymbolType.CINT || globalSymbol.identity == SymbolIdentity.POINTER ? "dw" : "db";
+        for (let j = 0; j < dim; j++) {
+          if (globalSymbol.type == SymbolType.STRUCT) {
+            lines.push(...this.dumpstruct(globalSymbol, i));
+          } else {
+            if (line_count % 10 == 0) {
+              lines.push(`${def} `);
+            }
+            if (j < list_size) {
+              const value = this.initials_table.get_item_at(globalSymbol.name, j, 0);
+              lines[lines.length - 1] += value?.toString();
             } else {
-              if (line_count % 10 == 0) {
-                lines.push(`${def} `);
-              }
-              if (j < list_size) {
-                const value = this.initials_table.get_item_at(globalSymbol.name, j, 0);
-                lines[lines.length - 1] += value?.toString();
-              } else {
-                lines[lines.length - 1] += "0";
-              }
-              line_count++;
-              if (line_count % 10 == 0) line_count = 0;
-              else {
-                if (j < dim - 1) lines[lines.length - 1] += ", ";
-              }
+              lines[lines.length - 1] += "0";
+            }
+            line_count++;
+            if (line_count % 10 == 0) line_count = 0;
+            else {
+              if (j < dim - 1) lines[lines.length - 1] += ", ";
             }
           }
         }
@@ -141,8 +141,26 @@ export class ScCompiler {
     return joinToNode(lines, NL);
   }
 
-  dumpstruct(sym: ISymbol, i: number) {
-    throw Error("Global struct dump not implemented yet");
+  dumpstruct(sym: ISymbol, position: number) {
+    const lines: string[] = [];
+    const tag = this.tag_table.tags[sym.tagidx];
+    tag.members.forEach((member, i) => {
+      if (member.identity == SymbolIdentity.ARRAY) {
+        // arrays in struct can't be initialised
+        // struct S { int x[3]; }  - cant do int x[3] = {1,2,3}
+        lines.push(`ds ${member.struct_size} ; ${tag.name}.${member.name}[]`);
+      } else {
+        const def = member.type & SymbolType.CINT || member.identity == SymbolIdentity.POINTER ? "dw" : "db";
+        const size = this.initials_table.initials[sym.name]?.dim || 0;
+        if (position < size) {
+          const value = this.initials_table.get_item_at(sym.name, i * tag.members.length + i, tag);
+          lines.push(`${def} ${value} ; ${tag.name}.${member.name}`);
+        } else {
+          lines.push(`${def} 0 ; ${tag.name}.${member.name}`);
+        }
+      }
+    });
+    return lines;
   }
 }
 
