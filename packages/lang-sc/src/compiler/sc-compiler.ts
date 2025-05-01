@@ -2,7 +2,8 @@ import { AstNode } from "langium";
 import { Definition, isFunctionDeclaration, isGlobalVariableDeclaration, isProgram } from "../language/generated/ast";
 import { AsmGenerator } from "./Generator";
 import { compileFunctionDeclaration } from "./function";
-import { compileGlobalVariableDeclaration, InitialTable, SymbolTable } from "./symbol";
+import { compileGlobalVariableDeclaration, SymbolTable } from "./symbol";
+import { InitialTable } from "./initials";
 import { TagTable } from "./struct";
 import { expandToNode, expandTracedToNode, joinToNode, toStringAndTrace } from "langium/generate";
 import { IRange } from "monaco-editor";
@@ -16,9 +17,6 @@ export function createError(description: string, range?: IRange) {
     range,
   };
 }
-
-// TODO: compile structs
-// TODO: compile static vars
 
 export class ScCompiler {
   private static _instance: ScCompiler;
@@ -63,9 +61,16 @@ export class ScCompiler {
 
       const res = toStringAndTrace(node);
       console.log("Trace", res.trace);
+      console.log("Symbols", this.symbol_table);
+      console.log("Structs", this.tag_table);
+      console.log("Initials", scCompiler.initials_table);
       console.groupEnd();
+
       return res;
     } catch (e) {
+      console.log("Symbols", this.symbol_table);
+      console.log("Structs", this.tag_table);
+      console.log("Initials", scCompiler.initials_table);
       console.groupEnd();
       throw e;
     }
@@ -153,7 +158,7 @@ export class ScCompiler {
         const def = member.type & SymbolType.CINT || member.identity == SymbolIdentity.POINTER ? "dw" : "db";
         const size = this.initials_table.initials[sym.name]?.dim || 0;
         if (position < size) {
-          const value = this.initials_table.get_item_at(sym.name, i * tag.members.length + i, tag);
+          const value = this.initials_table.get_item_at(sym.name, i, tag);
           lines.push(`${def} ${value} ; ${tag.name}.${member.name}`);
         } else {
           lines.push(`${def} 0 ; ${tag.name}.${member.name}`);

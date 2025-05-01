@@ -1,5 +1,3 @@
-// TODO: Test me
-
 main()
 {
   struct S
@@ -19,5 +17,4 @@ main()
   p->y = 2;
   if (p->y + p->x != 3)
     return 2;
-  ;
 }

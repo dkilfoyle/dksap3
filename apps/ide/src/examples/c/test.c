@@ -3,20 +3,20 @@ struct S
   int x;
   int y;
   int z;
-} s, z;
+} s = {7, 8, 9};
 main()
 {
-  s.x = 21;
-  s.y = 22;
-  s.z = 23;
-  z.x = 31;
-  z.y = 32;
-  z.z = 33;
-  if (s.x != 21)
+  struct S *p;
+  int sx, px;
+  p = &s;
+
+  sx = s.x;
+  px = p->x;
+
+  if (p->x != 7)
     return 1;
-  if (s.y != 22)
-    return 2;
-  if (s.z != 23)
-    return 3;
-  return 0;
+  if (p->y != 8)
+    return 1;
+  if (p->z != 9)
+    return 1;
 }

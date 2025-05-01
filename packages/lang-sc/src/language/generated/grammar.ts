@@ -225,15 +225,15 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
       "$type": "ParserRule",
       "name": "Initials",
       "definition": {
-        "$type": "Alternatives",
+        "$type": "Group",
         "elements": [
           {
-            "$type": "Group",
+            "$type": "Keyword",
+            "value": "="
+          },
+          {
+            "$type": "Alternatives",
             "elements": [
-              {
-                "$type": "Keyword",
-                "value": "="
-              },
               {
                 "$type": "Group",
                 "elements": [
@@ -280,20 +280,20 @@ export const ScGrammar = (): Grammar => loadedScGrammar ?? (loadedScGrammar = lo
                     "value": "}"
                   }
                 ]
+              },
+              {
+                "$type": "Assignment",
+                "feature": "values",
+                "operator": "+=",
+                "terminal": {
+                  "$type": "RuleCall",
+                  "rule": {
+                    "$ref": "#/rules@43"
+                  },
+                  "arguments": []
+                }
               }
             ]
-          },
-          {
-            "$type": "Assignment",
-            "feature": "values",
-            "operator": "+=",
-            "terminal": {
-              "$type": "RuleCall",
-              "rule": {
-                "$ref": "#/rules@43"
-              },
-              "arguments": []
-            }
           }
         ]
       },

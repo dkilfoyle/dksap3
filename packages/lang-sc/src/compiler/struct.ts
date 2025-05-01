@@ -82,7 +82,7 @@ export function compileMemberExpression(scc: ScCompiler, memberExpr: MemberAcces
   const member = scc.tag_table.find_member(receiverRes.lval.tagsym.name, memberExpr.memberName.$refText);
   if (!member) throw Error(`Cant find member ${memberExpr.memberName.$refText}`);
 
-  if (receiverRes.reg & FETCH && memberExpr.operator == ".") {
+  if (receiverRes.reg & FETCH && memberExpr.operator == "->") {
     receiverRes.node = receiverRes.node.append(joinToNode(rvalue(scc, receiverRes), NL));
   }
   if (receiverRes.reg == CompilerRegs.DE_REG) {

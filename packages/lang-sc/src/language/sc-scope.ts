@@ -9,6 +9,7 @@ import {
   isSymbolExpression,
   isLocalVariableDeclaration,
   isGlobalVariableDeclaration,
+  isStructTypeReference,
 } from "./generated/ast.js";
 import { LangiumServices } from "langium/lsp";
 
@@ -63,6 +64,9 @@ export class ScScopeProvider extends DefaultScopeProvider {
         if (isLocalVariableDeclaration(container) || isGlobalVariableDeclaration(container)) {
           if (isStructTypeDeclaration(container.typeSpecifier)) {
             return this.createScopeForNodes(container.typeSpecifier.members);
+          }
+          if (isStructTypeReference(container.typeSpecifier)) {
+            return this.createScopeForNodes(container.typeSpecifier.structTypeName.ref!.members);
           }
         }
       }

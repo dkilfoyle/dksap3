@@ -7,6 +7,12 @@ import {
   GlobalVariableDeclaration,
   isStructTypeSpecifier,
   isStructTypeDeclaration,
+  MemberAccess,
+  SymbolExpression,
+  isLocalVariableDeclaration,
+  isGlobalVariableDeclaration,
+  isGlobalVarName,
+  isLocalVarName,
 } from "./generated/ast";
 import type { ScServices } from "./sc-module";
 
@@ -19,6 +25,7 @@ export function registerValidationChecks(services: ScServices) {
   const checks: ValidationChecks<ScAstType> = {
     ParameterDeclaration: validator.checkStructParameterIsPointer,
     NumberExpression: validator.checkNumberInRange,
+    MemberAccess: validator.checkMemberOperator,
     GlobalVariableDeclaration: validator.checkInitialsSize,
   };
   registry.register(checks, validator);
@@ -28,6 +35,13 @@ export function registerValidationChecks(services: ScServices) {
  * Implementation of custom validations.
  */
 export class ScValidator {
+  checkMemberOperator(mem: MemberAccess, accept: ValidationAcceptor): void {
+    const receiver = (mem.receiver as SymbolExpression).element.ref;
+    if (isLocalVarName(receiver) || isGlobalVarName(receiver)) {
+      if (mem.operator == "->" && !receiver.pointer) accept("error", "Wrong accessor", { node: mem, property: "operator" });
+      if (mem.operator == "." && receiver.pointer) accept("error", "Wrong accessor", { node: mem, property: "operator" });
+    }
+  }
   checkNumberInRange(num: NumberExpression, accept: ValidationAcceptor): void {
     if (num.value == undefined) accept("error", "undefined parse result", { node: num, property: "value" });
     if (num.value < -32768) accept("error", "Out of signed integer range", { node: num, property: "value" });

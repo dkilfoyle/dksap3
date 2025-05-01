@@ -16,7 +16,7 @@ GlobalVarName returns NamedElement:
     {infer GlobalVarName} pointer?="*"? name=ID arraySpecifier=ArraySpecifier? initials=Initials?;
 
 Initials:
-    "=" ("{" values+=LiteralExpression ("," values+=LiteralExpression)* "}") | values+=LiteralExpression;
+    "=" (("{" values+=LiteralExpression ("," values+=LiteralExpression)* "}") | values+=LiteralExpression);
 
 LocalVariableDeclaration:
     storage=("static"|"register"|"auto")? typeSpecifier=TypeSpecifier varNames+=LocalVarName ("," varNames+=LocalVarName)* ";";

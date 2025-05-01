@@ -96,63 +96,6 @@ export class SymbolTable {
   }
 }
 
-interface ISymbolInitial {
-  name: string;
-  type: number;
-  dim: number;
-  data_len: number;
-  data_start: number;
-}
-
-export class InitialTable {
-  initials: Record<string, ISymbolInitial> = {};
-  data: number[] = [];
-  init() {
-    this.initials = {};
-    this.data = [];
-  }
-  add_symbol(name: string, type: SymbolType) {
-    this.initials[name] = {
-      name,
-      type,
-      dim: 0,
-      data_len: 0,
-      data_start: this.data.length,
-    };
-    return this.initials[name];
-  }
-  add_initial(name: string, type: SymbolType, value: number, tag: ITagSymbol | 0, member_index?: number) {
-    const initial = this.initials[name] || this.add_symbol(name, tag == 0 ? type : SymbolType.STRUCT);
-    if (tag != 0) {
-      if (member_index == undefined) throw Error("Need member index");
-      const index = initial.dim % tag.members.length;
-      const member_type = tag.members[member_index].type;
-      this.add_initial(name, member_type, value, 0);
-    } else {
-      if (type & SymbolType.CCHAR) {
-        this.data.push(0xff & value);
-        initial.data_len += 1;
-      } else if (type & SymbolType.CINT) {
-        this.data.push((0xff00 & value) >> 8);
-        this.data.push(0xff & value);
-        initial.data_len += 2;
-      } else throw Error("add initials invalid type " + type.toString());
-    }
-    this.initials[name].dim += 1;
-  }
-
-  get_item_at(name: string, position: number, tag: 0 | ITagSymbol) {
-    const sym = this.initials[name];
-    if (!sym) throw Error("get_item_at no symbol");
-    if (sym.type & SymbolType.CCHAR) {
-      return this.data[sym.data_start + position];
-    } else if (sym.type & SymbolType.CINT) {
-      return (this.data[sym.data_start + position * 2] << 8) + this.data[sym.data_start + position * 2 + 1];
-    } else if (sym.type == SymbolType.STRUCT) {
-      throw Error("get_item_at not implemened for structs yet");
-    }
-  }
-}
 export const getSymbolType = (v: LocalVariableDeclaration | GlobalVariableDeclaration | ParameterDeclaration | StructMember) => {
   if (isStructTypeSpecifier(v.typeSpecifier)) {
     return SymbolType.STRUCT;
@@ -206,14 +149,12 @@ export const compileGlobalVariableDeclaration = (scc: ScCompiler, decl: GlobalVa
       // struct S s = {1,"c"}
 
       if ((identity == SymbolIdentity.POINTER || identity == SymbolIdentity.VARIABLE) && atomicType == SymbolType.STRUCT) {
+        // struct init
         const dim = 0;
         const tag = scc.tag_table.tags[otag];
         tag.members.forEach((member, i) => {
-          initLiteral(tag.name, gvn.initials!.values[i], tag, i);
+          initLiteral(gvn.name, gvn.initials!.values[i], tag, i);
         });
-
-        // struct init
-        throw Error("Not implemented");
       } else {
         // there is an initial assignment
         // eg int x[] = {1,2,3}
