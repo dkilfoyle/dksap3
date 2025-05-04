@@ -20,10 +20,10 @@ declare const self: DedicatedWorkerGlobalScope;
 const messageReader = new BrowserMessageReader(self);
 const messageWriter = new BrowserMessageWriter(self);
 
+// console.log("Starting SmallC main browser");
 const connection = createConnection(messageReader, messageWriter);
 const { shared, Sc } = createScServices({ connection, ...EmptyFileSystem });
 
-// console.log("Starting SmallC main browser");
 startLanguageServer(shared);
 
 connection.onDidChangeConfiguration((params: DidChangeConfigurationParams) => {

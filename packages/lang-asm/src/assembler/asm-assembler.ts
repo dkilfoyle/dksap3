@@ -71,50 +71,53 @@ class Assembler {
 
     console.groupCollapsed(`assembleAndLink ${this.mainfile}`);
 
-    // order in memory is os, runtime, stdlib, includes, main
-    const allDocs = [this.os, this.runtime, this.stdlib, ...docs.slice(1, -1), docs[0]];
-    const filenames = allDocs.map((doc) => doc.uri.toString());
+    try {
+      // order in memory is os, runtime, stdlib, includes, main
+      const allDocs = [this.os, this.runtime, this.stdlib, ...docs.slice(1, -1), docs[0]];
+      const filenames = allDocs.map((doc) => doc.uri.toString());
 
-    // build this.files
-    // - build list of local labels
-    // - build list of externs
-    for (const doc of allDocs) {
-      this.preassemble(doc);
+      // build this.files
+      // - build list of local labels
+      // - build list of externs
+      for (const doc of allDocs) {
+        this.preassemble(doc);
+      }
+
+      // exclude unused lines from runtime and includes
+      this.trimDocs(allDocs);
+
+      // build machinecode
+      // add reference to every referenced label
+      Object.entries(this.files).forEach(([, file]) => {
+        this.assemble(file);
+      });
+
+      // relocate each document to be sequential in order runtime, #includes, main
+      this.relocateFiles(filenames, 0x0);
+      // this.relocateFiles(filenames, 0x100);
+
+      // replace every address reference with file_base_addr + reference_offset
+      this.relocateAddresses();
+
+      const result = {
+        bytes: this.concatenateFiles(filenames),
+        linkerInfo: Object.values(this.files).reduce<ILinkerInfo>((accum, cur) => {
+          accum[cur.filename] = {
+            filename: cur.filename,
+            labels: cur.labels,
+            lineAddressMap: cur.lineAddressMap,
+            size: cur.size,
+            startOffset: cur.startOffset,
+          };
+          return accum;
+        }, {}),
+      };
+      console.groupEnd();
+      return result;
+    } catch (e) {
+      console.groupEnd();
+      throw e;
     }
-
-    // exclude unused lines from runtime and includes
-    this.trimDocs(allDocs);
-
-    // build machinecode
-    // add reference to every referenced label
-    Object.entries(this.files).forEach(([, file]) => {
-      this.assemble(file);
-    });
-
-    // relocate each document to be sequential in order runtime, #includes, main
-    this.relocateFiles(filenames, 0x0);
-    // this.relocateFiles(filenames, 0x100);
-
-    // replace every address reference with file_base_addr + reference_offset
-    this.relocateAddresses();
-
-    const result = {
-      bytes: this.concatenateFiles(filenames),
-      linkerInfo: Object.values(this.files).reduce<ILinkerInfo>((accum, cur) => {
-        accum[cur.filename] = {
-          filename: cur.filename,
-          labels: cur.labels,
-          lineAddressMap: cur.lineAddressMap,
-          size: cur.size,
-          startOffset: cur.startOffset,
-        };
-        return accum;
-      }, {}),
-    };
-
-    console.groupEnd();
-
-    return result;
   }
 
   concatenateFiles(filenames: string[]) {

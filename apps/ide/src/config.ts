@@ -5,7 +5,6 @@
 
 import * as vscode from "vscode";
 import { LogLevel } from "@codingame/monaco-vscode-api";
-import { RegisteredFileSystemProvider, registerFileSystemOverlay, RegisteredMemoryFile } from "@codingame/monaco-vscode-files-service-override";
 import getConfigurationServiceOverride from "@codingame/monaco-vscode-configuration-service-override";
 import getKeybindingsServiceOverride from "@codingame/monaco-vscode-keybindings-service-override";
 import getLifecycleServiceOverride from "@codingame/monaco-vscode-lifecycle-service-override";
@@ -30,7 +29,7 @@ import getThemeServiceOverride from "@codingame/monaco-vscode-theme-service-over
 import getTextMateServiceOverride from "@codingame/monaco-vscode-textmate-service-override";
 
 import { createDefaultLocaleConfiguration } from "monaco-languageclient/vscode/services";
-import { configureMonacoWorkers, createDefaultWorkspaceFile } from "./utils.ts";
+import { configureMonacoWorkers } from "./utils.ts";
 import type { MonacoEditorLanguageClientWrapper, WrapperConfig } from "monaco-editor-wrapper";
 import { RegisterLocalProcessExtensionResult } from "@codingame/monaco-vscode-api/extensions";
 import { ScDocumentChange, getScLanguageClientConfig, getScLanguageExtension } from "@dksap3/lang-sc";
@@ -42,6 +41,8 @@ import { TraceRegion } from "langium/generate";
 import { AstNodeWithTextRegion } from "langium";
 import { DslLibraryFileSystemProvider } from "./DslFileSystemProvider.ts";
 import { MonacoLanguageClient } from "monaco-languageclient";
+import { fileSystemProvider, workspaceFile } from "./filesystem.ts";
+import { RegisteredMemoryFile } from "@codingame/monaco-vscode-files-service-override";
 
 export const HOME_DIR = "";
 export const WORKSPACE_PATH = `${HOME_DIR}/dk8085`;
@@ -54,29 +55,7 @@ export type ConfigResult = {
 export const traceRegions: Record<string, TraceRegion> = {};
 export const sourceAsts: Record<string, AstNodeWithTextRegion> = {};
 
-const workspaceFile = vscode.Uri.file("/workspace/.vscode/workspace.code-workspace");
-
-const buildFileSystem = () => {
-  const fileSystemProvider = new RegisteredFileSystemProvider(false);
-  fileSystemProvider.registerFile(createDefaultWorkspaceFile(workspaceFile, "/dk8085"));
-  const examplesAsm = import.meta.glob<string>("./examples/asm/*.asm", { eager: true, query: "?raw", import: "default" });
-  Object.entries(examplesAsm).forEach(([key, value]) => {
-    fileSystemProvider.registerFile(new RegisteredMemoryFile(vscode.Uri.file(`dk8085/${key.replace("./examples/", "")}`), value));
-  });
-  const examplesC = import.meta.glob<string>("./examples/c/*.c", { eager: true, query: "?raw", import: "default" });
-  Object.entries(examplesC).forEach(([key, value]) => {
-    fileSystemProvider.registerFile(new RegisteredMemoryFile(vscode.Uri.file(`dk8085/${key.replace("./examples/", "")}`), value));
-  });
-  const testC = import.meta.glob<string>("./examples/test/*.c", { eager: true, query: "?raw", import: "default" });
-  Object.entries(testC).forEach(([key, value]) => {
-    fileSystemProvider.registerFile(new RegisteredMemoryFile(vscode.Uri.file(`dk8085/${key.replace("./examples/", "")}`), value));
-  });
-  registerFileSystemOverlay(1, fileSystemProvider);
-};
-
 export const configure = (htmlContainer?: HTMLElement): ConfigResult => {
-  buildFileSystem();
-
   const wrapperConfig: WrapperConfig = {
     $type: "extended",
     id: "AAP",
@@ -167,7 +146,7 @@ export let scLanguageClient: MonacoLanguageClient | undefined;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrapper, _configResult: ConfigResult) => {
   const result = wrapper.getExtensionRegisterResult("sc-language-extension") as RegisterLocalProcessExtensionResult;
-  result.setAsDefaultApi();
+  await result.setAsDefaultApi();
 
   asmLanguageClient = wrapper.getLanguageClient("asm");
   scLanguageClient = wrapper.getLanguageClient("sc");
@@ -212,28 +191,21 @@ export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrap
     const content = Uint8Array.from(Array.from(data.asm).map((letter) => letter.charCodeAt(0)));
 
     try {
+      console.log("Writing file ", uri.toString());
+      // wrapper.getLanguageClient("asm")?.sendNotification("newCompiledAsm", { text: data.asm, uri: uri.toString() });
       await vscode.workspace.fs.writeFile(uri, content);
+      // fileSystemProvider.registerFile(new RegisteredMemoryFile(uri, data.asm));
     } catch (e) {
-      console.log("write file error", e);
-      //console.log(e);
+      console.error("write file error", e);
     }
 
     // compiledDocs[data.uri] = data;
   });
 
-  // const codeLineDecoration = vscode.window.createTextEditorDecorationType({
-  //   backgroundColor: "red",
-  // });
-
   // WA: Force show explorer and not search
-  // await vscode.commands.executeCommand('workbench.view.explorer');
-
-  // await Promise.all([
-  //   await vscode.workspace.openTextDocument(configResult.helloTsUri),
-  //   await vscode.workspace.openTextDocument(configResult.testerTsUri),
-  // ]);
-
-  // await Promise.all([await vscode.window.showTextDocument(configResult.helloTsUri)]);
+  await vscode.commands.executeCommand("workbench.view.explorer");
+  await Promise.all([await vscode.workspace.openTextDocument(vscode.Uri.file("dk8085/c/test.c"))]);
+  await Promise.all([await vscode.window.showTextDocument(vscode.Uri.file("dk8085/c/test.c"))]);
 
   console.log("dksap3 started");
 };

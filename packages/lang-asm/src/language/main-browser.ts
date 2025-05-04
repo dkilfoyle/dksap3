@@ -1,4 +1,4 @@
-import { AstNode, DocumentState, EmptyFileSystem, LangiumDocument } from "langium";
+import { AstNode, DocumentState, EmptyFileSystem, FileSystemNode, FileSystemProvider, LangiumDocument, URI } from "langium";
 import { startLanguageServer } from "langium/lsp";
 import {
   BrowserMessageReader,
@@ -27,7 +27,22 @@ const messageWriter = new BrowserMessageWriter(self);
 
 const connection = createConnection(messageReader, messageWriter);
 
-const { shared, Asm } = createAsmServices({ connection, ...EmptyFileSystem });
+class EmptyFileSystemProvider implements FileSystemProvider {
+  readFile(uri: URI): Promise<string> {
+    // hack
+    // sc compiler writes compiled asm
+    // langium watch detects file
+    // but documentbuilder gets "" - why???
+    // opening file tab works ok
+    return new Promise((resolve) => resolve("main:"));
+  }
+
+  async readDirectory(): Promise<FileSystemNode[]> {
+    return [];
+  }
+}
+
+const { shared, Asm } = createAsmServices({ connection, fileSystemProvider: () => new EmptyFileSystemProvider() });
 
 startLanguageServer(shared);
 
@@ -43,6 +58,10 @@ connection.onNotification("statusChange", (n) => {
 
 connection.onNotification("asmFolds", (params: { folds: FoldingRange[]; uri: string }) => {
   compiledFolds[params.uri] = params.folds;
+});
+
+connection.onNotification("newCompiledAsm", (params: { text: string; uri: string }) => {
+  shared.workspace.LangiumDocumentFactory.fromString(params.text, URI.file(params.uri));
 });
 
 export type AsmDocumentChange = {
@@ -82,6 +101,9 @@ const debouncedSendAsmDocumentChange = debounce(sendAsmDocumentChange, 1000);
 
 shared.workspace.DocumentBuilder.onBuildPhase(DocumentState.Validated, (documents) => {
   for (const document of documents) {
+    console.log("On build phase", document);
+    if (!document.diagnostics) console.log("UNDERFINED");
+    if (document.diagnostics?.length != 0) console.log("HAS ERRORS");
     if (document.diagnostics?.length == 0) {
       // debouncedSendAsmDocumentChange(document);
       sendAsmDocumentChange(document);

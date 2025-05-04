@@ -10,6 +10,7 @@ import {
   isSizeofExpression,
   isStringExpression,
   isSymbolExpression,
+  isTernaryExpression,
 } from "../language/generated/ast";
 import { CompilerRegs, ILValue, ISymbol, SymbolType } from "./interface";
 import { CompositeGeneratorNode, expandTracedToNode, JoinOptions, joinToNode } from "langium/generate";
@@ -34,6 +35,7 @@ import {
   compileSizeofExpression,
 } from "./primary";
 import { compileMemberExpression } from "./struct";
+import { compileTernaryExpression } from "./ternary";
 
 export const FETCH = 1;
 export const NL: JoinOptions<string> = { appendNewLineIfNotEmpty: true };
@@ -142,6 +144,8 @@ export function compileSubExpression(scc: ScCompiler, expression: Expression): E
         default:
           throw new AstNodeError(expression, `Unimplemented binary expression operator ${expression}`);
       }
+    case isTernaryExpression(expression):
+      return compileTernaryExpression(scc, expression);
     case isPrefixExpression(expression):
       return compilePrefixExpression(scc, expression);
     case isPostfixExpression(expression):

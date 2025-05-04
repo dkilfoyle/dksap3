@@ -1,4 +1,5 @@
 import "./App.css";
+import "./filesystem.ts";
 import { MonacoEditorLanguageClientWrapper } from "monaco-editor-wrapper";
 import { MonacoEditorReactComp } from "@typefox/monaco-editor-react";
 import { configure, configurePostStart, sourceAsts, traceRegions } from "./config.js";

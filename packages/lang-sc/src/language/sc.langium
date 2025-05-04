@@ -107,10 +107,10 @@ Expression:
     Assignment;
 
 Assignment infers Expression:
-    LogicalOr ({infer BinaryExpression.left=current} operator=('='|"+="|"-="|"*="|"/="|"%="|"&="|">>="|"<<="|"^="|"|=") right=LogicalOr)*;
+    Ternary ({infer BinaryExpression.left=current} operator=('='|"+="|"-="|"*="|"/="|"%="|"&="|">>="|"<<="|"^="|"|=") right=Ternary)*;
 
-// Ternary infers Expression:
-//     LogicalOr ({infer TernaryExpression.test=current} "?" left=Expression ":" right=LogicalOr)*;
+Ternary infers Expression:
+    LogicalOr ({infer TernaryExpression.test=current} "?" left=LogicalOr ":" right=LogicalOr)*;
 
 LogicalOr infers Expression:
     LogicalAnd ({infer BinaryExpression.left=current} operator="||" right=LogicalAnd)*;
