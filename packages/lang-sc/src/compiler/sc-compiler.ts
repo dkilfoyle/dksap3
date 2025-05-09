@@ -5,11 +5,10 @@ import { compileFunctionDeclaration } from "./function";
 import { compileGlobalVariableDeclaration, SymbolTable } from "./symbol";
 import { InitialTable } from "./initials";
 import { TagTable } from "./struct";
-import { expandToNode, expandTracedToNode, joinToNode, toStringAndTrace } from "langium/generate";
+import { expandToNode, expandTracedToNode, JoinOptions, joinToNode, toStringAndTrace } from "langium/generate";
 import { IRange } from "monaco-editor";
-import { WhileTable } from "./while";
+import { BreakTable } from "./while";
 import { ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
-import { NL } from "./expression";
 
 export function createError(description: string, range?: IRange) {
   return {
@@ -18,6 +17,8 @@ export function createError(description: string, range?: IRange) {
   };
 }
 
+export const AppendNL: JoinOptions<string> = { appendNewLineIfNotEmpty: true };
+
 export class ScCompiler {
   private static _instance: ScCompiler;
   generator = new AsmGenerator();
@@ -25,7 +26,7 @@ export class ScCompiler {
   tag_table = new TagTable();
   litq: number[] = [];
   litlab = this.generator.get_label();
-  while_table = new WhileTable(this);
+  break_table = new BreakTable(this);
   initials_table = new InitialTable();
 
   private constructor() {}
@@ -38,7 +39,7 @@ export class ScCompiler {
     this.generator.init();
     this.symbol_table.init();
     this.tag_table.init();
-    this.while_table.init();
+    this.break_table.init();
     this.initials_table.init();
     this.litq = [];
     this.litlab = this.generator.get_label();
@@ -143,7 +144,7 @@ export class ScCompiler {
         }
       }
     }
-    return joinToNode(lines, NL);
+    return joinToNode(lines, AppendNL);
   }
 
   dumpstruct(sym: ISymbol, position: number) {

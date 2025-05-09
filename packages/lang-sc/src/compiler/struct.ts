@@ -1,8 +1,8 @@
 import { MemberAccess, StructTypeDeclaration, StructTypeSpecifier } from "src/language/generated/ast";
 import { CompilerRegs, ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
 import { getSymbolStorage, getSymbolType } from "./symbol";
-import { ScCompiler } from "./sc-compiler";
-import { compileSubExpression, FETCH, NL, rvalue } from "./expression";
+import { AppendNL, ScCompiler } from "./sc-compiler";
+import { compileSubExpression, FETCH, rvalue } from "./expression";
 import { joinToNode } from "langium/generate";
 
 export interface ITagSymbol {
@@ -83,13 +83,13 @@ export function compileMemberExpression(scc: ScCompiler, memberExpr: MemberAcces
   if (!member) throw Error(`Cant find member ${memberExpr.memberName.$refText}`);
 
   if (receiverRes.reg & FETCH && memberExpr.operator == "->") {
-    receiverRes.node = receiverRes.node.append(joinToNode(rvalue(scc, receiverRes), NL));
+    receiverRes.node = receiverRes.node.append(joinToNode(rvalue(scc, receiverRes), AppendNL));
   }
   if (receiverRes.reg == CompilerRegs.DE_REG) {
-    receiverRes.node = receiverRes.node.append(joinToNode(["xchg"], NL));
+    receiverRes.node = receiverRes.node.append(joinToNode(["xchg"], AppendNL));
   }
 
-  receiverRes.node = receiverRes.node.appendNewLine().append(joinToNode(scc.generator.add_offset(member.offset), NL));
+  receiverRes.node = receiverRes.node.appendNewLine().append(joinToNode(scc.generator.add_offset(member.offset), AppendNL));
 
   const lval = receiverRes.lval;
   lval.symbol = member;

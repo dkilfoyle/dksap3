@@ -67,6 +67,9 @@ Block:
 
 Statement:
     IfStatement |
+    SwitchStatement |
+    CaseStatement |
+    DefaultStatement |
     WhileStatement |
     DoStatement ";"|
     ForStatement |
@@ -82,6 +85,15 @@ InlineAssembly:
 
 IfStatement:
     'if' '(' condition=Expression ')' block=Block ('else' elseBlock=Block)?;
+
+SwitchStatement:
+    'switch' '(' switchValue=Expression ')' block=Block;
+
+CaseStatement:
+    'case' caseValue=LiteralExpression ':' block=Block;
+
+DefaultStatement:
+    'default' ':' block=Block;
 
 WhileStatement:
     'while' '(' condition=Expression ')' block=Block;

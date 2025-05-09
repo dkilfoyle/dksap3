@@ -23,8 +23,8 @@ import {
 import { AsmGenerator } from "./Generator";
 import { CompilerRegs, ILValue, ISymbol, SymbolIdentity, SymbolStorage, SymbolType } from "./interface";
 import { expandToNode, expandTracedToNode, joinToNode, joinTracedToNode } from "langium/generate";
-import { ScCompiler } from "./sc-compiler";
-import { ExpressionResult, leafNode, AstNodeError, rvalue, compileExpression, FETCH, NL } from "./expression";
+import { AppendNL, ScCompiler } from "./sc-compiler";
+import { ExpressionResult, leafNode, AstNodeError, rvalue, compileExpression, FETCH } from "./expression";
 
 export function compileNumberExpression(scc: ScCompiler, numexp: NumberExpression): ExpressionResult {
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
@@ -86,11 +86,11 @@ export function compileArrayIndex(scc: ScCompiler, symbolRes: ExpressionResult, 
   const node = expandTracedToNode(indexExpression)`
     ${symbolRes.node}
     ; [${indexExpression.$cstNode!.text}]
-    ${ptr.identity == SymbolIdentity.POINTER ? joinToNode(rvalue(scc, symbolRes), NL) : undefined}
+    ${ptr.identity == SymbolIdentity.POINTER ? joinToNode(rvalue(scc, symbolRes), AppendNL) : undefined}
     ${joinToNode(scc.generator.gen_push(symbolRes.reg, (symbolRes.lval.symbol as ISymbol).name))}
     ${compileExpression(scc, indexExpression).node}
-    ${joinToNode(scc.generator.gen_multiply(ptr.type, ptr.type == SymbolType.STRUCT ? scc.tag_table.tags[ptr.tagidx!].size : 1), NL)}
-    ${joinToNode(scc.generator.gen_add(), NL)}
+    ${joinToNode(scc.generator.gen_multiply(ptr.type, ptr.type == SymbolType.STRUCT ? scc.tag_table.tags[ptr.tagidx!].size : 1), AppendNL)}
+    ${joinToNode(scc.generator.gen_add(), AppendNL)}
   `;
   symbolRes.lval.indirect = ptr.type;
   symbolRes.lval.ptr_type = 0;
@@ -116,11 +116,11 @@ export function compileFunctionCall(scc: ScCompiler, symbolRes: ExpressionResult
               lines.unshift("; function symbol is a pointer to a function ");
               return lines;
             })(),
-            NL
+            AppendNL
           )
         : undefined
     }
-    ${ptr == 0 ? joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG, "retaddr"), NL) : undefined}
+    ${ptr == 0 ? joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG, "retaddr"), AppendNL) : undefined}
     ${joinTracedToNode(
       functionCall,
       "arguments"
@@ -132,15 +132,15 @@ export function compileFunctionCall(scc: ScCompiler, symbolRes: ExpressionResult
         return argexpr.node
           .appendIf(ptr == 0, "xthl")
           .appendNewLineIfNotEmpty()
-          .append(joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG, `par ${param}`), NL));
+          .append(joinToNode(scc.generator.gen_push(CompilerRegs.HL_REG, `par ${param}`), AppendNL));
       })
     )}
     ${
       ptr != 0
-        ? joinToNode(scc.generator.gen_call((symbolRes.lval.symbol as ISymbol).name), NL)
-        : joinToNode(["; callstk", ...scc.generator.callstk()], NL)
+        ? joinToNode(scc.generator.gen_call((symbolRes.lval.symbol as ISymbol).name), AppendNL)
+        : joinToNode(["; callstk", ...scc.generator.callstk()], AppendNL)
     }
-    ${joinToNode(scc.generator.gen_modify_stack(scc.generator.stkp + functionCall.arguments.length * AsmGenerator.INTSIZE), NL)}
+    ${joinToNode(scc.generator.gen_modify_stack(scc.generator.stkp + functionCall.arguments.length * AsmGenerator.INTSIZE), AppendNL)}
   `;
 
   return { reg: 0, lval: { ...symbolRes.lval, symbol: 0 }, node };
@@ -255,7 +255,7 @@ export function compileSizeofExpression(scc: ScCompiler, sizeexp: SizeofExpressi
   }
   const node = expandTracedToNode(sizeexp)`
     ; ${sizeexp.$cstNode?.text}
-    ${joinToNode(scc.generator.gen_immediate(size), NL)}
+    ${joinToNode(scc.generator.gen_immediate(size), AppendNL)}
 
   `;
   return { lval: { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 }, reg: 0, node };

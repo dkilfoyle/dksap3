@@ -13,6 +13,7 @@ import {
   isGlobalVariableDeclaration,
   isGlobalVarName,
   isLocalVarName,
+  CaseStatement,
 } from "./generated/ast";
 import type { ScServices } from "./sc-module";
 
@@ -27,6 +28,7 @@ export function registerValidationChecks(services: ScServices) {
     NumberExpression: validator.checkNumberInRange,
     MemberAccess: validator.checkMemberOperator,
     GlobalVariableDeclaration: validator.checkInitialsSize,
+    CaseStatement: validator.checkValidCaseValue,
   };
   registry.register(checks, validator);
 }
@@ -35,6 +37,10 @@ export function registerValidationChecks(services: ScServices) {
  * Implementation of custom validations.
  */
 export class ScValidator {
+  checkValidCaseValue(cs: CaseStatement, accept: ValidationAcceptor): void {
+    if (typeof cs.caseValue.value == "string" && cs.caseValue.value.length > 0)
+      accept("error", "Case value must be int or char", { node: cs, property: "caseValue" });
+  }
   checkMemberOperator(mem: MemberAccess, accept: ValidationAcceptor): void {
     const receiver = (mem.receiver as SymbolExpression).element.ref;
     if (isLocalVarName(receiver) || isGlobalVarName(receiver)) {

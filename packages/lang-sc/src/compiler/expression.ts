@@ -14,7 +14,7 @@ import {
 } from "../language/generated/ast";
 import { CompilerRegs, ILValue, ISymbol, SymbolType } from "./interface";
 import { CompositeGeneratorNode, expandTracedToNode, JoinOptions, joinToNode } from "langium/generate";
-import { ScCompiler } from "./sc-compiler";
+import { AppendNL, ScCompiler } from "./sc-compiler";
 import {
   applyAssignment,
   applyAssignOperation,
@@ -38,7 +38,6 @@ import { compileMemberExpression } from "./struct";
 import { compileTernaryExpression } from "./ternary";
 
 export const FETCH = 1;
-export const NL: JoinOptions<string> = { appendNewLineIfNotEmpty: true };
 
 export class AstNodeError extends Error {
   constructor(node: AstNode, message: string) {
@@ -91,7 +90,7 @@ export function compileExpression(scc: ScCompiler, expression: Expression, asSta
   if (res.reg & FETCH) {
     // hl|de = &symbol so need to retrieve symbol value from ram
     // hl = symbol value
-    res.node = res.node.append(joinToNode(rvalue(scc, res), NL));
+    res.node = res.node.append(joinToNode(rvalue(scc, res), AppendNL));
   }
   if (asStatement) {
     res.node = expandTracedToNode(expression)`  ${res.node}`;

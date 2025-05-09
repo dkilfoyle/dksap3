@@ -1,6 +1,6 @@
 import { TernaryExpression } from "src/language/generated/ast";
-import { ScCompiler } from "./sc-compiler";
-import { compileExpression, ExpressionResult, NL } from "./expression";
+import { AppendNL, ScCompiler } from "./sc-compiler";
+import { compileExpression, ExpressionResult } from "./expression";
 import { expandToNode, joinToNode } from "langium/generate";
 
 export function compileTernaryExpression(scc: ScCompiler, tern: TernaryExpression): ExpressionResult {
@@ -10,7 +10,7 @@ export function compileTernaryExpression(scc: ScCompiler, tern: TernaryExpressio
   const node = expandToNode`
   ; ${tern.$cstNode?.text}
   ${symbolRes.node}
-  ${joinToNode(scc.generator.gen_test_jump(ternlab1, 0), NL)}
+  ${joinToNode(scc.generator.gen_test_jump(ternlab1, 0), AppendNL)}
   ${compileExpression(scc, tern.left).node}
   jmp ${ternlab2}
 ${ternlab1}:

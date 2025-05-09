@@ -2,19 +2,8 @@ import { BinaryExpression, isGlobalVarName, isLocalVarName, isMemberAccess, isSy
 import { AsmGenerator } from "./Generator";
 import { ILValue, ISymbol, SymbolType } from "./interface";
 import { expandTracedToNode, joinToNode } from "langium/generate";
-import { ScCompiler } from "./sc-compiler";
-import {
-  ExpressionResult,
-  compileExpression,
-  NL,
-  nosign,
-  compileSubExpression,
-  dbltest,
-  result,
-  rvalue,
-  AstNodeError,
-  store,
-} from "./expression";
+import { AppendNL, ScCompiler } from "./sc-compiler";
+import { ExpressionResult, compileExpression, nosign, compileSubExpression, dbltest, result, rvalue, AstNodeError, store } from "./expression";
 
 export function applyBitwise(scc: ScCompiler, op: "&" | "|" | "^" | ">>" | "<<", binary: BinaryExpression): ExpressionResult {
   const lval: ILValue = { symbol: 0, indirect: 0, ptr_type: 0, tagsym: 0 };
@@ -40,7 +29,7 @@ export function applyBitwise(scc: ScCompiler, op: "&" | "|" | "^" | ">>" | "<<",
     ${leftResult.node}
     ${joinToNode(scc.generator.gen_push(leftResult.reg, `${(leftResult.lval.symbol as ISymbol).name}`))}
     ${compileExpression(scc, binary.right).node}
-    ${joinToNode(getLines(op), NL)}
+    ${joinToNode(getLines(op), AppendNL)}
   `;
   return { reg: 0, lval, node };
 }
@@ -53,10 +42,10 @@ export function applyLogical(scc: ScCompiler, op: "&&" | "||", binary: BinaryExp
   const node = expandTracedToNode(binary)`
   ; ${binary.$cstNode!.text}
   ${(leftResult = compileExpression(scc, binary.left)).node}
-  ${joinToNode(scc.generator.gen_test_jump((lab = `$or${scc.generator.get_label()}`), op == "||" ? 1 : 0), NL)}
+  ${joinToNode(scc.generator.gen_test_jump((lab = `$or${scc.generator.get_label()}`), op == "||" ? 1 : 0), AppendNL)}
   ${(rightResult = compileExpression(scc, binary.right)).node}
   ${lab}:
-  ${joinToNode(scc.generator.gen_convert_primary_reg_value_to_bool(), NL)}`;
+  ${joinToNode(scc.generator.gen_convert_primary_reg_value_to_bool(), AppendNL)}`;
   return { reg: 0, lval, node };
 }
 
@@ -74,10 +63,10 @@ export function applyAssignment(scc: ScCompiler, binary: BinaryExpression): Expr
 
   const node = expandTracedToNode(binary)`  ; ${binary.$cstNode!.text}
   ${(leftResult = compileSubExpression(scc, binary.left)).node}
-  ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg, leftResult.lval) : [], NL)}
+  ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg, leftResult.lval) : [], AppendNL)}
   ${(rightResult = compileExpression(scc, binary.right)).node}
   ; ${binary.operator}
-  ${joinToNode(store(scc, leftResult.lval), NL)}`;
+  ${joinToNode(store(scc, leftResult.lval), AppendNL)}`;
   return { reg: 0, lval, node };
 }
 
@@ -136,13 +125,13 @@ export function applyAssignOperation(scc: ScCompiler, binary: BinaryExpression):
 
   const node = expandTracedToNode(binary)`  ; ${binary.$cstNode!.text}
   ${leftResult.node}
-  ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg, leftResult.lval) : [], NL)}
-  ${joinToNode(rvalue(scc, leftResult), NL)}
+  ${joinToNode(leftResult.lval.indirect ? scc.generator.gen_push(leftResult.reg, leftResult.lval) : [], AppendNL)}
+  ${joinToNode(rvalue(scc, leftResult), AppendNL)}
   ${joinToNode(scc.generator.gen_push(leftResult.reg, (leftResult.lval.symbol as ISymbol).name))}
   ${(rightResult = compileExpression(scc, binary.right)).node}
   ; ${binary.operator}
-  ${joinToNode(doOp(leftResult, rightResult), NL)}
-  ${joinToNode(store(scc, leftResult.lval), NL)}
+  ${joinToNode(doOp(leftResult, rightResult), AppendNL)}
+  ${joinToNode(store(scc, leftResult.lval), AppendNL)}
 `;
   return { reg: 0, lval, node };
 }
@@ -175,7 +164,7 @@ export function applyComparison(scc: ScCompiler, op: ">" | "<" | ">=" | "<=" | "
     ${joinToNode(scc.generator.gen_push(leftResult.reg, `${(leftResult.lval.symbol as ISymbol).name}`))}
     ${(rightResult = compileExpression(scc, binary.right)).node}
     ; doing test
-    ${joinToNode(gentest(leftResult.lval, rightResult.lval), NL)}
+    ${joinToNode(gentest(leftResult.lval, rightResult.lval), AppendNL)}
   `;
   return { reg: 0, lval, node };
 }
@@ -195,13 +184,13 @@ export function applySubtraction(scc: ScCompiler, binary: BinaryExpression): Exp
     ${(rightResult = compileExpression(scc, binary.right)).node}
     ${
       dbltest(leftResult.lval, rightResult.lval)
-        ? joinToNode(scc.generator.gen_multiply(leftResult.lval.ptr_type, leftResult.lval.tagsym ? leftResult.lval.tagsym.size : 2), NL)
+        ? joinToNode(scc.generator.gen_multiply(leftResult.lval.ptr_type, leftResult.lval.tagsym ? leftResult.lval.tagsym.size : 2), AppendNL)
         : undefined
     }
-    ${joinToNode(scc.generator.gen_sub(), NL)}
+    ${joinToNode(scc.generator.gen_sub(), AppendNL)}
     ${
       leftResult.lval.ptr_type & SymbolType.CINT && rightResult.lval.ptr_type & SymbolType.CINT
-        ? joinToNode(scc.generator.gen_divide_by_two(), NL)
+        ? joinToNode(scc.generator.gen_divide_by_two(), AppendNL)
         : undefined
     }
   `;
@@ -224,11 +213,11 @@ export function applyAddition(scc: ScCompiler, binary: BinaryExpression): Expres
       dbltest(leftResult.lval, rightResult.lval)
         ? joinToNode(
             scc.generator.gen_multiply(leftResult.lval.ptr_type, leftResult.lval.tagsym ? leftResult.lval.tagsym.size : AsmGenerator.INTSIZE),
-            NL
+            AppendNL
           )
         : undefined
     }
-    ${joinToNode(scc.generator.gen_add(leftResult.lval, rightResult.lval), NL)}
+    ${joinToNode(scc.generator.gen_add(leftResult.lval, rightResult.lval), AppendNL)}
   `;
   result(leftResult.lval, rightResult.lval);
   return { reg: 0, lval: leftResult.lval, node };
@@ -241,7 +230,7 @@ export function applyModulus(scc: ScCompiler, binary: BinaryExpression): Express
     ${(leftResult = compileExpression(scc, binary.left)).node}
     ${joinToNode(scc.generator.gen_push(leftResult.reg, "push k"))}
     ${(rightResult = compileExpression(scc, binary.right)).node}
-    ${joinToNode(nosign(leftResult.lval) && nosign(rightResult.lval) ? scc.generator.gen_umod() : scc.generator.gen_mod(), NL)}
+    ${joinToNode(nosign(leftResult.lval) && nosign(rightResult.lval) ? scc.generator.gen_umod() : scc.generator.gen_mod(), AppendNL)}
   `;
   return { reg: 0, lval: leftResult.lval, node };
 }
@@ -259,7 +248,7 @@ export function applyMultiplication(scc: ScCompiler, binary: BinaryExpression): 
         : nosign(leftResult.lval) || nosign(rightResult.lval)
         ? scc.generator.gen_udiv()
         : scc.generator.gen_div(),
-      NL
+      AppendNL
     )}
   `;
   return { reg: 0, lval: leftResult.lval, node };

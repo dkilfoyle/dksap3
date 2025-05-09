@@ -1,7 +1,7 @@
 import { CompilerRegs, ILValue, SymbolType } from "./interface";
 import { expandToNode, expandTracedToNode, joinToNode } from "langium/generate";
-import { ScCompiler } from "./sc-compiler";
-import { compileExpression, compileSubExpression, ExpressionResult, FETCH, NL, rvalue, store } from "./expression";
+import { AppendNL, ScCompiler } from "./sc-compiler";
+import { compileExpression, compileSubExpression, ExpressionResult, FETCH, rvalue, store } from "./expression";
 import { PostfixExpression, PrefixExpression, SymbolExpression } from "src/language/generated/ast";
 
 function compilePrefixStar(scc: ScCompiler, expr: PrefixExpression): ExpressionResult {
@@ -37,7 +37,7 @@ function compilePrefixAnd(scc: ScCompiler, expr: PrefixExpression): ExpressionRe
 
   const node = expandTracedToNode(expr)`
       ${symbolRes.node}
-      ${joinToNode(scc.generator.gen_immediate(symbolRes.lval.symbol.name), NL)}
+      ${joinToNode(scc.generator.gen_immediate(symbolRes.lval.symbol.name), AppendNL)}
     `;
 
   symbolRes.lval.indirect = symbolRes.lval.symbol.type;
@@ -51,15 +51,15 @@ function compilePrefixPlusMinus(scc: ScCompiler, expr: PrefixExpression): Expres
   const node = expandTracedToNode(expr)`
       ; ${expr.$cstNode!.text}
       ${symbolRes.node}
-      ${symbolRes.lval.indirect ? joinToNode(scc.generator.gen_push(symbolRes.reg, symbolRes.lval), NL) : undefined}
-      ${joinToNode(rvalue(scc, symbolRes), NL)}
+      ${symbolRes.lval.indirect ? joinToNode(scc.generator.gen_push(symbolRes.reg, symbolRes.lval), AppendNL) : undefined}
+      ${joinToNode(rvalue(scc, symbolRes), AppendNL)}
       ${joinToNode(
         expr.operator == "++"
           ? scc.generator.gen_increment_primary_reg(symbolRes.lval)
           : scc.generator.gen_decrement_primary_reg(symbolRes.lval),
-        NL
+        AppendNL
       )}
-      ${joinToNode(store(scc, symbolRes.lval), NL)}
+      ${joinToNode(store(scc, symbolRes.lval), AppendNL)}
     `;
   return { reg: CompilerRegs.HL_REG, lval, node };
 }
@@ -82,7 +82,7 @@ function compilePrefixNegation(scc: ScCompiler, expr: PrefixExpression): Express
   const node = expandTracedToNode(expr)`
       ; ${expr.$cstNode!.text}
       ${symbolRes.node}
-      ${joinToNode(getOpLines(), NL)}
+      ${joinToNode(getOpLines(), AppendNL)}
     `;
   return { reg: CompilerRegs.HL_REG, lval, node };
 }
@@ -109,17 +109,17 @@ export function compilePostfixExpression(scc: ScCompiler, expr: PostfixExpressio
   const symbolRes = compileSubExpression(scc, expr.operand);
   const node = expandToNode`
     ${symbolRes.node}
-    ${symbolRes.lval.indirect ? joinToNode(scc.generator.gen_push(symbolRes.reg, symbolRes.lval), NL) : undefined}
-    ${joinToNode(rvalue(scc, symbolRes), NL)}
+    ${symbolRes.lval.indirect ? joinToNode(scc.generator.gen_push(symbolRes.reg, symbolRes.lval), AppendNL) : undefined}
+    ${joinToNode(rvalue(scc, symbolRes), AppendNL)}
     ; ${expr.operator}
     ${joinToNode(
       expr.operator == "++" ? scc.generator.gen_increment_primary_reg(symbolRes.lval) : scc.generator.gen_decrement_primary_reg(symbolRes.lval),
-      NL
+      AppendNL
     )}
-    ${joinToNode(store(scc, symbolRes.lval), NL)}
+    ${joinToNode(store(scc, symbolRes.lval), AppendNL)}
     ${joinToNode(
       expr.operator == "++" ? scc.generator.gen_decrement_primary_reg(symbolRes.lval) : scc.generator.gen_increment_primary_reg(symbolRes.lval),
-      NL
+      AppendNL
     )}
   `;
   return { lval: symbolRes.lval, reg: CompilerRegs.HL_REG, node };

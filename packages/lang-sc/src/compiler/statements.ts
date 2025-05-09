@@ -4,13 +4,16 @@ import {
   InlineAssembly,
   isBinaryExpression,
   isBreakStatement,
+  isCaseStatement,
   isContinueStatement,
+  isDefaultStatement,
   isDoStatement,
   isExpression,
   isForStatement,
   isIfStatement,
   isInlineAssembly,
   isReturnStatement,
+  isSwitchStatement,
   isWhileStatement,
   ReturnStatement,
   Statement,
@@ -20,8 +23,7 @@ import { CompositeGeneratorNode, expandTracedToNode, JoinOptions, joinToNode, jo
 import { ScCompiler } from "./sc-compiler";
 import { compileBreak, compileContinue, compileDo, compileFor, compileWhile } from "./while";
 import { compileLocalDeclaration } from "./symbol";
-
-const NL: JoinOptions<string> = { appendNewLineIfNotEmpty: true };
+import { compileCase, compileDefault, compileIf, compileSwitch } from "./cond";
 
 export const compileBlock = (scc: ScCompiler, block: Block) => {
   // return expandTracedToNode(block)`
@@ -62,6 +64,12 @@ export const compileStatement = (scc: ScCompiler, statement: Statement): Composi
       return compileContinue(scc, statement);
     case isIfStatement(statement):
       return compileIf(scc, statement);
+    case isSwitchStatement(statement):
+      return compileSwitch(scc, statement);
+    case isCaseStatement(statement):
+      return compileCase(scc, statement);
+    case isDefaultStatement(statement):
+      return compileDefault(scc, statement);
     default:
       console.error("Unimplemented statement ", statement);
   }
@@ -79,47 +87,4 @@ const compileReturn = (scc: ScCompiler, ret: ReturnStatement) => {
   return expandTracedToNode(ret)`  ; return ${ret.value?.$cstNode?.text}
   ${exprNode}
   jmp $${scc.generator.fexitlab}`;
-};
-
-const compileIf = (scc: ScCompiler, ifstat: IfStatement) => {
-  const fstkp = scc.generator.stkp;
-  const flex = scc.symbol_table.local_table_index;
-  const flab = scc.generator.get_label();
-
-  const block = (b: Block) => {
-    return expandTracedToNode(b)`
-      ${compileBlock(scc, b)}
-      ${joinToNode(scc.generator.gen_modify_stack(fstkp), NL)}
-      ${(function () {
-        scc.symbol_table.local_table_index = flex;
-        return undefined;
-      })()}
-    `;
-  };
-
-  if (!ifstat.elseBlock) {
-    // if only
-    return expandTracedToNode(ifstat)`  ; i${flab} ${ifstat.condition.$cstNode?.text}
-  ${compileExpression(scc, ifstat.condition).node}
-  ; if false jump to end
-  ${joinToNode(scc.generator.gen_test_jump(`$i${flab}_end`, 0), NL)}
-  ; if true block
-${block(ifstat.block)}
-$i${flab}_end:
-`.appendNewLine();
-  } else {
-    // if else
-    return expandTracedToNode(ifstat)`
-        ; i${flab} ${ifstat.condition.$cstNode?.text}
-        ${compileExpression(scc, ifstat.condition).node}
-        ; if false jump to else
-        ${joinToNode(scc.generator.gen_test_jump(`$i${flab}_else`, 0), NL)}
-        ; if true block
-      ${block(ifstat.block)}
-        jmp $i${flab}_end
-      $i${flab}_else:
-      ${block(ifstat.elseBlock)}
-      $i${flab}_end:
-  `.appendNewLine();
-  }
 };

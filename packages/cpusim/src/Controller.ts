@@ -888,7 +888,7 @@ export class Controller implements IClocked {
         this.setControls("mar=reg", REGSEL.SP);
         break;
       case 11:
-        this.setControls("mem=reg", REGSEL.PCC); // save lo(PC) to stack
+        this.setControls("mem=reg", REGSEL.PCP); // save lo(PC) to stack => changed to save hi(PC)
         break;
       case 12:
         this.setControls("sp--");
@@ -897,7 +897,7 @@ export class Controller implements IClocked {
         this.setControls("mar=reg", REGSEL.SP);
         break;
       case 14:
-        this.setControls("mem=reg", REGSEL.PCP); // save hi(PC) to stack
+        this.setControls("mem=reg", REGSEL.PCC); // save hi(PC) to stack => changed to save lo(PC)
         break;
       case 15:
         this.setControls("bus=reg", REGSEL.WZ);
@@ -920,7 +920,7 @@ export class Controller implements IClocked {
         this.setControls("mar=reg", REGSEL.SP);
         break;
       case 4:
-        this.setControls("reg=mem", REGSEL.W); // pop hi(ret address) from stack
+        this.setControls("reg=mem", REGSEL.Z); // pop hi(ret address) from stack => changed to pop lo(retaddr)
         break;
       case 5:
         this.setControls("sp++");
@@ -929,7 +929,7 @@ export class Controller implements IClocked {
         this.setControls("mar=reg", REGSEL.SP);
         break;
       case 7:
-        this.setControls("reg=mem", REGSEL.Z); // pop lo(ret address) from stack
+        this.setControls("reg=mem", REGSEL.W); // pop lo(ret address) from stack => changed to pop hi(retaddr)
         break;
       case 8:
         this.setControls("sp++");

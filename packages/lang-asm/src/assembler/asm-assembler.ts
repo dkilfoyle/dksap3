@@ -61,7 +61,7 @@ class Assembler {
    * @param docs List of source documents excluding runtime. The first document must contain function main.
    * @returns Machine code
    */
-  assembleAndLink(docs: LangiumDocument<AstNode>[]) {
+  assembleAndLink(docs: LangiumDocument<AstNode>[], standalone = false) {
     if (!this.runtime) throw Error("Assembler has no runtime");
     if (!this.os) throw Error("Assembler has no os");
     if (!this.stdlib) throw Error("Assembler has no stdlib");
@@ -73,7 +73,7 @@ class Assembler {
 
     try {
       // order in memory is os, runtime, stdlib, includes, main
-      const allDocs = [this.os, this.runtime, this.stdlib, ...docs.slice(1, -1), docs[0]];
+      const allDocs = standalone ? [docs[0]] : [this.os, this.runtime, this.stdlib, ...docs.slice(1, -1), docs[0]];
       const filenames = allDocs.map((doc) => doc.uri.toString());
 
       // build this.files
@@ -84,7 +84,7 @@ class Assembler {
       }
 
       // exclude unused lines from runtime and includes
-      this.trimDocs(allDocs);
+      this.trimDocs(allDocs, standalone);
 
       // build machinecode
       // add reference to every referenced label
@@ -161,14 +161,16 @@ class Assembler {
     });
   }
 
-  trimDocs(docs: LangiumDocument<AstNode>[]) {
+  trimDocs(docs: LangiumDocument<AstNode>[], standalone = false) {
     // TODO build a dependency tracer
     // for now only include:
     // - everything in main
     // - for runtime and #includes only include what is referenced from main
     //   (this will ignore cross dependencies within and between runtime and #includes)
 
-    const externs = [...this.files[this.mainfile].externs, ...this.files["builtin:/stdlib8080.asm"].externs];
+    const externs = standalone
+      ? [...this.files[this.mainfile].externs]
+      : [...this.files[this.mainfile].externs, ...this.files["builtin:/stdlib8080.asm"].externs];
     // const externs = this.files[this.mainfile].externs;
 
     docs.forEach((doc, i) => {

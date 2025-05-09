@@ -41,8 +41,7 @@ import { TraceRegion } from "langium/generate";
 import { AstNodeWithTextRegion } from "langium";
 import { DslLibraryFileSystemProvider } from "./DslFileSystemProvider.ts";
 import { MonacoLanguageClient } from "monaco-languageclient";
-import { fileSystemProvider, workspaceFile } from "./filesystem.ts";
-import { RegisteredMemoryFile } from "@codingame/monaco-vscode-files-service-override";
+import { workspaceFile } from "./filesystem.ts";
 
 export const HOME_DIR = "";
 export const WORKSPACE_PATH = `${HOME_DIR}/dk8085`;

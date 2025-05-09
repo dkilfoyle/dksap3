@@ -81,7 +81,7 @@ const debounce = (fn: Function, ms = 300) => {
 
 const sendAsmDocumentChange = (document: LangiumDocument<AstNode>) => {
   if (status.isDebugging) return;
-  const { bytes, linkerInfo } = assembler.assembleAndLink([document]);
+  const { bytes, linkerInfo } = assembler.assembleAndLink([document], document.textDocument.getText().startsWith("; SmallC") == false);
 
   const json = Asm.serializer.JsonSerializer.serialize(document.parseResult.value, {
     sourceText: false,

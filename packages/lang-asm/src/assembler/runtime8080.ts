@@ -6,7 +6,7 @@ ccsxt:  mov     l,a
         sbb     a
         mov     h,a
         ret
-; fetch int from (HL)
+; fetch int from (HL) into HL
 ccgint:: mov     a,m
         inx     h
         mov     h,m
@@ -301,7 +301,9 @@ cccmpbd::
         sbb     b
         ret
 ; case jump
-cccase:: xchg                    ;switch value to DE. exchange HL with DE
+cccase::
+        pop     d               ; ignore return address
+        xchg                    ; save switch value to de
         pop     h               ;get table address
 cccase1: call    cccase4          ;get case value
         mov     a,e
@@ -324,6 +326,7 @@ cccase3: dcx     h
         mov     e,m
         xchg                    ;exchange HL with DE and vice versa - address is now in HL
         pchl                    ;default jump. loads HL to PC
+; ab = (hl) = case value
 cccase4: mov     c,m
         inx     h
         mov     b,m
