@@ -101,8 +101,7 @@ const debouncedSendAsmDocumentChange = debounce(sendAsmDocumentChange, 1000);
 
 shared.workspace.DocumentBuilder.onBuildPhase(DocumentState.Validated, (documents) => {
   for (const document of documents) {
-    console.log("On build phase", document);
-    if (!document.diagnostics) console.log("UNDERFINED");
+    // console.log("On build phase", document);
     if (document.diagnostics?.length != 0) console.log("HAS ERRORS");
     if (document.diagnostics?.length == 0) {
       // debouncedSendAsmDocumentChange(document);

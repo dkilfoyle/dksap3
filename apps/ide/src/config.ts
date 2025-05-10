@@ -190,7 +190,7 @@ export const configurePostStart = async (wrapper: MonacoEditorLanguageClientWrap
     const content = Uint8Array.from(Array.from(data.asm).map((letter) => letter.charCodeAt(0)));
 
     try {
-      console.log("Writing file ", uri.toString());
+      // console.log("Writing file ", uri.toString());
       // wrapper.getLanguageClient("asm")?.sendNotification("newCompiledAsm", { text: data.asm, uri: uri.toString() });
       await vscode.workspace.fs.writeFile(uri, content);
       // fileSystemProvider.registerFile(new RegisteredMemoryFile(uri, data.asm));

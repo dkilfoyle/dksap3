@@ -1,4 +1,4 @@
-import { AsmDocumentChange } from "@dksap3/lang-asm";
+import { AsmDocumentChange, getLabelInfo } from "@dksap3/lang-asm";
 import { AsmDebugSession } from "./AsmDebugSession.ts";
 import { BreakpointEvent, OutputEvent, StoppedEvent, TerminatedEvent } from "./dap/events.ts";
 import { emulator } from "@dksap3/cpusim";
@@ -66,7 +66,7 @@ export class AsmRuntime {
     // const fn = `file://${program.replace("\\", "/").replace("\\", "/")}`;
     this.compiledAsm = compiledDocs[program];
     if (!this.compiledAsm) {
-      console.log(compiledDocs);
+      // console.log(compiledDocs);
       throw Error(`No compiled result for ${program}`);
     }
   }
@@ -112,6 +112,16 @@ export class AsmRuntime {
 
     this.log(`Asm runtime start uri=${this.compiledAsm.uri}`);
     emulator.reset(Array.from(this.compiledAsm.machineCode));
+
+    const mainPC = getLabelInfo(this.compiledAsm.linkerInfo, "main");
+    if (mainPC) {
+      console.log("Running emulator until PC in main @ ", mainPC.globalAddress);
+      while (emulator.regs.pc != mainPC.globalAddress) {
+        // console.log("skipping until main PC=", emulator.regs.pc);
+        this.step("continue");
+      }
+    }
+
     // emulator.ctrl.bdos = this.bdos;
 
     this.setCurrentLine();
@@ -387,7 +397,7 @@ export class AsmRuntime {
       elapsed = 0;
 
     const animate = () => {
-      console.log("Step result", stepResult);
+      // console.log("Step result", stepResult);
       if (stepResult == "stop") return;
       requestAnimationFrame(animate);
       now = Date.now();
