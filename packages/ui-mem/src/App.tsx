@@ -46,6 +46,7 @@ function App() {
   const [hoverCell, setHoverCell] = useState<number>();
   const [selection, setSelection] = useState(oldState.selection);
   const [linkerInfo, setLinkerInfo] = useState<ILinkerInfo>({});
+  const [captureHover, setCaptureHover] = useState(false);
 
   // useEffect(() => {
   //   vscode.setState({
@@ -130,6 +131,10 @@ function App() {
     return x;
   }, [getStackFrameForAddress, hoverCell, isInStackRange, linkerInfo, memory, stack]);
 
+  const pcIsIn = useMemo(() => {
+    return getNearestPreceedingLabelForAddress(linkerInfo, pointers.pc).labelInfo.name;
+  }, [linkerInfo, pointers.pc]);
+
   const onZero = useCallback(() => {
     setSelection("0");
     setStart(0);
@@ -163,16 +168,20 @@ function App() {
       return clsx(
         "text-gray-400",
         "hover:text-black hover:bg-gray-200",
+        "transition-colors",
         addr < start && "text-gray-600",
         addr > end && "text-gray-600",
-        addr == pointers.pc && "border border-orange-200",
-        addr == pointers.sp && "border border-green-200",
-        addr == pointers.hl && "border border-blue-500",
+        addr == pointers.pc && "dark-red",
+        addr == pointers.sp && "dark-yellow",
+        // addr == pointers.hl && "dark-orange",
+        // addr == pointers.pc && "border border-orange-200",
+        // addr == pointers.sp && "border border-green-200",
+        // addr == pointers.hl && "border border-blue-500",
         num == -1 ? "" : num % 2 ? "bg-indigo-700" : "bg-indigo-900",
         s == -1 ? "" : s % 2 ? "bg-green-700" : "bg-green-900"
       );
     },
-    [end, getStackFrameForAddress, isInStackRange, linkerInfo, pointers.hl, pointers.pc, pointers.sp, start]
+    [end, getStackFrameForAddress, isInStackRange, linkerInfo, pointers.pc, pointers.sp, start]
   );
 
   const parseSeleection = useCallback(
@@ -249,12 +258,14 @@ function App() {
             <Button size="xs" variant={selection == "HL" ? "vscodePrimary" : "vscodeSecondary"} onClick={onHL}>
               <span className="w-3">HL</span>
             </Button>
+            {(selection == "PC" || selection == "0") && <span style={{ width: "50px" }}>{pcIsIn}</span>}
           </div>
         </div>
-        <div className="flex gap-2 items-center">
-          <span>{hoverInfo}</span>
-        </div>
-        <div className="grid grid-cols-[auto_repeat(16,_minmax(1rem,_1rem))_minmax(0,_auto)] grid-flow-row gap-x-1 text-center cursor-default">
+        <div className="flex gap-2 items-center h-[10px]">{captureHover && <span>{hoverInfo}</span>}</div>
+        <div
+          className="grid grid-cols-[auto_repeat(16,_minmax(1rem,_1rem))_minmax(0,_auto)] grid-flow-row gap-x-1 text-center cursor-default"
+          onMouseEnter={() => setCaptureHover(true)}
+          onMouseLeave={() => setCaptureHover(false)}>
           <span className="pr-2 text-right"></span>
           <span className="text-yellow-700">00</span>
           <span className="text-yellow-700">01</span>

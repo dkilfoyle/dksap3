@@ -49,3 +49,17 @@
   background-color: var(--vscode-input-background);
   color: var(--vscode-input-foreground);
 }
+
+.dark-orange {
+  background-color: #c8863f;
+}
+
+.dark-red {
+  background-color: #ca4142;
+  color: white;
+}
+
+.dark-yellow {
+  background-color: #c7c940;
+  color: black;
+}

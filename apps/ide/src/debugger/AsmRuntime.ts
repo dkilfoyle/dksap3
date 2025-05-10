@@ -9,6 +9,7 @@ import { getLabelForAddress, getSourceLocationForAddress } from "@dksap3/lang-as
 import { asmLanguageClient, sourceAsts } from "../config.ts";
 import { isProgram } from "../../../../packages/lang-asm/src/language/generated/ast.ts";
 import { AstNodeWithTextRegion } from "langium";
+import * as vscode from "vscode";
 
 interface IAsmBreakpoint {
   id: number;
@@ -154,6 +155,7 @@ export class AsmRuntime {
         this._debugger!.sendEvent(new TerminatedEvent());
         this.isDebugging = false;
         asmLanguageClient?.sendNotification("statusChange", { isDebugging: false });
+        vscode.commands.executeCommand("workbench.view.explorer");
         break;
       case "breakpoint":
         this._debugger!.sendEvent(new StoppedEvent("breakpoint", AsmDebugSession.THREAD_ID));
@@ -378,11 +380,66 @@ export class AsmRuntime {
   run(mode: IStepMode) {
     let stepResult: IStepResult = mode;
     let steps = 0;
-    do {
-      stepResult = this.step(stepResult);
-      steps++;
-    } while (stepResult == "continue");
+    const fps = 5;
+    let fpsInterval = 0,
+      now = 0,
+      then = 0,
+      elapsed = 0;
+
+    const animate = () => {
+      console.log("Step result", stepResult);
+      if (stepResult == "stop") return;
+      requestAnimationFrame(animate);
+      now = Date.now();
+      elapsed = now - then;
+
+      if (elapsed > fpsInterval) {
+        then = now - (elapsed % fpsInterval);
+        stepResult = this.step(stepResult as IStepMode);
+        steps++;
+        MemoryWebviewPanel.sendPointers({
+          sp: emulator.regs.sp,
+          sb: emulator.regs.stackBase || 0,
+          pc: emulator.regs.pc,
+          hl: emulator.regs.hl,
+        });
+        EmulatorWebviewPanel.sendComputerState(emulator.states);
+        EmulatorWebviewPanel.sendRuntimeState({
+          frames: this.frames.map((f) => ({
+            file: f.file,
+            name: f.name,
+            base: f.stackBase,
+            mem: emulator.regs.sp == 0 ? [] : Array.from(new Uint16Array(emulator.mem.ram.slice(emulator.regs.sp, f.stackBase + 1).buffer)),
+            labels: f.stackLabels,
+          })),
+          hlLabel: this.hlLabel,
+          deLabel: this.deLabel,
+        });
+      }
+    };
+
+    const start = () => {
+      fpsInterval = 1000 / fps;
+      then = Date.now();
+      animate();
+    };
+
+    start();
     if (steps > 1) this._debugger!.sendEvent(new OutputEvent(`Asm runtime: Run ${steps} steps, result ${stepResult}\n`));
+
+    // let stepResult: IStepResult = mode;
+    // let steps = 0;
+    // do {
+    //   stepResult = this.step(stepResult);
+    //   steps++;
+    //   MemoryWebviewPanel.sendPointers({
+    //     sp: emulator.regs.sp,
+    //     sb: emulator.regs.stackBase || 0,
+    //     pc: emulator.regs.pc,
+    //     hl: emulator.regs.hl,
+    //   });
+    // } while (stepResult == "continue");
+    // if (steps > 1) this._debugger!.sendEvent(new OutputEvent(`Asm runtime: Run ${steps} steps, result ${stepResult}\n`));
   }
 
   public setBreakPoint(path: string, line: number): IAsmBreakpoint {
